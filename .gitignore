@@ -1,3 +1,11 @@
+# general
+*~
+*#
+*.o
+build*
+
+
+# CMake related files
 CMakeCache.txt
 CMakeFiles
 CMakeScripts

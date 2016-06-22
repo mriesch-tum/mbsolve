@@ -1,7 +1,11 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include "boost/program_options.hpp"
+#include <boost/program_options.hpp>
+#include <Device.hpp>
+#include <Scenario.hpp>
+#include <Solver.hpp>
+#include <SolverCUDA.hpp>
 
 namespace po = boost::program_options;
 
@@ -46,12 +50,25 @@ int main(int argc, char **argv)
 {
     parse_args(argc, argv);
 
+    /* read inputs */
 
+    /* setup solver */
+    mbsolve::SolverCUDA solver;
 
+    std::cout << solver.name() << std::endl;
 
+    /* tic */
 
+    /* execute solver */
 
+    /* toc */
 
+    /* write results */
+
+    /* cleanup solver */
+
+    /* cleanup */
 
     exit(0);
 }
+

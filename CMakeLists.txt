@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 2.6)
 project(mbsolve)
 
-find_package(Boost REQUIRED COMPONENTS program_options)
+set(MBSOLVE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(SOLVERCUDA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/solver-cuda/include)
 
-include_directories(${Boost_INCLUDE_DIR})
+# solver libraries
+add_subdirectory(solver-cuda)
 
-add_executable(mbsolve mbsolve.cpp)
-target_link_libraries(mbsolve ${Boost_LIBRARIES})
+# executable
+add_subdirectory(mbsolve-tool)
