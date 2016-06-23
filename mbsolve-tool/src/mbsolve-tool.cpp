@@ -142,7 +142,7 @@ int main(int argc, char **argv)
     try {
 	writer->write("test.mat", results, device, scenario);
     } catch (std::exception& e) {
-	std::cout << "Error: Could not write results." <<
+	std::cout << "Error: Could not write results."
 		  << std::endl << e.what() << std::endl;
     }
 
