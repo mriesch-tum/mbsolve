@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
 #include <Device.hpp>
@@ -87,6 +88,7 @@ int main(int argc, char **argv)
     mbsolve::Scenario scenario;
     mbsolve::Solver* solver;
     ti::cpu_timer timer;
+    std::vector<mbsolve::Result *> results;
 
     /* parse command line arguments */
     parse_args(argc, argv);
@@ -126,7 +128,7 @@ int main(int argc, char **argv)
     timer.start();
 
     /* execute solver */
-    solver->run();
+    solver->run(results);
 
     /* toc */
     timer.stop();
@@ -136,6 +138,9 @@ int main(int argc, char **argv)
     /* write results */
 
      /* cleanup */
+    BOOST_FOREACH(mbsolve::Result *result, results) {
+	delete result;
+    }
     delete solver;
 
     exit(0);

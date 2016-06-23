@@ -26,9 +26,12 @@ void SolverCUDA::do_cleanup()
 {
 }
 
-void SolverCUDA::do_run()
+void SolverCUDA::do_run(std::vector<Result *>& results)
 {
+
     makestep_black<<<12, 1>>>();
+
+
 }
 
 }

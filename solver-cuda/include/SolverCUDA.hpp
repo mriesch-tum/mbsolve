@@ -13,7 +13,7 @@ public:
 
     void do_cleanup();
 
-    void do_run();
+    void do_run(std::vector<Result *>& results);
 };
 
 }

@@ -2,8 +2,10 @@
 #define SOLVER_H
 
 #include <string>
+#include <vector>
 #include <Device.hpp>
 #include <Scenario.hpp>
+#include <Types.hpp>
 
 namespace mbsolve {
 
@@ -17,7 +19,7 @@ protected:
 
     virtual void do_setup(const Device& device, const Scenario& scenario) { }
 
-    virtual void do_run() { }
+    virtual void do_run(std::vector<Result *>& results) { }
 
     virtual void do_cleanup() { }
 
@@ -37,8 +39,8 @@ public:
 	m_initialized = true;
     }
 
-    void run() {
-	do_run();
+    void run(std::vector<Result *>& results) {
+	return do_run(results);
     }
 };
 
