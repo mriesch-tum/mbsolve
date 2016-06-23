@@ -1,3 +1,6 @@
+#ifndef SOLVERCUDA_H
+#define SOLVERCUDA_H
+
 #include <Solver.hpp>
 
 namespace mbsolve {
@@ -17,3 +20,5 @@ public:
 };
 
 }
+
+#endif

@@ -8,6 +8,8 @@
 #include <Scenario.hpp>
 #include <Solver.hpp>
 #include <SolverCUDA.hpp>
+#include <Writer.hpp>
+#include <WriterMATLAB.hpp>
 
 namespace po = boost::program_options;
 namespace ti = boost::timer;
@@ -89,6 +91,7 @@ int main(int argc, char **argv)
     mbsolve::Solver* solver;
     ti::cpu_timer timer;
     std::vector<mbsolve::Result *> results;
+    mbsolve::Writer *writer = new mbsolve::WriterMATLAB();
 
     /* parse command line arguments */
     parse_args(argc, argv);
@@ -136,12 +139,19 @@ int main(int argc, char **argv)
     std::cout << "Time required: " << 1e-9 * times.wall << std::endl;
 
     /* write results */
+    try {
+	writer->write("test.mat", results, device, scenario);
+    } catch (std::exception& e) {
+	std::cout << "Error: Could not write results." <<
+		  << std::endl << e.what() << std::endl;
+    }
 
      /* cleanup */
     BOOST_FOREACH(mbsolve::Result *result, results) {
 	delete result;
     }
     delete solver;
+    delete writer;
 
     exit(0);
 }
