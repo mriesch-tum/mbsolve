@@ -2,12 +2,18 @@
 #include <iostream>
 #include <string>
 #include <boost/program_options.hpp>
+#include <boost/timer/timer.hpp>
 #include <Device.hpp>
 #include <Scenario.hpp>
 #include <Solver.hpp>
 #include <SolverCUDA.hpp>
 
 namespace po = boost::program_options;
+namespace ti = boost::timer;
+
+static std::string device_file;
+static std::string scenario_file;
+static std::string solver_method;
 
 static void parse_args(int argc, char **argv)
 {
@@ -16,7 +22,8 @@ static void parse_args(int argc, char **argv)
 	("help,h", "Print usage")
 	("device,d", po::value<std::string>(), "Set device settings file")
 	("scenario,s", po::value<std::string>(), "Set scenario settings file")
-	("method,m", po::value<std::string>(), "Set solver method");
+	("method,m", po::value<std::string>(&solver_method)->required(),
+	 "Set solver method");
 
     po::variables_map vm;
     try {
@@ -33,41 +40,103 @@ static void parse_args(int argc, char **argv)
     }
 
     if (vm.count("device")) {
-	std::cout << "Using device file " << vm["device"].as<std::string>()
-		  << std::endl;
+	device_file = vm["device"].as<std::string>();
+	std::cout << "Using device file " << device_file << std::endl;
     }
     if (vm.count("scenario")) {
-	std::cout << "Using scenario file " << vm["scenario"].as<std::string>()
-		  << std::endl;
+	scenario_file = vm["scenario"].as<std::string>();
+	std::cout << "Using scenario file " << scenario_file << std::endl;
     }
-    if (vm.count("method")) {
-	std::cout << "Using solver method " << vm["method"].as<std::string>()
-		  << std::endl;
+}
+
+mbsolve::Device parse_device(const std::string& file)
+{
+    mbsolve::Device dev;
+
+    /* TODO: read xml file */
+    dev.L_x = 3e-3;
+
+    return dev;
+}
+
+mbsolve::Scenario parse_scenario(const std::string& file)
+{
+    mbsolve::Scenario scen;
+
+    /* TODO: read xml file */
+    scen.t_e = 5e-9;
+    scen.N_x = 5760;
+    scen.mod_a = 0;
+    scen.mod_f = 13e9;
+
+    return scen;
+}
+
+mbsolve::Solver* create_solver(const std::string& method)
+{
+    if (method == "CUDA") {
+	return new mbsolve::SolverCUDA();
+    } else {
+	throw std::invalid_argument("Unknown solver " + method);
     }
 }
 
 int main(int argc, char **argv)
 {
+    mbsolve::Device device;
+    mbsolve::Scenario scenario;
+    mbsolve::Solver* solver;
+    ti::cpu_timer timer;
+
+    /* parse command line arguments */
     parse_args(argc, argv);
 
-    /* read inputs */
+    /* parse device file */
+    try {
+	device = parse_device(device_file);
+    } catch (std::exception& e) {
+	std::cout << "Error: Could not parse device file " << device_file
+		  << std::endl << e.what() << std::endl;
+	exit(1);
+    }
+
+    /* parse scenario file */
+    try {
+	scenario = parse_scenario(scenario_file);
+    } catch (std::exception& e) {
+	std::cout << "Error: Could not parse scenario file " << scenario_file
+		  << std::endl << e.what() << std::endl;
+	exit(1);
+    }
+
+    /* select solver */
+    try {
+	solver = create_solver(solver_method);
+    } catch (std::exception& e) {
+	std::cout << "Error: " << e.what() << std::endl;
+	exit(1);
+    }
 
     /* setup solver */
-    mbsolve::SolverCUDA solver;
+    solver->setup(device, scenario);
 
-    std::cout << solver.name() << std::endl;
+    std::cout << solver->name() << std::endl;
 
     /* tic */
+    timer.start();
 
     /* execute solver */
+    solver->run();
 
     /* toc */
+    timer.stop();
+    ti::cpu_times times = timer.elapsed();
+    std::cout << "Time required: " << 1e-9 * times.wall << std::endl;
 
     /* write results */
 
-    /* cleanup solver */
-
-    /* cleanup */
+     /* cleanup */
+    delete solver;
 
     exit(0);
 }

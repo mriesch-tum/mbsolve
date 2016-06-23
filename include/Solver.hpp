@@ -15,28 +15,31 @@ private:
 protected:
     std::string m_name;
 
+    virtual void do_setup(const Device& device, const Scenario& scenario) { }
+
+    virtual void do_run() { }
+
+    virtual void do_cleanup() { }
+
 public:
-    explicit Solver(std::string name, bool setup = false) :
-	m_name(name), m_initialized(false) {
-	if (setup) {
-	    this->setup();
-	    this->m_initialized = true;
-	}
-    }
+    explicit Solver(std::string name) : m_initialized(false), m_name(name) { }
 
     ~Solver() {
 	if (m_initialized) {
-	    this->cleanup();
+	    do_cleanup();
 	}
     }
 
     const std::string& name() { return m_name; }
 
-    virtual void setup() { }
+    void setup(const Device& device, const Scenario& scenario) {
+	do_setup(device, scenario);
+	m_initialized = true;
+    }
 
-    virtual void cleanup() { }
-
-    virtual void run() { }
+    void run() {
+	do_run();
+    }
 };
 
 }

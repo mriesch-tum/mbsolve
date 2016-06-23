@@ -9,11 +9,11 @@ public:
 
     ~SolverCUDA();
 
-    void setup();
+    void do_setup(const Device& device, const Scenario& scenario);
 
-    void cleanup();
+    void do_cleanup();
 
-    void run();
+    void do_run();
 };
 
 }

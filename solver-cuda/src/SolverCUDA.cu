@@ -18,15 +18,15 @@ SolverCUDA::~SolverCUDA()
 {
 }
 
-void SolverCUDA::setup()
+void SolverCUDA::do_setup(const Device& device, const Scenario& scenario)
 {
 }
 
-void SolverCUDA::cleanup()
+void SolverCUDA::do_cleanup()
 {
 }
 
-void SolverCUDA::run()
+void SolverCUDA::do_run()
 {
     makestep_black<<<12, 1>>>();
 }
