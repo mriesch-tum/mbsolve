@@ -2,6 +2,7 @@
 #define TYPES_H
 
 #include <complex>
+#include <stdexcept>
 #include <string>
 
 namespace mbsolve {
@@ -25,7 +26,10 @@ private:
     Result& operator=(const Result& other) { return *this; }
 
 public:
-    explicit Result(const std::string& name) : m_name(name) { }
+    explicit Result(const std::string& name, unsigned int size) :
+	m_name(name), m_size(size) {
+	m_values = new real[size];
+    }
 
     ~Result() {
 	delete[] m_values;
@@ -35,7 +39,14 @@ public:
 
     unsigned int size() { return m_size; }
 
-    real *values() { return m_values; }
+    real *data() { return m_values; }
+
+    real& at(unsigned int index) {
+	if (index > m_size) {
+	    throw std::out_of_range("Index out of bounds");
+	}
+	return m_values[index];
+    }
 
 };
 

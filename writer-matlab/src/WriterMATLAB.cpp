@@ -1,5 +1,6 @@
 #include <WriterMATLAB.hpp>
 
+#include <boost/foreach.hpp>
 #include <mat.h>
 
 namespace mbsolve {
@@ -16,13 +17,22 @@ void WriterMATLAB::write(const std::string& file,
     }
 
     mxArray *t = mxCreateDoubleScalar(scenario.t_e);
-
-    //matPutVariable(pmat, varname, var);
     matPutVariable(pmat, "t_e", t);
-
     mxDestroyArray(t);
-    matClose(pmat);
 
+    BOOST_FOREACH(mbsolve::Result *result, results) {
+	mxArray *var = mxCreateDoubleMatrix(result->size(), 1, mxREAL);
+
+	for (int i = 0; i < result->size(); i++) {
+	    *(mxGetPr(var) + i) = result->at(i);
+	}
+
+	matPutVariable(pmat, result->name().c_str(), var);
+
+	mxDestroyArray(var);
+    }
+
+    matClose(pmat);
 }
 
 }
