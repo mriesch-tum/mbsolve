@@ -7,9 +7,7 @@
 #include <Device.hpp>
 #include <Scenario.hpp>
 #include <Solver.hpp>
-#include <SolverCUDA.hpp>
 #include <Writer.hpp>
-#include <WriterMATLAB.hpp>
 
 namespace po = boost::program_options;
 namespace ti = boost::timer;
@@ -75,15 +73,6 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     return scen;
 }
 
-mbsolve::Solver* create_solver(const std::string& method)
-{
-    if (method == "CUDA") {
-	return new mbsolve::SolverCUDA();
-    } else {
-	throw std::invalid_argument("Unknown solver " + method);
-    }
-}
-
 int main(int argc, char **argv)
 {
     mbsolve::Device device;
@@ -116,7 +105,7 @@ int main(int argc, char **argv)
 
     /* select solver */
     try {
-	solver = create_solver(solver_method);
+	solver = mbsolve::Solver::create(solver_method);
     } catch (std::exception& e) {
 	std::cout << "Error: " << e.what() << std::endl;
 	exit(1);

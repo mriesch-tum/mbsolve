@@ -3,15 +3,32 @@ project(mbsolve)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 
-set(MBSOLVE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(SOLVERCUDA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/solver-cuda/include)
-set(WRITERMATLAB_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/writer-matlab/include)
+option(WITH_MATLAB "with(out) MATLAB writer" ON)
+option(WITH_CUDA "with(out) CUDA solver" ON)
 
-# writer libraries
-add_subdirectory(writer-matlab)
+# MATLAB support?
+if(WITH_MATLAB)
+  find_package(MATLAB)
+  if(MATLAB_FOUND)
+    set(MBSOLVE_MATLAB TRUE)
+    add_subdirectory(writer-matlab)
+  endif(MATLAB_FOUND)
+endif(WITH_MATLAB)
 
-# solver libraries
-add_subdirectory(solver-cuda)
+# CUDA support?
+if(WITH_CUDA)
+  find_package(CUDA)
+  if(CUDA_FOUND)
+    set(MBSOLVE_CUDA TRUE)
+    add_subdirectory(solver-cuda)
+  endif(CUDA_FOUND)
+endif(WITH_CUDA)
+
+# Generic support
+add_subdirectory(solver-generic)
+
+# mbsolve library
+add_subdirectory(mbsolve-lib)
 
 # executable
 add_subdirectory(mbsolve-tool)

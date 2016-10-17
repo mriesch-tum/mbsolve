@@ -13,7 +13,6 @@ namespace mbsolve {
 typedef std::complex<double> complex;
 typedef double real;
 
-
 class Result
 {
 private:
