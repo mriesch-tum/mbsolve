@@ -73,14 +73,15 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     return scen;
 }
 
+// TODO: setup - cleanup sequence? make sure everything is cleanup in case of an error
 int main(int argc, char **argv)
 {
     mbsolve::Device device;
     mbsolve::Scenario scenario;
-    mbsolve::Solver* solver;
+    mbsolve::Solver *solver;
+    mbsolve::Writer *writer;
     ti::cpu_timer timer;
     std::vector<mbsolve::Result *> results;
-    mbsolve::Writer *writer = new mbsolve::WriterMATLAB();
 
     /* parse command line arguments */
     parse_args(argc, argv);
@@ -100,6 +101,14 @@ int main(int argc, char **argv)
     } catch (std::exception& e) {
 	std::cout << "Error: Could not parse scenario file " << scenario_file
 		  << std::endl << e.what() << std::endl;
+	exit(1);
+    }
+
+    /* select writer */
+    try {
+	writer = mbsolve::Writer::create("MATLAB");
+    } catch (std::exception& e) {
+	std::cout << "Error: " << e.what() << std::endl;
 	exit(1);
     }
 

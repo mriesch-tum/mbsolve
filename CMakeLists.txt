@@ -6,6 +6,9 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 option(WITH_MATLAB "with(out) MATLAB writer" ON)
 option(WITH_CUDA "with(out) CUDA solver" ON)
 
+# mbsolve library
+add_subdirectory(mbsolve-lib)
+
 # MATLAB support?
 if(WITH_MATLAB)
   find_package(MATLAB)
@@ -26,9 +29,6 @@ endif(WITH_CUDA)
 
 # Generic support
 add_subdirectory(solver-generic)
-
-# mbsolve library
-add_subdirectory(mbsolve-lib)
 
 # executable
 add_subdirectory(mbsolve-tool)

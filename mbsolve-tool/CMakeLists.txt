@@ -9,3 +9,11 @@ add_executable(mbsolve-tool src/mbsolve-tool.cpp)
 
 target_link_libraries(mbsolve-tool ${Boost_LIBRARIES} mbsolve-lib
   solver-generic)
+
+if(MBSOLVE_CUDA)
+  target_link_libraries(mbsolve-tool solver-cuda)
+endif(MBSOLVE_CUDA)
+
+if(MBSOLVE_MATLAB)
+  target_link_libraries(mbsolve-tool writer-matlab)
+endif(MBSOLVE_MATLAB)

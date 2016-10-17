@@ -1,8 +1,8 @@
 #ifndef SOLVER_H
 #define SOLVER_H
 
-#include <string>
 #include <map>
+#include <string>
 #include <vector>
 #include <Device.hpp>
 #include <Scenario.hpp>

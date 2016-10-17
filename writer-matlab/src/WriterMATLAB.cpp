@@ -5,6 +5,8 @@
 
 namespace mbsolve {
 
+static WriterFactory<WriterMATLAB> factory("MATLAB");
+
 void WriterMATLAB::write(const std::string& file,
 			 const std::vector<Result *>& results,
 			 const Device& device, const Scenario& scenario)

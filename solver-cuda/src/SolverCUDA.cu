@@ -5,6 +5,8 @@
 
 namespace mbsolve {
 
+static SolverFactory<SolverCUDA> factory("CUDA");
+
 __global__ void makestep_black()
 {
 
