@@ -10,7 +10,7 @@ namespace mbsolve {
 
 /* complex number? boost? */
 
-typedef std::complex<double> complex;
+//typedef std::complex<double> complex;
 typedef double real;
 
 class Result

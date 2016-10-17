@@ -1,16 +1,16 @@
-#ifndef SOLVERCUDA_H
-#define SOLVERCUDA_H
+#ifndef SOLVERCUDA2LVL_H
+#define SOLVERCUDA2LVL_H
 
 #include <Solver.hpp>
 
 namespace mbsolve {
 
-class SolverCUDA : public Solver
+class SolverCUDA2lvl : public Solver
 {
 public:
-    SolverCUDA();
+    SolverCUDA2lvl();
 
-    ~SolverCUDA();
+    ~SolverCUDA2lvl();
 
     void do_setup(const Device& device, const Scenario& scenario);
 

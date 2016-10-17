@@ -18,7 +18,7 @@ void WriterMATLAB::write(const std::string& file,
 	throw std::exception();
     }
 
-    mxArray *t = mxCreateDoubleScalar(scenario.t_e);
+    mxArray *t = mxCreateDoubleScalar(scenario.SimEndTime);
     matPutVariable(pmat, "t_e", t);
     mxDestroyArray(t);
 

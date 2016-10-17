@@ -16,6 +16,9 @@ static std::string device_file;
 static std::string scenario_file;
 static std::string solver_method;
 
+/* TODO: output file parameter ? */
+/* TODO: writer parameter ? */
+
 static void parse_args(int argc, char **argv)
 {
     po::options_description desc("Allowed options");
@@ -55,7 +58,39 @@ mbsolve::Device parse_device(const std::string& file)
     mbsolve::Device dev;
 
     /* TODO: read xml file */
-    dev.L_x = 3e-3;
+
+    /* Ziolkowski settings */
+    mbsolve::Region vacuum;
+    vacuum.XDim = 7.5e-6;
+    vacuum.Permeability = mbsolve::MU0;
+    vacuum.Permittivity = mbsolve::EPS0;
+    vacuum.Overlap = 1;
+    vacuum.Losses = 0;
+    vacuum.DopingDensity = 0;
+
+    vacuum.Name = "Vacuum left";
+    vacuum.X0 = 0;
+    dev.Regions.push_back(vacuum);
+
+    mbsolve::Region active;
+    active.Name = "Active Region";
+    active.X0 = 7.5e-6;
+    active.XDim = 135e-6;
+    active.Permeability = mbsolve::MU0;
+    active.Permittivity = mbsolve::EPS0;
+    active.Overlap = 1;
+    active.Losses = 0;
+    active.DopingDensity = 1e24;
+    active.TransitionFrequencies.push_back(mbsolve::Quantity(M_PI * 4e14));
+    active.DipoleMoments.push_back(mbsolve::Quantity(6.24e-9));
+    active.ScatteringRates.push_back(mbsolve::Quantity(-1.0e10));
+    active.ScatteringRates.push_back(mbsolve::Quantity(+1.0e10));
+    active.DephasingRates.push_back(mbsolve::Quantity(1.0e10));
+    dev.Regions.push_back(active);
+
+    vacuum.Name = "Vacuum right";
+    vacuum.X0 = 142.5e-6;
+    dev.Regions.push_back(vacuum);
 
     return dev;
 }
@@ -65,10 +100,11 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     mbsolve::Scenario scen;
 
     /* TODO: read xml file */
-    scen.t_e = 5e-9;
-    scen.N_x = 5760;
-    scen.mod_a = 0;
-    scen.mod_f = 13e9;
+
+    /* Ziolkowski settings */
+    scen.Name = "Ziolkowski";
+    scen.SimEndTime = 5e-9;
+    scen.NumGridPoints = 5760;
 
     return scen;
 }
@@ -153,4 +189,3 @@ int main(int argc, char **argv)
 
     exit(0);
 }
-
