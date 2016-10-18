@@ -40,7 +40,7 @@ Solver::name()
 }
 
 void
-Solver::setup(const Device& device, const Scenario& scenario)
+Solver::setup(const Device& device, Scenario& scenario)
 {
     do_setup(device, scenario);
     m_initialized = true;

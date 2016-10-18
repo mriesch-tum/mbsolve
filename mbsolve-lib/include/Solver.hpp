@@ -21,7 +21,7 @@ private:
 protected:
     std::string m_name;
 
-    virtual void do_setup(const Device& device, const Scenario& scenario) { }
+    virtual void do_setup(const Device& device, Scenario& scenario) { }
 
     virtual void do_run(std::vector<Result *>& results) { }
 
@@ -34,7 +34,7 @@ public:
 
     const std::string& name();
 
-    void setup(const Device& device, const Scenario& scenario);
+    void setup(const Device& device, Scenario& scenario);
 
     void run(std::vector<Result *>& results);
 

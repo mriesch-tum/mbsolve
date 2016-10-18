@@ -11,6 +11,10 @@ namespace mbsolve {
 class Region
 {
 public:
+    Region() : RelPermeability(1.0),
+	       RelPermittivity(1.0),
+	       Overlap(1.0) { }
+
     std::string Name;
 
     /* dimensions */
@@ -18,8 +22,9 @@ public:
     Quantity XDim;
 
     /* electromagnetic properties */
-    Quantity Permeability;
-    Quantity Permittivity;
+    Quantity RelPermeability; /* default 1.0 */
+    Quantity RelPermittivity; /* default 1.0 */
+
     Quantity Overlap;
     Quantity Losses;
 
@@ -62,7 +67,27 @@ public:
     std::string Name;
     std::vector<Region> Regions;
 
+    /* TODO: what happens if no Regions inserted */
 
+    Quantity XDim() const {
+	Quantity total;
+	std::vector<Region>::const_iterator it;
+	for (it = Regions.begin(); it != Regions.end(); it++) {
+	    total += it->XDim;
+	}
+	return total;
+    }
+
+    Quantity MinRelPermittivity() const {
+	Quantity min(1e12);
+	std::vector<Region>::const_iterator it;
+	for (it = Regions.begin(); it != Regions.end(); it++) {
+	    if (it->RelPermittivity < min) {
+		min = it->RelPermittivity;
+	    }
+	}
+	return min;
+    }
 
 };
 

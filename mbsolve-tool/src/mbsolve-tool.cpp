@@ -62,8 +62,6 @@ mbsolve::Device parse_device(const std::string& file)
     /* Ziolkowski settings */
     mbsolve::Region vacuum;
     vacuum.XDim = 7.5e-6;
-    vacuum.Permeability = mbsolve::MU0;
-    vacuum.Permittivity = mbsolve::EPS0;
     vacuum.Overlap = 1;
     vacuum.Losses = 0;
     vacuum.DopingDensity = 0;
@@ -76,14 +74,12 @@ mbsolve::Device parse_device(const std::string& file)
     active.Name = "Active Region";
     active.X0 = 7.5e-6;
     active.XDim = 135e-6;
-    active.Permeability = mbsolve::MU0;
-    active.Permittivity = mbsolve::EPS0;
     active.Overlap = 1;
     active.Losses = 0;
     active.DopingDensity = 1e24;
     active.TransitionFrequencies.push_back(mbsolve::Quantity(M_PI * 4e14));
     active.DipoleMoments.push_back(mbsolve::Quantity(6.24e-9));
-    active.ScatteringRates.push_back(mbsolve::Quantity(-1.0e10));
+    //active.ScatteringRates.push_back(mbsolve::Quantity(-1.0e10));
     active.ScatteringRates.push_back(mbsolve::Quantity(+1.0e10));
     active.DephasingRates.push_back(mbsolve::Quantity(1.0e10));
     dev.Regions.push_back(active);
@@ -110,6 +106,9 @@ mbsolve::Scenario parse_scenario(const std::string& file)
 }
 
 // TODO: setup - cleanup sequence? make sure everything is cleanup in case of an error
+/* TODO: add Solver mysolver(args) that does the setup/RAII scheme*/
+/* TODO: analogue for writer */
+/* TODO: abstract IWriter/ISolver etc */
 int main(int argc, char **argv)
 {
     mbsolve::Device device;

@@ -16,7 +16,31 @@ public:
 
     virtual const real& operator()() const;
 
+    operator real() const {
+	return m_value;
+    }
+
+    /* TODO: operator with real? */
+
+    Quantity operator+(const Quantity& rhs) const;
+
+    Quantity& operator+=(const Quantity& rhs);
+
+    Quantity operator-(const Quantity& rhs) const;
+
+    Quantity& operator-=(const Quantity& rhs);
+
     Quantity operator*(const Quantity& rhs) const;
+
+    Quantity& operator*=(const Quantity& rhs);
+
+    Quantity operator/(const Quantity& rhs) const;
+
+    Quantity& operator/=(const Quantity& rhs);
+
+    bool operator<(const Quantity& rhs) const;
+
+    bool operator>(const Quantity& rhs) const;
 
 };
 
