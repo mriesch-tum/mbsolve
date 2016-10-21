@@ -2,6 +2,9 @@
 #define SCENARIO_H
 
 #include <string>
+#include <vector>
+#include <Record.hpp>
+#include <Source.hpp>
 
 namespace mbsolve {
 
@@ -19,6 +22,12 @@ public:
     real GridPointSize;
 
     real SimEndTime;
+
+    std::vector<IRecord *> Records;
+
+    /* TODO: add sources vector */
+    std::vector<ISource *> Sources;
+
 
 };
 

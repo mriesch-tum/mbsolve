@@ -69,6 +69,7 @@ __global__ void makestep_h(const real *ge, real *gh)
     __syncthreads();
 
     /* TODO: alternative boundary conditions? */
+    /* TODO: different kernel or templated version?? */
     /* open circuit boundary conditions already set */
     /* gh_ghz[0] = 0; */
     /* gh_ghz[N_x] = 0; */
@@ -95,6 +96,8 @@ __global__ void makestep_e(const DensityMatrix& dm, const real *gh, real *ge)
 
     real j = ge[gidx] * gsc[region].sigma;
     real p_t = 0.0; /* TODO: ? */
+
+    real p_t = gsc[region].C_P * gsc[region].d12 * dm.OldDM(2)[gidx];
 
     ge[gidx] += gsc[region].M_CE *
 	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
@@ -217,7 +220,7 @@ void SolverCUDA2lvl::do_setup(const Device& device, Scenario& scenario)
 	sc[i].idx_start = round(it->X0()/scenario.GridPointSize);
 	sc[i].M_CE = scenario.TimeStepSize/(EPS0() * it->RelPermittivity());
 	sc[i].M_CH = scenario.TimeStepSize/(MU0() * scenario.GridPointSize);
-	//real M_CP;
+	sc[i].M_CP = -2.0 * it->DopingDensity * E0;
 	sc[i].sigma = 2.0 * sqrt(EPS0 * it->RelPermittivity/MU0) * it->Losses;
 
 	sc[i].w12 = (it->TransitionFrequencies.size() < 1) ? 0.0 :
@@ -271,8 +274,6 @@ void SolverCUDA2lvl::do_cleanup()
 void SolverCUDA2lvl::do_run(std::vector<Result *>& results)
 {
 
-    /* invoke kernels with different settings index */
-
 
     int threads = 1024;
     int blocks = 10; // NumGridPoint / threads
@@ -281,6 +282,18 @@ void SolverCUDA2lvl::do_run(std::vector<Result *>& results)
     dim3 block(blocks);
     dim3 thread(threads);
 
+    /* for i = 2:N_t */
+    /* makestep_h in maxwell stream */
+    /* makestep_dm in density stream */
+    /* gather e field in copy stream */
+    /* call toggle */
+    /* sync */
+    /* calculate source value -> makestep_e kernel */
+    /* gather h field and dm entries in copy stream */
+    /* makestep_e */
+    /* sync */
+
+    /* end for */
     makestep_h<<<block, thread, sizeof(real) * (threads + 1)>>>(e, h);
 
 }
