@@ -2,9 +2,10 @@
 
 namespace mbsolve {
 
-static SolverFactory<SolverGeneric> factory("Generic");
+static SolverFactory<SolverGeneric> factory("generic");
 
-SolverGeneric::SolverGeneric() : Solver("Generic")
+SolverGeneric::SolverGeneric(const Device& device, const Scenario& scenario) :
+    ISolver(device, scenario)
 {
 }
 
@@ -12,17 +13,16 @@ SolverGeneric::~SolverGeneric()
 {
 }
 
-void SolverGeneric::do_setup(const Device& device, const Scenario& scenario)
+std::string
+SolverGeneric::getName() const
+{
+    return std::string("Generic dummy solver");
+}
+
+void
+SolverGeneric::run(const std::vector<Result *>& results) const
 {
 }
 
-void SolverGeneric::do_cleanup()
-{
-}
-
-void SolverGeneric::do_run(std::vector<Result *>& results)
-{
-
-}
 
 }

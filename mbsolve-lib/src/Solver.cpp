@@ -1,55 +1,63 @@
 #include <Solver.hpp>
 
+#include <boost/foreach.hpp>
+
 namespace mbsolve {
 
-std::map<std::string, ISolverFactory *> Solver::m_solvers;
+std::map<std::string, ISolverFactory *>
+Solver::m_factories;
 
 void
-Solver::register_new(const std::string& name, ISolverFactory *factory)
+Solver::registerFactory(const std::string& name, ISolverFactory *factory)
 {
-    // TODO: check doubles
-    m_solvers[name] = factory;
+    if (m_factories[name]) {
+	throw std::invalid_argument("Solver already registered.");
+    }
+    m_factories[name] = factory;
 }
 
-Solver *
-Solver::create(const std::string& name)
+Solver::Solver(const std::string& name, const Device& device,
+	       const Scenario& scenario)
 {
+    /* create solver */
     std::map<std::string, ISolverFactory *>::iterator it;
-    it = m_solvers.find(name);
-    if (it == m_solvers.end()) {
+    it = m_factories.find(name);
+    if (it == m_factories.end()) {
 	throw std::invalid_argument("Unknown solver " + name);
     }
-    return it->second->create();
-}
+    m_solver = it->second->createInstance(device, scenario);
 
-Solver::Solver(std::string name) : m_initialized(false), m_name(name)
-{
+    /* allocate space for results */
+
+    //    m_solver->getScenario().
 }
 
 Solver::~Solver()
 {
-    if (m_initialized) {
-	do_cleanup();
+    /* clean up results */
+    BOOST_FOREACH(Result *result, m_results) {
+	delete result;
     }
+    /* clean up solver */
+    delete m_solver;
 }
 
-const std::string&
-Solver::name()
+std::string
+Solver::getName() const
 {
-    return m_name;
-}
-
-void
-Solver::setup(const Device& device, Scenario& scenario)
-{
-    do_setup(device, scenario);
-    m_initialized = true;
+    return m_solver->getName();
 }
 
 void
-Solver::run(std::vector<Result *>& results)
+Solver::run()
 {
-    return do_run(results);
+    m_solver->run(m_results);
+}
+
+const std::vector<Result *>&
+Solver::getResults() const
+{
+    return m_results;
 }
 
 }

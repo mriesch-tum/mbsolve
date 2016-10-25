@@ -23,10 +23,10 @@ public:
 
     real SimEndTime;
 
-    std::vector<IRecord *> Records;
+    std::vector<Record> Records;
 
     /* TODO: add sources vector */
-    std::vector<ISource *> Sources;
+    //std::vector<ISource *> Sources;
 
 
 };

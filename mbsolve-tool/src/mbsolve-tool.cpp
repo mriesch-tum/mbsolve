@@ -1,7 +1,6 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
-#include <boost/foreach.hpp>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
 #include <Device.hpp>
@@ -13,21 +12,25 @@ namespace po = boost::program_options;
 namespace ti = boost::timer;
 
 static std::string device_file;
+static std::string output_file;
 static std::string scenario_file;
 static std::string solver_method;
-
-/* TODO: output file parameter ? */
-/* TODO: writer parameter ? */
+static std::string writer_method;
 
 static void parse_args(int argc, char **argv)
 {
     po::options_description desc("Allowed options");
     desc.add_options()
 	("help,h", "Print usage")
-	("device,d", po::value<std::string>(), "Set device settings file")
-	("scenario,s", po::value<std::string>(), "Set scenario settings file")
+	("device,d", po::value<std::string>(&device_file),
+	 "Set device settings file")
+	("output,o", po::value<std::string>(&output_file), "Set output file")
+	("scenario,s", po::value<std::string>(&scenario_file),
+	 "Set scenario settings file")
 	("method,m", po::value<std::string>(&solver_method)->required(),
-	 "Set solver method");
+	 "Set solver method")
+	("writer,w", po::value<std::string>(&writer_method)->required(),
+	 "Set writer");
 
     po::variables_map vm;
     try {
@@ -56,6 +59,7 @@ static void parse_args(int argc, char **argv)
 mbsolve::Device parse_device(const std::string& file)
 {
     mbsolve::Device dev;
+    dev.Name = "Ziolkowski";
 
     /* TODO: read xml file */
 
@@ -98,25 +102,17 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     /* TODO: read xml file */
 
     /* Ziolkowski settings */
-    scen.Name = "Ziolkowski";
+    scen.Name = "Basic";
     scen.SimEndTime = 5e-9;
     scen.NumGridPoints = 5760;
 
     return scen;
 }
 
-// TODO: setup - cleanup sequence? make sure everything is cleanup in case of an error
-/* TODO: add Solver mysolver(args) that does the setup/RAII scheme*/
-/* TODO: analogue for writer */
-/* TODO: abstract IWriter/ISolver etc */
 int main(int argc, char **argv)
 {
     mbsolve::Device device;
     mbsolve::Scenario scenario;
-    mbsolve::Solver *solver;
-    mbsolve::Writer *writer;
-    ti::cpu_timer timer;
-    std::vector<mbsolve::Result *> results;
 
     /* parse command line arguments */
     parse_args(argc, argv);
@@ -139,52 +135,31 @@ int main(int argc, char **argv)
 	exit(1);
     }
 
-    /* select writer */
     try {
-	writer = mbsolve::Writer::create("MATLAB");
+	mbsolve::Writer writer(writer_method);
+	mbsolve::Solver solver(solver_method, device, scenario);
+
+	std::cout << solver.getName() << std::endl;
+
+	/* tic */
+	ti::cpu_timer timer;
+	timer.start();
+
+	/* execute solver */
+	solver.run();
+
+	/* toc */
+	timer.stop();
+	ti::cpu_times times = timer.elapsed();
+	std::cout << "Time required: " << 1e-9 * times.wall << std::endl;
+
+	/* write results */
+	writer.write(output_file, solver.getResults(), device, scenario);
+
     } catch (std::exception& e) {
 	std::cout << "Error: " << e.what() << std::endl;
 	exit(1);
     }
-
-    /* select solver */
-    try {
-	solver = mbsolve::Solver::create(solver_method);
-    } catch (std::exception& e) {
-	std::cout << "Error: " << e.what() << std::endl;
-	exit(1);
-    }
-
-    /* setup solver */
-    solver->setup(device, scenario);
-
-    std::cout << solver->name() << std::endl;
-
-    /* tic */
-    timer.start();
-
-    /* execute solver */
-    solver->run(results);
-
-    /* toc */
-    timer.stop();
-    ti::cpu_times times = timer.elapsed();
-    std::cout << "Time required: " << 1e-9 * times.wall << std::endl;
-
-    /* write results */
-    try {
-	writer->write("test.mat", results, device, scenario);
-    } catch (std::exception& e) {
-	std::cout << "Error: Could not write results."
-		  << std::endl << e.what() << std::endl;
-    }
-
-     /* cleanup */
-    BOOST_FOREACH(mbsolve::Result *result, results) {
-	delete result;
-    }
-    delete solver;
-    delete writer;
 
     exit(0);
 }

@@ -5,18 +5,16 @@
 
 namespace mbsolve {
 
-class SolverGeneric : public Solver
+class SolverGeneric : public ISolver
 {
 public:
-    SolverGeneric();
+    SolverGeneric(const Device& device, const Scenario& scenario);
 
     ~SolverGeneric();
 
-    void do_setup(const Device& device, const Scenario& scenario);
+    std::string getName() const;
 
-    void do_cleanup();
-
-    void do_run(std::vector<Result *>& results);
+    void run(const std::vector<Result *>& results) const;
 };
 
 }

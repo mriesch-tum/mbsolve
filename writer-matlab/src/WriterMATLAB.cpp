@@ -7,19 +7,20 @@ namespace mbsolve {
 
 static WriterFactory<WriterMATLAB> factory("MATLAB");
 
-void WriterMATLAB::write(const std::string& file,
-			 const std::vector<Result *>& results,
-			 const Device& device, const Scenario& scenario)
+void
+WriterMATLAB::write(const std::string& file,
+		    const std::vector<Result *>& results,
+		    const Device& device, const Scenario& scenario) const
 {
     MATFile *pmat;
 
     pmat = matOpen(file.c_str(), "w");
     if (pmat == NULL) {
-	throw std::exception();
+	throw std::invalid_argument("File \"" + file + "\" not found");
     }
 
     mxArray *t = mxCreateDoubleScalar(scenario.SimEndTime);
-    matPutVariable(pmat, "t_e", t);
+    matPutVariable(pmat, "SimEndTime", t);
     mxDestroyArray(t);
 
     BOOST_FOREACH(mbsolve::Result *result, results) {
@@ -35,6 +36,12 @@ void WriterMATLAB::write(const std::string& file,
     }
 
     matClose(pmat);
+}
+
+std::string
+WriterMATLAB::getExtension() const
+{
+    return std::string("mat");
 }
 
 }

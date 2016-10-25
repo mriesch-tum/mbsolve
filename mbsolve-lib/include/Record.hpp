@@ -2,38 +2,37 @@
 #define RECORD_H
 
 #include <string>
+#include <Quantity.hpp>
 
 namespace mbsolve {
 
+enum RecordType { HField, EField, Density };
+
 class Record
 {
+private:
 public:
-    /* what */
-    /* string enum?? */
-    /* check content where? */
-    std::string name;
+    Record(const std::string& name,
+	   const RecordType& type,
+	   unsigned int i,
+	   unsigned int j,
+	   const Quantity& interval = 0.0,
+	   const Quantity& position = -1.0) :
+	Name(name), Type(type), I(i), J(j),
+	Position(position), Interval(interval) { }
 
-    /* TODO where */
-    /* spatial: Quantity x sample */
-    /* TODO when */
-    /* temporal: Quantity dt inverval */
-    /* or certain times */
+    std::string Name;
 
+    unsigned int I, J;
 
-    virtual bool record(unsigned int index) const = 0;
+    RecordType Type;
 
+    Quantity Position;
 
-    /* virtual delgate function*/
-    /* function(real *dst, real * src, unsigned int size) */
-    /* save() { call function( } */
-
-    /* then: test_and_save() { if (record) save() } */
-
-
-    /* TODO: make Result 2D? */
-    /* TODO: Result assignment operator???? */
-    /* TODO: use library for matrices? */
+    Quantity Interval;
 };
+
+/* virtual bool record(unsigned int index) const = 0;*/
 
 /*
   RecordWrtTime

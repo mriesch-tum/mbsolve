@@ -95,9 +95,7 @@ __global__ void makestep_e(const DensityMatrix& dm, const real *gh, real *ge)
     __syncthreads();
 
     real j = ge[gidx] * gsc[region].sigma;
-    real p_t = 0.0; /* TODO: ? */
-
-    real p_t = gsc[region].C_P * gsc[region].d12 * dm.OldDM(2)[gidx];
+    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.OldDM(2)[gidx];
 
     ge[gidx] += gsc[region].M_CE *
 	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
@@ -179,16 +177,9 @@ DensityMatrix::initialize(unsigned int numGridPoints)
 }
 
 /* host members */
-SolverCUDA2lvl::SolverCUDA2lvl() : Solver("CUDA 2-Level Solver")
-{
-}
-
-SolverCUDA2lvl::~SolverCUDA2lvl()
-{
-}
-
-/* TODO: RAII with CUDA pointers/memory? */
-void SolverCUDA2lvl::do_setup(const Device& device, Scenario& scenario)
+SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
+			       const Scenario& scenario) :
+    ISolver(device, scenario), comp_maxwell(0), comp_density(0), copy(0)
 {
     /* total device length */
     Quantity length = device.XDim();
@@ -199,10 +190,12 @@ void SolverCUDA2lvl::do_setup(const Device& device, Scenario& scenario)
     /* determine grid point and time step size */
     real C = 0.9; /* courant number */
     real velocity = sqrt(MU0() * EPS0() * minRelPermittivity());
-    scenario.GridPointSize = length()/(scenario.NumGridPoints - 1);
-    real timestep  = C * scenario.GridPointSize * velocity;
-    scenario.NumTimeSteps = ceil(scenario.SimEndTime/timestep) + 1;
-    scenario.TimeStepSize = scenario.SimEndTime/(scenario.NumTimeSteps - 1);
+    m_scenario.GridPointSize = length()/(m_scenario.NumGridPoints - 1);
+    real timestep  = C * m_scenario.GridPointSize * velocity;
+    m_scenario.NumTimeSteps = ceil(m_scenario.SimEndTime/timestep) + 1;
+    m_scenario.TimeStepSize = m_scenario.SimEndTime /
+	(m_scenario.NumTimeSteps - 1);
+
 
     /* determine border indices and initialize region settings */
     if (device.Regions.size() > MaxRegions) {
@@ -215,28 +208,29 @@ void SolverCUDA2lvl::do_setup(const Device& device, Scenario& scenario)
     for (it = device.Regions.begin(), i = 0; it != device.Regions.end();
 	 it++, i++) {
 	if (i > 0) {
-	    sc[i - 1].idx_end = round(it->X0()/scenario.GridPointSize) - 1;
+	    sc[i - 1].idx_end = round(it->X0()/m_scenario.GridPointSize) - 1;
 	}
-	sc[i].idx_start = round(it->X0()/scenario.GridPointSize);
-	sc[i].M_CE = scenario.TimeStepSize/(EPS0() * it->RelPermittivity());
-	sc[i].M_CH = scenario.TimeStepSize/(MU0() * scenario.GridPointSize);
+	sc[i].idx_start = round(it->X0()/m_scenario.GridPointSize);
+	sc[i].M_CE = m_scenario.TimeStepSize/(EPS0() * it->RelPermittivity());
+	sc[i].M_CH = m_scenario.TimeStepSize/(MU0() *
+					      m_scenario.GridPointSize);
 	sc[i].M_CP = -2.0 * it->DopingDensity * E0;
 	sc[i].sigma = 2.0 * sqrt(EPS0 * it->RelPermittivity/MU0) * it->Losses;
 
 	sc[i].w12 = (it->TransitionFrequencies.size() < 1) ? 0.0 :
-	    it->TransitionFrequencies[i]();
+	    it->TransitionFrequencies[0]();
 	sc[i].d12 = (it->DipoleMoments.size() < 1) ? 0.0 :
-	    it->DipoleMoments[i]();
+	    it->DipoleMoments[0]();
 	sc[i].gamma1 = (it->ScatteringRates.size() < 1) ? 0.0 :
-	    it->ScatteringRates[i]();
+	    it->ScatteringRates[0]();
 	sc[i].gamma2 = (it->DephasingRates.size() < 1) ? 0.0 :
-	    it->DephasingRates[i]();
+	    it->DephasingRates[0]();
 
-	sc[i].d_x = scenario.GridPointSize;
-	sc[i].d_t = scenario.TimeStepSize;
+	sc[i].d_x = m_scenario.GridPointSize;
+	sc[i].d_t = m_scenario.TimeStepSize;
     }
     if (i > 0) {
-	sc[i - 1].idx_end = scenario.NumGridPoints - 1;
+	sc[i - 1].idx_end = m_scenario.NumGridPoints - 1;
     }
 
     /* initialize streams */
@@ -245,9 +239,9 @@ void SolverCUDA2lvl::do_setup(const Device& device, Scenario& scenario)
     chk_err(cudaStreamCreate(&copy));
 
     /* allocate space */
-    chk_err(cudaMalloc(&e, sizeof(real) * scenario.NumGridPoints));
-    chk_err(cudaMalloc(&h, sizeof(real) * (scenario.NumGridPoints + 1)));
-    dm.initialize(scenario.NumGridPoints);
+    chk_err(cudaMalloc(&e, sizeof(real) * m_scenario.NumGridPoints));
+    chk_err(cudaMalloc(&h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
+    dm.initialize(m_scenario.NumGridPoints);
 
     /* initalize memory */
     /* TODO: kernel call */
@@ -255,23 +249,38 @@ void SolverCUDA2lvl::do_setup(const Device& device, Scenario& scenario)
     /* copy settings to CUDA constant memory */
     chk_err(cudaMemcpyToSymbol(gsc, &sc, MaxRegions *
 			       sizeof(struct sim_constants)));
+
 }
 
-void SolverCUDA2lvl::do_cleanup()
+SolverCUDA2lvl::~SolverCUDA2lvl()
 {
     /* free CUDA memory */
     cudaFree(h);
     cudaFree(e);
 
     /* clean up streams */
-    cudaStreamDestroy(comp_maxwell);
-    cudaStreamDestroy(comp_density);
-    cudaStreamDestroy(copy);
+    if (comp_maxwell) {
+	cudaStreamDestroy(comp_maxwell);
+    }
+    if (comp_density) {
+	cudaStreamDestroy(comp_density);
+    }
+    if (copy) {
+	cudaStreamDestroy(copy);
+    }
 
+    /* reset device */
     cudaDeviceReset();
 }
 
-void SolverCUDA2lvl::do_run(std::vector<Result *>& results)
+std::string
+SolverCUDA2lvl::getName() const
+{
+    return std::string("CUDA two-level solver");
+}
+
+void
+SolverCUDA2lvl::run(const std::vector<Result *>& results) const
 {
 
 

@@ -10,44 +10,59 @@
 
 namespace mbsolve {
 
+class ISolver
+{
+protected:
+    Scenario m_scenario;
+    Device m_device;
+public:
+    ISolver(const Device& device, const Scenario& scenario) :
+	m_device(device), m_scenario(scenario) { }
+
+    virtual ~ISolver() { }
+
+    const Scenario& getScenario() const { return m_scenario; }
+
+    const Device& getDevice() const { return m_device; }
+
+    virtual std::string getName() const = 0;
+
+    virtual void run(const std::vector<Result *>& results) const = 0;
+};
+
 class ISolverFactory;
 
 class Solver
 {
 private:
-    bool m_initialized;
-    static std::map<std::string, ISolverFactory *> m_solvers;
+    static std::map<std::string, ISolverFactory *> m_factories;
+    ISolver *m_solver;
 
-protected:
-    std::string m_name;
-
-    virtual void do_setup(const Device& device, Scenario& scenario) { }
-
-    virtual void do_run(std::vector<Result *>& results) { }
-
-    virtual void do_cleanup() { }
+    std::vector<Result *> m_results;
 
 public:
-    explicit Solver(std::string name);
+    Solver(const std::string& name, const Device& device,
+	   const Scenario& scenario);
 
     ~Solver();
 
-    const std::string& name();
+    std::string getName() const;
 
-    void setup(const Device& device, Scenario& scenario);
+    void run();
 
-    void run(std::vector<Result *>& results);
+    const std::vector<Result *>& getResults() const;
 
-    static void register_new(const std::string& name, ISolverFactory *factory);
-
-    static Solver *create(const std::string& name);
-
+    static void registerFactory(const std::string& name,
+				ISolverFactory *factory);
 };
 
 class ISolverFactory
 {
 public:
-    virtual Solver* create() = 0;
+    ISolverFactory() { }
+    virtual ~ISolverFactory() { }
+    virtual ISolver* createInstance(const Device& device,
+				    const Scenario& scenario) const = 0;
 };
 
 template<typename T>
@@ -55,10 +70,14 @@ class SolverFactory : ISolverFactory
 {
 public:
     explicit SolverFactory(const std::string& name) {
-	Solver::register_new(name, this);
+	Solver::registerFactory(name, this);
     }
 
-    Solver* create() { return new T; }
+    ISolver* createInstance(const Device& device,
+			    const Scenario& scenario) const {
+	return new T(device, scenario);
+    }
+
 };
 
 }

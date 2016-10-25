@@ -55,18 +55,16 @@ private:
 };
 
 
-class SolverCUDA2lvl : public Solver
+class SolverCUDA2lvl : public ISolver
 {
 public:
-    SolverCUDA2lvl();
+    SolverCUDA2lvl(const Device& device, const Scenario& scenario);
 
     ~SolverCUDA2lvl();
 
-    void do_setup(const Device& device, Scenario& scenario);
+    std::string getName() const;
 
-    void do_cleanup();
-
-    void do_run(std::vector<Result *>& results);
+    void run(const std::vector<Result *>& results) const;
 
 private:
     cudaStream_t comp_maxwell;

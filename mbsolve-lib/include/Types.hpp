@@ -13,6 +13,12 @@ namespace mbsolve {
 //typedef std::complex<double> complex;
 typedef double real;
 
+
+    /* TODO: make Result 2D? */
+    /* TODO: Result assignment operator???? */
+    /* TODO: use library for matrices? */
+
+
 class Result
 {
 private:
