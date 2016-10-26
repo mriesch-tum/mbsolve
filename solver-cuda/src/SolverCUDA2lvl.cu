@@ -1,3 +1,4 @@
+#include <boost/foreach.hpp>
 #include <cuda.h>
 #include <curand.h>
 #include <curand_kernel.h>
@@ -203,31 +204,30 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     }
     struct sim_constants sc[MaxRegions];
 
-    std::vector<Region>::const_iterator it;
     unsigned int i;
-    for (it = device.Regions.begin(), i = 0; it != device.Regions.end();
-	 it++, i++) {
+    BOOST_FOREACH(Region reg, device.Regions) {
 	if (i > 0) {
-	    sc[i - 1].idx_end = round(it->X0()/m_scenario.GridPointSize) - 1;
+	    sc[i - 1].idx_end = round(reg.X0()/m_scenario.GridPointSize) - 1;
 	}
-	sc[i].idx_start = round(it->X0()/m_scenario.GridPointSize);
-	sc[i].M_CE = m_scenario.TimeStepSize/(EPS0() * it->RelPermittivity());
+	sc[i].idx_start = round(reg.X0()/m_scenario.GridPointSize);
+	sc[i].M_CE = m_scenario.TimeStepSize/(EPS0() * reg.RelPermittivity());
 	sc[i].M_CH = m_scenario.TimeStepSize/(MU0() *
 					      m_scenario.GridPointSize);
-	sc[i].M_CP = -2.0 * it->DopingDensity * E0;
-	sc[i].sigma = 2.0 * sqrt(EPS0 * it->RelPermittivity/MU0) * it->Losses;
+	sc[i].M_CP = -2.0 * reg.DopingDensity * E0;
+	sc[i].sigma = 2.0 * sqrt(EPS0 * reg.RelPermittivity/MU0) * reg.Losses;
 
-	sc[i].w12 = (it->TransitionFrequencies.size() < 1) ? 0.0 :
-	    it->TransitionFrequencies[0]();
-	sc[i].d12 = (it->DipoleMoments.size() < 1) ? 0.0 :
-	    it->DipoleMoments[0]();
-	sc[i].gamma1 = (it->ScatteringRates.size() < 1) ? 0.0 :
-	    it->ScatteringRates[0]();
-	sc[i].gamma2 = (it->DephasingRates.size() < 1) ? 0.0 :
-	    it->DephasingRates[0]();
+	sc[i].w12 = (reg.TransitionFrequencies.size() < 1) ? 0.0 :
+	    reg.TransitionFrequencies[0]();
+	sc[i].d12 = (reg.DipoleMoments.size() < 1) ? 0.0 :
+	    reg.DipoleMoments[0]();
+	sc[i].gamma1 = (reg.ScatteringRates.size() < 1) ? 0.0 :
+	    reg.ScatteringRates[0]();
+	sc[i].gamma2 = (reg.DephasingRates.size() < 1) ? 0.0 :
+	    reg.DephasingRates[0]();
 
 	sc[i].d_x = m_scenario.GridPointSize;
 	sc[i].d_t = m_scenario.TimeStepSize;
+	i++;
     }
     if (i > 0) {
 	sc[i - 1].idx_end = m_scenario.NumGridPoints - 1;
@@ -250,6 +250,56 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     chk_err(cudaMemcpyToSymbol(gsc, &sc, MaxRegions *
 			       sizeof(struct sim_constants)));
 
+    /* set up results transfer data structures */
+    BOOST_FOREACH(Record rec, m_scenario.Records) {
+	unsigned int interval = ceil(rec.Interval()/m_scenario.TimeStepSize);
+	unsigned int row_ct = m_scenario.NumTimeSteps/interval;
+	unsigned int position_idx;
+	unsigned int col_ct;
+
+	if (rec.Position() < 0.0) {
+	    /* copy complete grid */
+	    position_idx = 0;
+	    col_ct = m_scenario.NumGridPoints;
+	} else {
+	    position_idx = round(rec.Position()/m_scenario.GridPointSize);
+	    col_ct = 1;
+	}
+
+	/* allocate result memory */
+	Result *res = new Result(rec.Name, col_ct, row_ct);
+	m_results.push_back(res);
+
+	/* create copy list entry */
+	/* switch rec.Type */ /* enum RecordType { HField, EField, Density };*/
+	/* check rec.I, rec.J */
+	real *src;
+	if (rec.Type == EField) {
+	    src = e;
+	} else if (rec.Type == HField) {
+	    src = h;
+	} else if (rec.Type == Density) {
+	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
+		src = 0;
+	    }
+	}
+	if (!src) {
+	    // throw exc
+	}
+
+	/* if complex */
+	/* create two list entries */
+	/* create two Results, or one complex Result */
+
+	CopyListEntry entry(src, res, col_ct * row_ct, interval);
+
+	/* insert entry in correct list */
+	if (rec.Type == EField) {
+	    m_copyListRed.push_back(entry);
+	} else {
+	    m_copyListBlack.push_back(entry);
+	}
+    }
 }
 
 SolverCUDA2lvl::~SolverCUDA2lvl()
@@ -291,19 +341,41 @@ SolverCUDA2lvl::run(const std::vector<Result *>& results) const
     dim3 block(blocks);
     dim3 thread(threads);
 
-    /* for i = 2:N_t */
-    /* makestep_h in maxwell stream */
-    /* makestep_dm in density stream */
-    /* gather e field in copy stream */
-    /* call toggle */
-    /* sync */
-    /* calculate source value -> makestep_e kernel */
-    /* gather h field and dm entries in copy stream */
-    /* makestep_e */
-    /* sync */
+    /* main loop */
+    for (unsigned int i = 1; i < m_scenario.NumTimeSteps; i++) {
+	/* makestep_h in maxwell stream */
+	/* makestep_dm in density stream */
+	/* gather e field in copy stream */
+	BOOST_FOREACH(CopyListEntry entry, m_copyListRed) {
+	    if (entry.record(i)) {
+		cudaMemcpyAsync(entry.getDst(i), entry.getSrc(),
+				entry.getSize(), cudaMemcpyDeviceToHost, copy);
+	    }
+	}
 
-    /* end for */
-    makestep_h<<<block, thread, sizeof(real) * (threads + 1)>>>(e, h);
+
+
+	/* sync */
+
+	/* call toggle */
+
+	/* calculate source value -> makestep_e kernel */
+
+	/* gather h field and dm entries in copy stream */
+	BOOST_FOREACH(CopyListEntry entry, m_copyListBlack) {
+	    if (entry.record(i)) {
+		cudaMemcpyAsync(entry.getDst(i), entry.getSrc(),
+				entry.getSize(), cudaMemcpyDeviceToHost, copy);
+	    }
+	}
+
+
+	/* makestep_e */
+	/* sync */
+
+    }
+
+    //    makestep_h<<<block, thread, sizeof(real) * (threads + 1)>>>(e, h);
 
 }
 
