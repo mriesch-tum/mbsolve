@@ -5,7 +5,9 @@
 
 namespace mbsolve {
 
-static const unsigned int NumEntries = 4;
+/* TODO: leave static members here? */
+/* TODO: namespace separation? */
+static const unsigned int NumLevels = 2;
 static const unsigned int NumMultistep = 5;
 static const unsigned int MaxRegions = 8;
 
@@ -18,8 +20,8 @@ struct sim_constants
 
     real w12;
     real d12;
-    real gamma1;
-    real gamma2;
+    real tau1;
+    real gamma12;
 
     unsigned int idx_start;
     unsigned int idx_end;
@@ -40,16 +42,19 @@ public:
 
     void next();
 
-    __host__ __device__ __inline__ real *OldDM(unsigned int entry) const;
+    __host__ __device__ __inline__ real *OldDM(unsigned int row,
+					       unsigned int col) const;
 
-    __host__ __device__ __inline__ real *NewDM(unsigned int entry) const;
+    __host__ __device__ __inline__ real *NewDM(unsigned int row,
+					       unsigned int col) const;
 
-    __device__ __inline__ real *RHS(unsigned int entry, unsigned int row) const;
+    __device__ __inline__ real *RHS(unsigned int row, unsigned int col,
+				    unsigned int rhsIdx) const;
 
 private:
-    real *dm_a[NumEntries];
-    real *dm_b[NumEntries];
-    real *rhs[NumEntries][NumMultistep];
+    real *dm_a[NumLevels][NumLevels];
+    real *dm_b[NumLevels][NumLevels];
+    real *rhs[NumLevels][NumLevels][NumMultistep];
 
     bool a_is_old;
     unsigned int head;
@@ -58,7 +63,15 @@ private:
 
 /* functor classes */
 
-class GetSrcField
+class ISrcFunctor
+{
+public:
+    ISrcFunctor() { }
+    virtual ~ISrcFunctor() { }
+    virtual real *operator()() const = 0;
+};
+
+class GetSrcField : public ISrcFunctor
 {
 private:
     real *m_address;
@@ -68,7 +81,7 @@ public:
 	m_address(address)
     { }
 
-    real *operator()()
+    real *operator()() const
     {
 	return m_address;
     }
@@ -77,21 +90,22 @@ public:
 
 /* TODO: complex results support ? */
 
-class GetSrcDensity
+class GetSrcDensity : public ISrcFunctor
 {
 private:
     DensityMatrix *m_dm;
     unsigned int m_row;
+    unsigned int m_col;
 
 public:
-    GetSrcDensity(DensityMatrix *dm, unsigned int row) :
-	m_dm(dm), m_row(row)
+    GetSrcDensity(DensityMatrix *dm, unsigned int row, unsigned int col) :
+	m_dm(dm), m_row(row), m_col(col)
     {
     }
 
-    real *operator()()
+    real *operator()() const
     {
-	return m_dm->OldDM(m_row);
+	return m_dm->OldDM(m_row, m_col);
     }
 
 };
@@ -104,25 +118,31 @@ public:
 class CopyListEntry
 {
 private:
-    real *m_src;
+    ISrcFunctor* m_srcFunctor;
     Result *m_res;
     unsigned int m_size;
     unsigned int m_interval;
+    unsigned int m_position;
 
     /* TODO: base address + offset (position */
 
 public:
-    CopyListEntry(real *src, Result *result, unsigned int count,
-		  unsigned int interval) :
-	m_src(src), m_res(result), m_size(sizeof(real) * count),
-	m_interval(interval)
+    CopyListEntry(ISrcFunctor* srcFunctor, Result *result, unsigned int count,
+		  unsigned int position, unsigned int interval) :
+	m_srcFunctor(srcFunctor), m_res(result), m_size(sizeof(real) * count),
+	m_position(position), m_interval(interval)
     {
     }
 
-    real *getSrc() const { return m_src; }
+    ~CopyListEntry()
+    {
+	delete m_srcFunctor;
+    }
+
+    real *getSrc() const { return (*m_srcFunctor)() + m_position; }
 
     real *getDst(unsigned int idx) const {
-	return m_res->data(idx / m_interval);
+	return m_res->data(idx/m_interval);
     }
 
     unsigned int getSize() const { return m_size; }

@@ -31,26 +31,42 @@ __device__ __inline__ unsigned int get_region(unsigned int idx)
 
 __global__ void init_memory(const DensityMatrix& dm, real *e, real *h)
 {
-    int idx = blockDim.x * blockIdx.x + threadIdx.x;
-    int type = blockIdx.y;
-    int max = blockDim.x * gridDim.x - 1;
+    unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
+    unsigned int max = blockDim.x * gridDim.x - 1;
 
     /* TODO: alternative initializations */
+    curandState_t rand_state;
 
-    if (type < NumEntries) {
-	dm.OldDM(type)[idx] = 0.0;
-	for (int i = 0; i < NumMultistep; i++) {
-	    dm.RHS(type, i)[idx] = 0.0;
+    /* initialize random number generator */
+    curand_init(clock64(), gidx, 0, &rand_state);
+
+    if (gidx == max - 1) {
+	h[max] = 0.0;
+    }
+    h[gidx] = 0.0;
+    e[gidx] = curand_uniform(&rand_state) * 1e-15;
+
+    real populations[NumLevels];
+    real trace = 0.0;
+
+    for (unsigned int i = 0; i < NumLevels; i++) {
+	populations[i] = curand_uniform(&rand_state);
+	trace += populations[i];
+    }
+
+    for (unsigned int row = 0; row < NumLevels; row++) {
+	for (unsigned int col = 0; col < NumLevels; col++) {
+	    if (row == col) {
+		if (row == NumLevels - 1) {
+		    dm.OldDM(row, col)[gidx] = populations[row]/trace;
+		} else {
+		    dm.OldDM(row, col)[gidx] = 0.0;
+		}
+		for (int i = 0; i < NumMultistep; i++) {
+		    dm.RHS(row, col, i)[gidx] = 0.0;
+		}
+	    }
 	}
-    } else if (type == NumEntries) {
-	e[idx] = 0.0;
-    } else if (type == NumEntries + 1) {
-	if (idx == max - 1) {
-	    h[max] = 0.0;
-	}
-	h[idx] = 0.0;
-    } else {
-	// handle error
     }
 }
 
@@ -96,7 +112,7 @@ __global__ void makestep_e(const DensityMatrix& dm, const real *gh, real *ge)
     __syncthreads();
 
     real j = ge[gidx] * gsc[region].sigma;
-    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.OldDM(2)[gidx];
+    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.OldDM(0, 1)[gidx];
 
     ge[gidx] += gsc[region].M_CE *
 	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
@@ -107,21 +123,38 @@ __global__ void makestep_dm(const DensityMatrix& dm, const real *ge)
     //    int idx = threadIdx.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     int region = get_region(gidx);
-    int type = blockIdx.y;
+    int row = blockIdx.y;
+    int col = blockIdx.z;
 
     real rhs = 0.0;
 
-    /* if blah
-       depending on dm entry
-     */
+    if ((row == 0) && (col == 0)) {
+	/* dm11 */
+	rhs = - dm.OldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
+	    - dm.OldDM(0, 0)[gidx] * gsc[region].tau1;
+    } else if ((row == 0) && (col == 1)) {
+	/* imag dm12 */
+	rhs = dm.OldDM(1, 0)[gidx] * gsc[region].w12
+	    - dm.OldDM(0, 1)[gidx] * gsc[region].gamma12;
+    } else if ((row == 1) && (col == 0)) {
+	/* real dm12 */
+	rhs = - dm.OldDM(0, 1)[gidx] * gsc[region].w12
+	    - dm.OldDM(1, 0)[gidx] * gsc[region].gamma12;
+    } else if ((row == 1) && (col == 1)) {
+	/* dm22 */
+	rhs = dm.OldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
+	    + dm.OldDM(0, 0)[gidx] * gsc[region].tau1;
+    } else {
+	/* do nothing */
+    }
 
-    dm.RHS(type, 0)[gidx] = rhs;
-    dm.NewDM(type)[gidx] = dm.OldDM(type)[gidx] + gsc[region].d_t *
-	(+ dm.RHS(type, 0)[gidx] * 1901.0/720.0
-	 - dm.RHS(type, 1)[gidx] * 1387.0/360.0
-	 + dm.RHS(type, 2)[gidx] * 109.0/30.0
-	 - dm.RHS(type, 3)[gidx] * 637.0/360.0
-	 + dm.RHS(type, 4)[gidx] * 251.0/720.0);
+    dm.RHS(row, col, 0)[gidx] = rhs;
+    dm.NewDM(row, col)[gidx] = dm.OldDM(row, col)[gidx] + gsc[region].d_t *
+	(+ dm.RHS(row, col, 0)[gidx] * 1901.0/720.0
+	 - dm.RHS(row, col, 1)[gidx] * 1387.0/360.0
+	 + dm.RHS(row, col, 2)[gidx] * 109.0/30.0
+	 - dm.RHS(row, col, 3)[gidx] * 637.0/360.0
+	 + dm.RHS(row, col, 4)[gidx] * 251.0/720.0);
 }
 
 
@@ -131,31 +164,34 @@ DensityMatrix::DensityMatrix() : a_is_old(true), head(0)
 
 DensityMatrix::~DensityMatrix()
 {
-    for (unsigned int i = 0; i < NumEntries; i++) {
-	cudaFree(dm_a[i]);
-	cudaFree(dm_b[i]);
-	for (unsigned int j = 0; j < NumMultistep; j++) {
-	    cudaFree(rhs[i][j]);
+    for (unsigned int i = 0; i < NumLevels; i++) {
+	for (unsigned int j = 0; j < NumLevels; j++) {
+	    cudaFree(dm_a[i][j]);
+	    cudaFree(dm_b[i][j]);
+	    for (unsigned int k = 0; k < NumMultistep; k++) {
+		cudaFree(rhs[i][j][k]);
+	    }
 	}
     }
 }
 
 __device__ __inline__ real *
-DensityMatrix::OldDM(unsigned int entry) const
+DensityMatrix::OldDM(unsigned int row, unsigned int col) const
 {
-    return a_is_old ? dm_a[entry] : dm_b[entry];
+    return a_is_old ? dm_a[row][col] : dm_b[row][col];
 }
 
 __device__ __inline__ real *
-DensityMatrix::NewDM(unsigned int entry) const
+DensityMatrix::NewDM(unsigned int row, unsigned int col) const
 {
-    return a_is_old ? dm_b[entry] : dm_a[entry];
+    return a_is_old ? dm_b[row][col] : dm_a[row][col];
 }
 
 __device__ __inline__ real *
-DensityMatrix::RHS(unsigned int entry, unsigned int row) const
+DensityMatrix::RHS(unsigned int row, unsigned int col,
+		   unsigned int rhsIdx) const
 {
-    return rhs[entry][(row + head) % NumMultistep];
+    return rhs[row][col][(rhsIdx + head) % NumMultistep];
 }
 
 void
@@ -168,11 +204,14 @@ DensityMatrix::next()
 void
 DensityMatrix::initialize(unsigned int numGridPoints)
 {
-    for (unsigned int i = 0; i < NumEntries; i++) {
-	chk_err(cudaMalloc(&dm_a[i], sizeof(real) * numGridPoints));
-	chk_err(cudaMalloc(&dm_b[i], sizeof(real) * numGridPoints));
-	for (unsigned int j = 0; j < NumMultistep; j++) {
-	    chk_err(cudaMalloc(&rhs[i][j], sizeof(real) * numGridPoints));
+    for (unsigned int i = 0; i < NumLevels; i++) {
+	for (unsigned int j = 0; j < NumLevels; j++) {
+	    chk_err(cudaMalloc(&dm_a[i][j], sizeof(real) * numGridPoints));
+	    chk_err(cudaMalloc(&dm_b[i][j], sizeof(real) * numGridPoints));
+	    for (unsigned int k = 0; k < NumMultistep; k++) {
+		chk_err(cudaMalloc(&rhs[i][j][k],
+				   sizeof(real) * numGridPoints));
+	    }
 	}
     }
 }
@@ -187,6 +226,12 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 
     /* minimum relative permittivity */
     Quantity minRelPermittivity = device.MinRelPermittivity();
+
+    /* TODO: sanity check scenario? */
+    if (m_scenario.NumGridPoints % 32 != 0) {
+	throw std::invalid_argument("Number of grid points must be multiple"
+				    " of 32");
+    }
 
     /* determine grid point and time step size */
     real C = 0.9; /* courant number */
@@ -218,11 +263,12 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 
 	sc[i].w12 = (reg.TransitionFrequencies.size() < 1) ? 0.0 :
 	    reg.TransitionFrequencies[0]();
+	/* TODO rename to rabi freqs or something */
 	sc[i].d12 = (reg.DipoleMoments.size() < 1) ? 0.0 :
-	    reg.DipoleMoments[0]();
-	sc[i].gamma1 = (reg.ScatteringRates.size() < 1) ? 0.0 :
+	    reg.DipoleMoments[0]() * E0()/HBAR();
+	sc[i].tau1 = (reg.ScatteringRates.size() < 1) ? 0.0 :
 	    reg.ScatteringRates[0]();
-	sc[i].gamma2 = (reg.DephasingRates.size() < 1) ? 0.0 :
+	sc[i].gamma12 = (reg.DephasingRates.size() < 1) ? 0.0 :
 	    reg.DephasingRates[0]();
 
 	sc[i].d_x = m_scenario.GridPointSize;
@@ -270,20 +316,28 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	Result *res = new Result(rec.Name, col_ct, row_ct);
 	m_results.push_back(res);
 
+	ISrcFunctor *srcFunctor;
 	/* create copy list entry */
-	/* switch rec.Type */ /* enum RecordType { HField, EField, Density };*/
-	/* check rec.I, rec.J */
-	real *src;
 	if (rec.Type == EField) {
-	    src = e;
+	    srcFunctor = new GetSrcField(e);
 	} else if (rec.Type == HField) {
-	    src = h;
+	    srcFunctor = new GetSrcField(h);
 	} else if (rec.Type == Density) {
 	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
-		src = 0;
+		if (rec.I == rec.J) {
+		    /* main diagonal entry */
+		    srcFunctor = new GetSrcDensity(&dm, rec.I, rec.J);
+		} else {
+		    /* off-diagonal entry */
+		    /* TODO */
+
+		    /* real part: GetSrcDensity(&dm, rec.I, rec.J); */
+		    /* imag part: GetSrcDensity(&dm, rec.J, rec.I); */
+		}
+	    } else {
+	    // throw exc
 	    }
-	}
-	if (!src) {
+	} else {
 	    // throw exc
 	}
 
@@ -291,7 +345,8 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	/* create two list entries */
 	/* create two Results, or one complex Result */
 
-	CopyListEntry entry(src, res, col_ct * row_ct, interval);
+	CopyListEntry entry(srcFunctor, res, col_ct * row_ct, position_idx,
+			    interval);
 
 	/* insert entry in correct list */
 	if (rec.Type == EField) {
@@ -332,10 +387,8 @@ SolverCUDA2lvl::getName() const
 void
 SolverCUDA2lvl::run(const std::vector<Result *>& results) const
 {
-
-
-    int threads = 1024;
-    int blocks = 10; // NumGridPoint / threads
+    unsigned int threads = 128;
+    unsigned int blocks = 10; // NumGridPoint / threads
     /* TODO handle roundoff errors */
 
     dim3 block(blocks);

@@ -28,6 +28,7 @@ public:
     /* TODO: add sources vector */
     //std::vector<ISource *> Sources;
 
+    /* TODO: change real to Quantity */
 
 };
 
