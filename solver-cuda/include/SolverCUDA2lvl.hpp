@@ -60,56 +60,7 @@ private:
     unsigned int head;
 };
 
-
-/* functor classes */
-
-class ISrcFunctor
-{
-public:
-    ISrcFunctor() { }
-    virtual ~ISrcFunctor() { }
-    virtual real *operator()() const = 0;
-};
-
-class GetSrcField : public ISrcFunctor
-{
-private:
-    real *m_address;
-
-public:
-    GetSrcField(real *address) :
-	m_address(address)
-    { }
-
-    real *operator()() const
-    {
-	return m_address;
-    }
-
-};
-
 /* TODO: complex results support ? */
-
-class GetSrcDensity : public ISrcFunctor
-{
-private:
-    DensityMatrix *m_dm;
-    unsigned int m_row;
-    unsigned int m_col;
-
-public:
-    GetSrcDensity(DensityMatrix *dm, unsigned int row, unsigned int col) :
-	m_dm(dm), m_row(row), m_col(col)
-    {
-    }
-
-    real *operator()() const
-    {
-	return m_dm->OldDM(m_row, m_col);
-    }
-
-};
-
 /* TODO: CopyListEntry base class */
 /* subclasses for fields and dm? */
 /* specialize functions getDst, getSrc? */
@@ -117,29 +68,25 @@ public:
 
 class CopyListEntry
 {
-private:
-    ISrcFunctor* m_srcFunctor;
+protected:
     Result *m_res;
     unsigned int m_size;
     unsigned int m_interval;
     unsigned int m_position;
 
-    /* TODO: base address + offset (position */
-
 public:
-    CopyListEntry(ISrcFunctor* srcFunctor, Result *result, unsigned int count,
+    CopyListEntry(Result *result, unsigned int count,
 		  unsigned int position, unsigned int interval) :
-	m_srcFunctor(srcFunctor), m_res(result), m_size(sizeof(real) * count),
+	m_res(result), m_size(sizeof(real) * count),
 	m_position(position), m_interval(interval)
     {
     }
 
     ~CopyListEntry()
     {
-	delete m_srcFunctor;
     }
 
-    real *getSrc() const { return (*m_srcFunctor)() + m_position; }
+    virtual real *getSrc() const = 0;
 
     real *getDst(unsigned int idx) const {
 	return m_res->data(idx/m_interval);
@@ -150,6 +97,44 @@ public:
     bool record(unsigned int idx) const { return (idx % m_interval) == 0; }
 };
 
+class CLEField : public CopyListEntry
+{
+private:
+    real *m_address;
+public:
+    CLEField(real *address, Result *result, unsigned int count,
+	     unsigned int position, unsigned int interval) :
+	CopyListEntry(result, count, position, interval), m_address(address)
+    {
+    }
+
+    real *getSrc() const
+    {
+	return m_address + m_position;
+    }
+};
+
+class CLEDensity : public CopyListEntry
+{
+private:
+    DensityMatrix *m_dm;
+    unsigned int m_row;
+    unsigned int m_col;
+
+public:
+    CLEDensity(DensityMatrix *dm, unsigned int row, unsigned int col,
+	     Result *result, unsigned int count,
+	     unsigned int position, unsigned int interval) :
+	CopyListEntry(result, count, position, interval), m_dm(dm), m_row(row),
+	m_col(col)
+    {
+    }
+
+    real *getSrc() const
+    {
+	return m_dm->OldDM(m_row, m_col) + m_position;
+    }
+};
 
 
 class SolverCUDA2lvl : public ISolver
@@ -173,8 +158,8 @@ private:
     real *h;
     real *e;
 
-    std::vector<CopyListEntry> m_copyListBlack;
-    std::vector<CopyListEntry> m_copyListRed;
+    std::vector<CopyListEntry *> m_copyListBlack;
+    std::vector<CopyListEntry *> m_copyListRed;
     std::vector<Result *> m_results;
 };
 

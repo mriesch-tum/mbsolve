@@ -316,20 +316,30 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	Result *res = new Result(rec.Name, col_ct, row_ct);
 	m_results.push_back(res);
 
-	ISrcFunctor *srcFunctor;
 	/* create copy list entry */
+	CopyListEntry *entry;
 	if (rec.Type == EField) {
-	    srcFunctor = new GetSrcField(e);
+	    entry = new CLEField(e, res, col_ct * row_ct, position_idx,
+				 interval);
+	    m_copyListRed.push_back(entry);
 	} else if (rec.Type == HField) {
-	    srcFunctor = new GetSrcField(h);
+	    entry = new CLEField(h, res, col_ct * row_ct, position_idx,
+				 interval);
+	    m_copyListBlack.push_back(entry);
 	} else if (rec.Type == Density) {
 	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
 		if (rec.I == rec.J) {
 		    /* main diagonal entry */
-		    srcFunctor = new GetSrcDensity(&dm, rec.I, rec.J);
+		    entry = new CLEDensity(&dm, rec.I, rec.J, res,
+					   col_ct * row_ct, position_idx,
+					   interval);
+		    m_copyListBlack.push_back(entry);
 		} else {
 		    /* off-diagonal entry */
 		    /* TODO */
+		    /* if complex */
+		    /* create two list entries */
+		    /* create two Results, or one complex Result */
 
 		    /* real part: GetSrcDensity(&dm, rec.I, rec.J); */
 		    /* imag part: GetSrcDensity(&dm, rec.J, rec.I); */
@@ -340,25 +350,24 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	} else {
 	    // throw exc
 	}
-
-	/* if complex */
-	/* create two list entries */
-	/* create two Results, or one complex Result */
-
-	CopyListEntry entry(srcFunctor, res, col_ct * row_ct, position_idx,
-			    interval);
-
-	/* insert entry in correct list */
-	if (rec.Type == EField) {
-	    m_copyListRed.push_back(entry);
-	} else {
-	    m_copyListBlack.push_back(entry);
-	}
     }
 }
 
 SolverCUDA2lvl::~SolverCUDA2lvl()
 {
+    /* delete copy lists */
+    BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
+	delete entry;
+    }
+    BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
+	delete entry;
+    }
+
+    /* delete results */
+    BOOST_FOREACH(Result *result, m_results) {
+	delete result;
+    }
+
     /* free CUDA memory */
     cudaFree(h);
     cudaFree(e);
@@ -389,7 +398,7 @@ SolverCUDA2lvl::run(const std::vector<Result *>& results) const
 {
     unsigned int threads = 128;
     unsigned int blocks = 10; // NumGridPoint / threads
-    /* TODO handle roundoff errors */
+    /* TODO handle roundoff errors in thread/block partition */
 
     dim3 block(blocks);
     dim3 thread(threads);
@@ -399,13 +408,13 @@ SolverCUDA2lvl::run(const std::vector<Result *>& results) const
 	/* makestep_h in maxwell stream */
 	/* makestep_dm in density stream */
 	/* gather e field in copy stream */
-	BOOST_FOREACH(CopyListEntry entry, m_copyListRed) {
-	    if (entry.record(i)) {
-		cudaMemcpyAsync(entry.getDst(i), entry.getSrc(),
-				entry.getSize(), cudaMemcpyDeviceToHost, copy);
+	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
+	    if (entry->record(i)) {
+		cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
+				entry->getSize(), cudaMemcpyDeviceToHost,
+				copy);
 	    }
 	}
-
 
 
 	/* sync */
@@ -415,10 +424,11 @@ SolverCUDA2lvl::run(const std::vector<Result *>& results) const
 	/* calculate source value -> makestep_e kernel */
 
 	/* gather h field and dm entries in copy stream */
-	BOOST_FOREACH(CopyListEntry entry, m_copyListBlack) {
-	    if (entry.record(i)) {
-		cudaMemcpyAsync(entry.getDst(i), entry.getSrc(),
-				entry.getSize(), cudaMemcpyDeviceToHost, copy);
+	BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
+	    if (entry->record(i)) {
+		cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
+				entry->getSize(), cudaMemcpyDeviceToHost,
+				copy);
 	    }
 	}
 
