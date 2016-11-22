@@ -15,11 +15,13 @@ class ISolver
 protected:
     Scenario m_scenario;
     Device m_device;
+
+    std::vector<Result *> m_results;
 public:
     ISolver(const Device& device, const Scenario& scenario) :
 	m_device(device), m_scenario(scenario) { }
 
-    virtual ~ISolver() { }
+    virtual ~ISolver();
 
     const Scenario& getScenario() const { return m_scenario; }
 
@@ -27,7 +29,12 @@ public:
 
     virtual std::string getName() const = 0;
 
-    virtual void run(const std::vector<Result *>& results) const = 0;
+    virtual void run() const = 0;
+
+    const std::vector<Result *>& getResults() const
+    {
+	return m_results;
+    }
 };
 
 class ISolverFactory;
@@ -38,8 +45,6 @@ private:
     static std::map<std::string, ISolverFactory *> m_factories;
     ISolver *m_solver;
 
-    std::vector<Result *> m_results;
-
 public:
     Solver(const std::string& name, const Device& device,
 	   const Scenario& scenario);
@@ -48,7 +53,7 @@ public:
 
     std::string getName() const;
 
-    void run();
+    void run() const;
 
     const std::vector<Result *>& getResults() const;
 
@@ -68,8 +73,10 @@ public:
 template<typename T>
 class SolverFactory : ISolverFactory
 {
+private:
+    std::string m_name;
 public:
-    explicit SolverFactory(const std::string& name) {
+    explicit SolverFactory(const std::string& name) : m_name(name) {
 	Solver::registerFactory(name, this);
     }
 
@@ -78,6 +85,7 @@ public:
 	return new T(device, scenario);
     }
 
+    const std::string& getName() const { return m_name; }
 };
 
 }

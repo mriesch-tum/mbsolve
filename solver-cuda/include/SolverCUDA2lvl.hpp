@@ -1,16 +1,16 @@
 #ifndef SOLVERCUDA2LVL_H
 #define SOLVERCUDA2LVL_H
 
+#include <cuda.h>
 #include <Solver.hpp>
+#include <CUDADensityMatrix.hpp>
 
 namespace mbsolve {
 
-/* TODO: leave static members here? */
-/* TODO: namespace separation? */
-static const unsigned int NumLevels = 2;
-static const unsigned int NumMultistep = 5;
+/* TODO: make general? */
 static const unsigned int MaxRegions = 8;
 
+/* TODO: class with constructor(Device, Scenario) on CUDA ? */
 struct sim_constants
 {
     real M_CE;
@@ -30,35 +30,10 @@ struct sim_constants
     real d_t;
 };
 
+/* TODO: move generic helper classes for CUDA into separate file */
+/* TODO: make inline where possible */
+/* TODO: mark host or device where needed */
 
-class DensityMatrix
-{
-public:
-    DensityMatrix();
-
-    ~DensityMatrix();
-
-    void initialize(unsigned int numGridPoints);
-
-    void next();
-
-    __host__ __device__ __inline__ real *OldDM(unsigned int row,
-					       unsigned int col) const;
-
-    __host__ __device__ __inline__ real *NewDM(unsigned int row,
-					       unsigned int col) const;
-
-    __device__ __inline__ real *RHS(unsigned int row, unsigned int col,
-				    unsigned int rhsIdx) const;
-
-private:
-    real *dm_a[NumLevels][NumLevels];
-    real *dm_b[NumLevels][NumLevels];
-    real *rhs[NumLevels][NumLevels][NumMultistep];
-
-    bool a_is_old;
-    unsigned int head;
-};
 
 /* TODO: complex results support ? */
 /* TODO: CopyListEntry base class */
@@ -117,12 +92,12 @@ public:
 class CLEDensity : public CopyListEntry
 {
 private:
-    DensityMatrix *m_dm;
+    CUDADensityMatrix *m_dm;
     unsigned int m_row;
     unsigned int m_col;
 
 public:
-    CLEDensity(DensityMatrix *dm, unsigned int row, unsigned int col,
+    CLEDensity(CUDADensityMatrix *dm, unsigned int row, unsigned int col,
 	     Result *result, unsigned int count,
 	     unsigned int position, unsigned int interval) :
 	CopyListEntry(result, count, position, interval), m_dm(dm), m_row(row),
@@ -132,7 +107,7 @@ public:
 
     real *getSrc() const
     {
-	return m_dm->OldDM(m_row, m_col) + m_position;
+	return m_dm->getData().oldDM(m_row, m_col) + m_position;
     }
 };
 
@@ -146,21 +121,20 @@ public:
 
     std::string getName() const;
 
-    void run(const std::vector<Result *>& results) const;
+    void run() const;
 
 private:
     cudaStream_t comp_maxwell;
     cudaStream_t comp_density;
     cudaStream_t copy;
 
-    DensityMatrix dm;
+    CUDADensityMatrix *m_dm;
 
-    real *h;
-    real *e;
+    real *m_h;
+    real *m_e;
 
     std::vector<CopyListEntry *> m_copyListBlack;
     std::vector<CopyListEntry *> m_copyListRed;
-    std::vector<Result *> m_results;
 };
 
 }

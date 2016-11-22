@@ -1,24 +1,18 @@
 #include <boost/foreach.hpp>
-#include <cuda.h>
+
 #include <curand.h>
 #include <curand_kernel.h>
+#include <CUDACommon.hpp>
 #include <SolverCUDA2lvl.hpp>
 
 namespace mbsolve {
 
 static SolverFactory<SolverCUDA2lvl> factory("cuda-2lvl");
 
-static inline void chk_err(cudaError_t code)
-{
-    if (code != cudaSuccess) {
-	throw std::runtime_error(std::string("CUDA: ") +
-				 cudaGetErrorString(code));
-    }
-}
-
 /* CUDA memory and kernels */
 __device__ __constant__ struct sim_constants gsc[MaxRegions];
 
+/* TODO: hash function or something? */
 __device__ __inline__ unsigned int get_region(unsigned int idx)
 {
     for (unsigned int i = 0; i < MaxRegions; i++) {
@@ -29,7 +23,9 @@ __device__ __inline__ unsigned int get_region(unsigned int idx)
     return 0;
 }
 
-__global__ void init_memory(const DensityMatrix& dm, real *e, real *h)
+/* TODO: initialize may be reused by other CUDA solvers, make general */
+/* TODO: region-wise? initialization */
+__global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
 {
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     unsigned int max = blockDim.x * gridDim.x - 1;
@@ -46,27 +42,25 @@ __global__ void init_memory(const DensityMatrix& dm, real *e, real *h)
     h[gidx] = 0.0;
     e[gidx] = curand_uniform(&rand_state) * 1e-15;
 
-    real populations[NumLevels];
     real trace = 0.0;
 
-    for (unsigned int i = 0; i < NumLevels; i++) {
-	populations[i] = curand_uniform(&rand_state);
-	trace += populations[i];
-    }
-
-    for (unsigned int row = 0; row < NumLevels; row++) {
-	for (unsigned int col = 0; col < NumLevels; col++) {
+    for (unsigned int row = 0; row < dm.getNumLevels(); row++) {
+	for (unsigned int col = 0; col < dm.getNumLevels(); col++) {
 	    if (row == col) {
-		if (row == NumLevels - 1) {
-		    dm.OldDM(row, col)[gidx] = populations[row]/trace;
-		} else {
-		    dm.OldDM(row, col)[gidx] = 0.0;
-		}
-		for (int i = 0; i < NumMultistep; i++) {
-		    dm.RHS(row, col, i)[gidx] = 0.0;
-		}
+		real entry = curand_uniform(&rand_state);
+		dm.oldDM(row, col)[gidx] = entry;
+		trace += entry;
+	    } else {
+		dm.oldDM(row, col)[gidx] = 0.0;
+	    }
+	    for (int i = 0; i < dm.getNumMultistep(); i++) {
+		dm.rhs(row, col, i)[gidx] = 0.0;
 	    }
 	}
+    }
+
+    for (unsigned int i = 0; i < dm.getNumLevels(); i++) {
+	dm.oldDM(i, i)[gidx] /= trace;
     }
 }
 
@@ -79,7 +73,7 @@ __global__ void makestep_h(const real *ge, real *gh)
     extern __shared__ real e[];
 
     if ((idx == 0) && (gidx != 0)) {
-	e[0] = ge[gidx - 1];
+	e[idx] = ge[gidx - 1];
     }
     e[idx + 1] = ge[gidx];
 
@@ -96,7 +90,8 @@ __global__ void makestep_h(const real *ge, real *gh)
     }
 }
 
-__global__ void makestep_e(const DensityMatrix& dm, const real *gh, real *ge)
+__global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
+			   real *ge)
 {
     int idx = threadIdx.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -112,15 +107,14 @@ __global__ void makestep_e(const DensityMatrix& dm, const real *gh, real *ge)
     __syncthreads();
 
     real j = ge[gidx] * gsc[region].sigma;
-    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.OldDM(0, 1)[gidx];
+    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.oldDM(0, 1)[gidx];
 
     ge[gidx] += gsc[region].M_CE *
 	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
 }
 
-__global__ void makestep_dm(const DensityMatrix& dm, const real *ge)
+__global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
 {
-    //    int idx = threadIdx.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     int region = get_region(gidx);
     int row = blockIdx.y;
@@ -130,90 +124,31 @@ __global__ void makestep_dm(const DensityMatrix& dm, const real *ge)
 
     if ((row == 0) && (col == 0)) {
 	/* dm11 */
-	rhs = - dm.OldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
-	    - dm.OldDM(0, 0)[gidx] * gsc[region].tau1;
+	rhs = - dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
+	    - dm.oldDM(0, 0)[gidx] * gsc[region].tau1;
     } else if ((row == 0) && (col == 1)) {
 	/* imag dm12 */
-	rhs = dm.OldDM(1, 0)[gidx] * gsc[region].w12
-	    - dm.OldDM(0, 1)[gidx] * gsc[region].gamma12;
+	rhs = dm.oldDM(1, 0)[gidx] * gsc[region].w12
+	    - dm.oldDM(0, 1)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 0)) {
 	/* real dm12 */
-	rhs = - dm.OldDM(0, 1)[gidx] * gsc[region].w12
-	    - dm.OldDM(1, 0)[gidx] * gsc[region].gamma12;
+	rhs = - dm.oldDM(0, 1)[gidx] * gsc[region].w12
+	    - dm.oldDM(1, 0)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 1)) {
 	/* dm22 */
-	rhs = dm.OldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
-	    + dm.OldDM(0, 0)[gidx] * gsc[region].tau1;
+	rhs = dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
+	    + dm.oldDM(0, 0)[gidx] * gsc[region].tau1;
     } else {
 	/* do nothing */
     }
 
-    dm.RHS(row, col, 0)[gidx] = rhs;
-    dm.NewDM(row, col)[gidx] = dm.OldDM(row, col)[gidx] + gsc[region].d_t *
-	(+ dm.RHS(row, col, 0)[gidx] * 1901.0/720.0
-	 - dm.RHS(row, col, 1)[gidx] * 1387.0/360.0
-	 + dm.RHS(row, col, 2)[gidx] * 109.0/30.0
-	 - dm.RHS(row, col, 3)[gidx] * 637.0/360.0
-	 + dm.RHS(row, col, 4)[gidx] * 251.0/720.0);
-}
-
-
-DensityMatrix::DensityMatrix() : a_is_old(true), head(0)
-{
-}
-
-DensityMatrix::~DensityMatrix()
-{
-    for (unsigned int i = 0; i < NumLevels; i++) {
-	for (unsigned int j = 0; j < NumLevels; j++) {
-	    cudaFree(dm_a[i][j]);
-	    cudaFree(dm_b[i][j]);
-	    for (unsigned int k = 0; k < NumMultistep; k++) {
-		cudaFree(rhs[i][j][k]);
-	    }
-	}
-    }
-}
-
-__device__ __inline__ real *
-DensityMatrix::OldDM(unsigned int row, unsigned int col) const
-{
-    return a_is_old ? dm_a[row][col] : dm_b[row][col];
-}
-
-__device__ __inline__ real *
-DensityMatrix::NewDM(unsigned int row, unsigned int col) const
-{
-    return a_is_old ? dm_b[row][col] : dm_a[row][col];
-}
-
-__device__ __inline__ real *
-DensityMatrix::RHS(unsigned int row, unsigned int col,
-		   unsigned int rhsIdx) const
-{
-    return rhs[row][col][(rhsIdx + head) % NumMultistep];
-}
-
-void
-DensityMatrix::next()
-{
-    a_is_old = !a_is_old;
-    head = (head + 1) % NumMultistep;
-}
-
-void
-DensityMatrix::initialize(unsigned int numGridPoints)
-{
-    for (unsigned int i = 0; i < NumLevels; i++) {
-	for (unsigned int j = 0; j < NumLevels; j++) {
-	    chk_err(cudaMalloc(&dm_a[i][j], sizeof(real) * numGridPoints));
-	    chk_err(cudaMalloc(&dm_b[i][j], sizeof(real) * numGridPoints));
-	    for (unsigned int k = 0; k < NumMultistep; k++) {
-		chk_err(cudaMalloc(&rhs[i][j][k],
-				   sizeof(real) * numGridPoints));
-	    }
-	}
-    }
+    dm.rhs(row, col, 0)[gidx] = rhs;
+    dm.newDM(row, col)[gidx] = dm.oldDM(row, col)[gidx] + gsc[region].d_t *
+	(+ dm.rhs(row, col, 0)[gidx] * 1901.0/720.0
+	 - dm.rhs(row, col, 1)[gidx] * 1387.0/360.0
+	 + dm.rhs(row, col, 2)[gidx] * 109.0/30.0
+	 - dm.rhs(row, col, 3)[gidx] * 637.0/360.0
+	 + dm.rhs(row, col, 4)[gidx] * 251.0/720.0);
 }
 
 /* host members */
@@ -249,7 +184,7 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     }
     struct sim_constants sc[MaxRegions];
 
-    unsigned int i;
+    unsigned int i = 0;
     BOOST_FOREACH(Region reg, device.Regions) {
 	if (i > 0) {
 	    sc[i - 1].idx_end = round(reg.X0()/m_scenario.GridPointSize) - 1;
@@ -285,12 +220,15 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     chk_err(cudaStreamCreate(&copy));
 
     /* allocate space */
-    chk_err(cudaMalloc(&e, sizeof(real) * m_scenario.NumGridPoints));
-    chk_err(cudaMalloc(&h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
-    dm.initialize(m_scenario.NumGridPoints);
+    chk_err(cudaMalloc(&m_e, sizeof(real) * m_scenario.NumGridPoints));
+    chk_err(cudaMalloc(&m_h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
+    m_dm = new CUDADensityMatrix(m_scenario.NumGridPoints, 2, 5);
 
-    /* initalize memory */
-    /* TODO: kernel call */
+    /* initialize memory */
+    unsigned int threads = 128;
+    unsigned int blocks = m_scenario.NumGridPoints/threads;
+
+    init_memory<<<blocks, threads>>>(m_dm->getData(), m_e, m_h);
 
     /* copy settings to CUDA constant memory */
     chk_err(cudaMemcpyToSymbol(gsc, &sc, MaxRegions *
@@ -298,8 +236,8 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 
     /* set up results transfer data structures */
     BOOST_FOREACH(Record rec, m_scenario.Records) {
-	unsigned int interval = ceil(rec.Interval()/m_scenario.TimeStepSize);
-	unsigned int row_ct = m_scenario.NumTimeSteps/interval;
+	unsigned int row_ct = m_scenario.SimEndTime/rec.Interval;
+	unsigned int interval = ceil(1.0 * m_scenario.NumTimeSteps/row_ct);
 	unsigned int position_idx;
 	unsigned int col_ct;
 
@@ -319,19 +257,20 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	/* create copy list entry */
 	CopyListEntry *entry;
 	if (rec.Type == EField) {
-	    entry = new CLEField(e, res, col_ct * row_ct, position_idx,
+	    entry = new CLEField(m_e, res, col_ct, position_idx,
 				 interval);
 	    m_copyListRed.push_back(entry);
 	} else if (rec.Type == HField) {
-	    entry = new CLEField(h, res, col_ct * row_ct, position_idx,
+	    /* TODO: numGridPoints + 1 */
+	    entry = new CLEField(m_h, res, col_ct, position_idx,
 				 interval);
 	    m_copyListBlack.push_back(entry);
 	} else if (rec.Type == Density) {
 	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
 		if (rec.I == rec.J) {
 		    /* main diagonal entry */
-		    entry = new CLEDensity(&dm, rec.I, rec.J, res,
-					   col_ct * row_ct, position_idx,
+		    entry = new CLEDensity(m_dm, rec.I, rec.J, res,
+					   col_ct, position_idx,
 					   interval);
 		    m_copyListBlack.push_back(entry);
 		} else {
@@ -351,6 +290,9 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	    // throw exc
 	}
     }
+
+    /* sync */
+    cudaDeviceSynchronize();
 }
 
 SolverCUDA2lvl::~SolverCUDA2lvl()
@@ -364,13 +306,16 @@ SolverCUDA2lvl::~SolverCUDA2lvl()
     }
 
     /* delete results */
-    BOOST_FOREACH(Result *result, m_results) {
+    /*    BOOST_FOREACH(Result *result, m_results) {
 	delete result;
-    }
+	}*/
+
+    /* delete density matrix */
+    delete(m_dm);
 
     /* free CUDA memory */
-    cudaFree(h);
-    cudaFree(e);
+    cudaFree(m_h);
+    cudaFree(m_e);
 
     /* clean up streams */
     if (comp_maxwell) {
@@ -390,56 +335,70 @@ SolverCUDA2lvl::~SolverCUDA2lvl()
 std::string
 SolverCUDA2lvl::getName() const
 {
-    return std::string("CUDA two-level solver");
+    return factory.getName(); //std::string("CUDA two-level solver");
 }
 
 void
-SolverCUDA2lvl::run(const std::vector<Result *>& results) const
+SolverCUDA2lvl::run() const
 {
     unsigned int threads = 128;
-    unsigned int blocks = 10; // NumGridPoint / threads
+    unsigned int blocks = m_scenario.NumGridPoints/threads;
     /* TODO handle roundoff errors in thread/block partition */
 
-    dim3 block(blocks);
-    dim3 thread(threads);
+    dim3 block_maxwell(blocks);
+    dim3 block_density(blocks, 2, 2);
 
     /* main loop */
     for (unsigned int i = 1; i < m_scenario.NumTimeSteps; i++) {
-	/* makestep_h in maxwell stream */
 	/* makestep_dm in density stream */
+	makestep_dm<<<block_density, threads, 0, comp_density>>>
+	    (m_dm->getData(), m_e);
+
+	/* makestep_h in maxwell stream */
+	makestep_h<<<block_maxwell, threads + 1, (threads + 1) * sizeof(real),
+	    comp_maxwell>>>(m_e, m_h);
+
 	/* gather e field in copy stream */
 	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
 	    if (entry->record(i)) {
-		cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
-				entry->getSize(), cudaMemcpyDeviceToHost,
-				copy);
+		chk_err(cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
+					entry->getSize(),
+					cudaMemcpyDeviceToHost, copy));
 	    }
 	}
 
-
 	/* sync */
+	chk_err(cudaStreamSynchronize(copy));
+	chk_err(cudaStreamSynchronize(comp_maxwell));
+	chk_err(cudaStreamSynchronize(comp_density));
 
-	/* call toggle */
+	/* switch density matrix double buffer */
+	m_dm->getData().next();
 
-	/* calculate source value -> makestep_e kernel */
+	/* calculate source value */
+	/* TODO */
+
+	/* makestep_e kernel */
+	makestep_e<<<block_maxwell, threads + 1, (threads + 1) * sizeof(real),
+	    comp_maxwell>>>(m_dm->getData(), m_h, m_e);
 
 	/* gather h field and dm entries in copy stream */
 	BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
-	    if (entry->record(i)) {
-		cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
-				entry->getSize(), cudaMemcpyDeviceToHost,
-				copy);
+            if (entry->record(i)) {
+		chk_err(cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
+					entry->getSize(),
+					cudaMemcpyDeviceToHost, copy));
 	    }
 	}
 
-
-	/* makestep_e */
 	/* sync */
-
+	chk_err(cudaStreamSynchronize(copy));
+	chk_err(cudaStreamSynchronize(comp_maxwell));
+	chk_err(cudaStreamSynchronize(comp_density));
     }
 
-    //    makestep_h<<<block, thread, sizeof(real) * (threads + 1)>>>(e, h);
-
+    /* sync */
+    cudaDeviceSynchronize();
 }
 
 }

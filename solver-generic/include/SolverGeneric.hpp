@@ -14,7 +14,7 @@ public:
 
     std::string getName() const;
 
-    void run(const std::vector<Result *>& results) const;
+    void run() const;
 };
 
 }

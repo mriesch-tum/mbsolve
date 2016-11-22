@@ -23,8 +23,11 @@ WriterMATLAB::write(const std::string& file,
     matPutVariable(pmat, "SimEndTime", t);
     mxDestroyArray(t);
 
+    /* TODO use cols and rows */
+    /* TODO: use updated (updated by solver) scenario? */
     BOOST_FOREACH(mbsolve::Result *result, results) {
-	mxArray *var = mxCreateDoubleMatrix(result->size(), 1, mxREAL);
+	mxArray *var = mxCreateDoubleMatrix(result->rows(), result->cols(),
+					    mxREAL);
 
 	for (int i = 0; i < result->size(); i++) {
 	    *(mxGetPr(var) + i) = result->at(i);

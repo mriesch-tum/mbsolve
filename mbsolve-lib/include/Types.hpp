@@ -36,7 +36,7 @@ public:
     explicit Result(const std::string& name, unsigned int cols,
 		    unsigned int rows) :
 	m_name(name), m_cols(cols), m_rows(rows),
-	m_size(cols * rows * sizeof(real))
+	m_size(cols * rows)
     {
 	m_values = new real[rows * cols];
     }

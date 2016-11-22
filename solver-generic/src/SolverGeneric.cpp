@@ -20,7 +20,7 @@ SolverGeneric::getName() const
 }
 
 void
-SolverGeneric::run(const std::vector<Result *>& results) const
+SolverGeneric::run() const
 {
 }
 
