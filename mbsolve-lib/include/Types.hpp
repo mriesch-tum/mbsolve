@@ -12,6 +12,7 @@ namespace mbsolve {
 
 //typedef std::complex<double> complex;
 typedef double real;
+//typedef float real;
 
 
     /* TODO: make Result 2D? */
@@ -25,7 +26,7 @@ private:
     std::string m_name;
     unsigned int m_cols;
     unsigned int m_rows;
-    unsigned int m_size;
+    unsigned int m_count;
     real *m_values;
 
     Result(const Result& other) { }
@@ -35,10 +36,9 @@ private:
 public:
     explicit Result(const std::string& name, unsigned int cols,
 		    unsigned int rows) :
-	m_name(name), m_cols(cols), m_rows(rows),
-	m_size(cols * rows)
+	m_name(name), m_cols(cols), m_rows(rows), m_count(cols * rows)
     {
-	m_values = new real[rows * cols];
+	m_values = new real[m_count];
     }
 
     ~Result() {
@@ -47,7 +47,7 @@ public:
 
     const std::string& name() const { return m_name; }
 
-    unsigned int size() const { return m_size; }
+    unsigned int count() const { return m_count; }
 
     unsigned int cols() const { return m_cols; }
 
@@ -56,7 +56,7 @@ public:
     real *data(unsigned int row = 0) { return &m_values[row * m_cols]; }
 
     real& at(unsigned int index) {
-	if (index > m_size) {
+	if (index > m_count) {
 	    throw std::out_of_range("Index out of bounds");
 	}
 	return m_values[index];

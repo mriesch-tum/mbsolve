@@ -29,6 +29,7 @@ __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
 {
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     unsigned int max = blockDim.x * gridDim.x - 1;
+    int region = get_region(gidx);
 
     /* TODO: alternative initializations */
     curandState_t rand_state;
@@ -40,16 +41,19 @@ __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
 	h[max] = 0.0;
     }
     h[gidx] = 0.0;
-    e[gidx] = curand_uniform(&rand_state) * 1e-15;
+    e[gidx] = 0.0;
+    //   e[gidx] = curand_uniform(&rand_state) * 1e-15;
 
     real trace = 0.0;
 
     for (unsigned int row = 0; row < dm.getNumLevels(); row++) {
 	for (unsigned int col = 0; col < dm.getNumLevels(); col++) {
 	    if (row == col) {
+		/*
 		real entry = curand_uniform(&rand_state);
 		dm.oldDM(row, col)[gidx] = entry;
 		trace += entry;
+		*/
 	    } else {
 		dm.oldDM(row, col)[gidx] = 0.0;
 	    }
@@ -59,9 +63,14 @@ __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
 	}
     }
 
+    dm.oldDM(0, 0)[gidx] = gsc[region].dm11_init;
+    dm.oldDM(1, 1)[gidx] = gsc[region].dm22_init;
+
+    /*
     for (unsigned int i = 0; i < dm.getNumLevels(); i++) {
 	dm.oldDM(i, i)[gidx] /= trace;
     }
+    */
 }
 
 __global__ void makestep_h(const real *ge, real *gh)
@@ -91,7 +100,7 @@ __global__ void makestep_h(const real *ge, real *gh)
 }
 
 __global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
-			   real *ge)
+			   real *ge, real src)
 {
     int idx = threadIdx.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -107,10 +116,20 @@ __global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
     __syncthreads();
 
     real j = ge[gidx] * gsc[region].sigma;
-    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.oldDM(0, 1)[gidx];
+    /*
+      real p_t = gsc[region].M_CP * gsc[region].d12 * dm.rhs(0, 1, 1)[gidx];
+
+
+    */
+    // real p_t = gsc[region].M_CP * gsc[region].d12
+    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.rhs(1, 0, 1)[gidx];
 
     ge[gidx] += gsc[region].M_CE *
 	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
+
+    if (gidx == 0) {
+	ge[gidx] += src;
+    }
 }
 
 __global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
@@ -128,11 +147,12 @@ __global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
 	    - dm.oldDM(0, 0)[gidx] * gsc[region].tau1;
     } else if ((row == 0) && (col == 1)) {
 	/* imag dm12 */
-	rhs = dm.oldDM(1, 0)[gidx] * gsc[region].w12
+	rhs = - dm.oldDM(1, 0)[gidx] * gsc[region].w12
+	    + (dm.oldDM(0, 0)[gidx] - dm.oldDM(1, 1)[gidx]) * gsc[region].d12 * ge[gidx]
 	    - dm.oldDM(0, 1)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 0)) {
 	/* real dm12 */
-	rhs = - dm.oldDM(0, 1)[gidx] * gsc[region].w12
+	rhs = + dm.oldDM(0, 1)[gidx] * gsc[region].w12
 	    - dm.oldDM(1, 0)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 1)) {
 	/* dm22 */
@@ -193,7 +213,8 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	sc[i].M_CE = m_scenario.TimeStepSize/(EPS0() * reg.RelPermittivity());
 	sc[i].M_CH = m_scenario.TimeStepSize/(MU0() *
 					      m_scenario.GridPointSize);
-	sc[i].M_CP = -2.0 * reg.DopingDensity * E0;
+	/* TODO: overlap factor? */
+	sc[i].M_CP = -2.0 * reg.DopingDensity * HBAR();
 	sc[i].sigma = 2.0 * sqrt(EPS0 * reg.RelPermittivity/MU0) * reg.Losses;
 
 	sc[i].w12 = (reg.TransitionFrequencies.size() < 1) ? 0.0 :
@@ -208,11 +229,24 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 
 	sc[i].d_x = m_scenario.GridPointSize;
 	sc[i].d_t = m_scenario.TimeStepSize;
+
+	if (reg.DopingDensity() < 1.0) {
+	    sc[i].dm11_init = 0.0;
+	    sc[i].dm22_init = 0.0;
+	} else {
+	    sc[i].dm11_init = 0.0;
+	    sc[i].dm22_init = 1.0;
+	}
+
 	i++;
     }
     if (i > 0) {
 	sc[i - 1].idx_end = m_scenario.NumGridPoints - 1;
     }
+
+    /* copy settings to CUDA constant memory */
+    chk_err(cudaMemcpyToSymbol(gsc, &sc, MaxRegions *
+			       sizeof(struct sim_constants)));
 
     /* initialize streams */
     chk_err(cudaStreamCreate(&comp_maxwell));
@@ -229,10 +263,6 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     unsigned int blocks = m_scenario.NumGridPoints/threads;
 
     init_memory<<<blocks, threads>>>(m_dm->getData(), m_e, m_h);
-
-    /* copy settings to CUDA constant memory */
-    chk_err(cudaMemcpyToSymbol(gsc, &sc, MaxRegions *
-			       sizeof(struct sim_constants)));
 
     /* set up results transfer data structures */
     BOOST_FOREACH(Record rec, m_scenario.Records) {
@@ -269,7 +299,7 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
 		if (rec.I == rec.J) {
 		    /* main diagonal entry */
-		    entry = new CLEDensity(m_dm, rec.I, rec.J, res,
+		    entry = new CLEDensity(m_dm, rec.I - 1, rec.J - 1, res,
 					   col_ct, position_idx,
 					   interval);
 		    m_copyListBlack.push_back(entry);
@@ -304,11 +334,6 @@ SolverCUDA2lvl::~SolverCUDA2lvl()
     BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
 	delete entry;
     }
-
-    /* delete results */
-    /*    BOOST_FOREACH(Result *result, m_results) {
-	delete result;
-	}*/
 
     /* delete density matrix */
     delete(m_dm);
@@ -349,7 +374,7 @@ SolverCUDA2lvl::run() const
     dim3 block_density(blocks, 2, 2);
 
     /* main loop */
-    for (unsigned int i = 1; i < m_scenario.NumTimeSteps; i++) {
+    for (unsigned int i = 0; i < m_scenario.NumTimeSteps; i++) {
 	/* makestep_dm in density stream */
 	makestep_dm<<<block_density, threads, 0, comp_density>>>
 	    (m_dm->getData(), m_e);
@@ -377,10 +402,16 @@ SolverCUDA2lvl::run() const
 
 	/* calculate source value */
 	/* TODO */
+	real f_0 = 2e14;
+	real t = i * m_scenario.TimeStepSize;
+	real T_p = 20/f_0;
+	real gamma = 2 * t/T_p - 1;
+	real E_0 = 4.2186e9;
+	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
 
 	/* makestep_e kernel */
 	makestep_e<<<block_maxwell, threads + 1, (threads + 1) * sizeof(real),
-	    comp_maxwell>>>(m_dm->getData(), m_h, m_e);
+	    comp_maxwell>>>(m_dm->getData(), m_h, m_e, src);
 
 	/* gather h field and dm entries in copy stream */
 	BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {

@@ -85,7 +85,7 @@ mbsolve::Device parse_device(const std::string& file)
     active.TransitionFrequencies.push_back(mbsolve::Quantity(M_PI * 4e14));
     active.DipoleMoments.push_back(mbsolve::Quantity(6.24e-9));
     //active.ScatteringRates.push_back(mbsolve::Quantity(-1.0e10));
-    active.ScatteringRates.push_back(mbsolve::Quantity(+1.0e10));
+    active.ScatteringRates.push_back(mbsolve::Quantity(1.0e10));
     active.DephasingRates.push_back(mbsolve::Quantity(1.0e10));
     dev.Regions.push_back(active);
 
@@ -104,11 +104,16 @@ mbsolve::Scenario parse_scenario(const std::string& file)
 
     /* Ziolkowski settings */
     scen.Name = "Basic";
-    //    scen.SimEndTime = 500e-15;
-    scen.SimEndTime = 500e-12;
+    scen.SimEndTime = 500e-15;
+    //scen.SimEndTime = 500e-12;
     scen.NumGridPoints = 5760;
 
     scen.Records.push_back(mbsolve::Record("dm11", mbsolve::Density, 1, 1,
+					   100e-15));
+
+    scen.Records.push_back(mbsolve::Record("dm22", mbsolve::Density, 2, 2,
+					   100e-15));
+    scen.Records.push_back(mbsolve::Record("e", mbsolve::EField, 1, 1,
 					   100e-15));
     return scen;
 }
@@ -158,7 +163,8 @@ int main(int argc, char **argv)
 	std::cout << "Time required: " << 1e-9 * times.wall << std::endl;
 
 	/* write results */
-	writer.write(output_file, solver.getResults(), device, scenario);
+	writer.write(output_file, solver.getResults(), device,
+		     solver.getScenario());
 
     } catch (std::exception& e) {
 	std::cout << "Error: " << e.what() << std::endl;

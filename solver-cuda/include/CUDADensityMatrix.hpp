@@ -10,6 +10,7 @@ namespace mbsolve {
 class CUDADensityMatrixData
 {
 private:
+    unsigned int m_numGridPoints;
     unsigned int m_numLevels;
     unsigned int m_numMultistep;
     unsigned int m_sizeData;
@@ -22,8 +23,9 @@ private:
     real * m_rhs;
 
 public:
-    __host__ __device__ CUDADensityMatrixData(unsigned int NumLevels,
-					      unsigned int NumMultistep,
+    __host__ __device__ CUDADensityMatrixData(unsigned int numGridPoints,
+					      unsigned int numLevels,
+					      unsigned int numMultistep,
 					      real *data = NULL);
 
     //    __host__ __device__ CUDADensityMatrixData(const CUDADensityMatrixData&

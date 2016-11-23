@@ -19,19 +19,30 @@ WriterMATLAB::write(const std::string& file,
 	throw std::invalid_argument("File \"" + file + "\" not found");
     }
 
-    mxArray *t = mxCreateDoubleScalar(scenario.SimEndTime);
+    mxArray *t;
+    /* put scenario data */
+    t = mxCreateDoubleScalar(scenario.SimEndTime);
     matPutVariable(pmat, "SimEndTime", t);
     mxDestroyArray(t);
+    t = mxCreateDoubleScalar(scenario.TimeStepSize);
+    matPutVariable(pmat, "TimeStepSize", t);
+    mxDestroyArray(t);
+    t = mxCreateDoubleScalar(scenario.GridPointSize);
+    matPutVariable(pmat, "GridPointSize", t);
+    mxDestroyArray(t);
+    /* put device data */
+    t = mxCreateDoubleScalar(device.XDim());
+    matPutVariable(pmat, "XDim", t);
+    mxDestroyArray(t);
 
-    /* TODO use cols and rows */
     /* TODO: use updated (updated by solver) scenario? */
     BOOST_FOREACH(mbsolve::Result *result, results) {
-	mxArray *var = mxCreateDoubleMatrix(result->rows(), result->cols(),
+	/* matlab array is created transposed in order to match order */
+	mxArray *var = mxCreateDoubleMatrix(result->cols(), result->rows(),
 					    mxREAL);
 
-	for (int i = 0; i < result->size(); i++) {
-	    *(mxGetPr(var) + i) = result->at(i);
-	}
+	std::copy(result->data(), result->data() + result->count(),
+		  mxGetPr(var));
 
 	matPutVariable(pmat, result->name().c_str(), var);
 

@@ -53,6 +53,10 @@ public:
 
     std::string getName() const;
 
+    const Scenario& getScenario() const { return m_solver->getScenario(); }
+
+    const Device& getDevice() const { return m_solver->getDevice(); }
+
     void run() const;
 
     const std::vector<Result *>& getResults() const;

@@ -28,6 +28,9 @@ struct sim_constants
 
     real d_x;
     real d_t;
+
+    real dm11_init;
+    real dm22_init;
 };
 
 /* TODO: move generic helper classes for CUDA into separate file */
