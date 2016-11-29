@@ -13,10 +13,11 @@ static SolverFactory<SolverCUDA2lvl> factory("cuda-2lvl");
 __device__ __constant__ struct sim_constants gsc[MaxRegions];
 
 /* TODO: hash function or something? */
+/* TODO: otherwise divergence within warp */
 __device__ __inline__ unsigned int get_region(unsigned int idx)
 {
     for (unsigned int i = 0; i < MaxRegions; i++) {
-	if (idx < gsc[i].idx_end) {
+	if (idx <= gsc[i].idx_end) {
 	    return i;
 	}
     }
@@ -28,7 +29,6 @@ __device__ __inline__ unsigned int get_region(unsigned int idx)
 __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
 {
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    unsigned int max = blockDim.x * gridDim.x - 1;
     int region = get_region(gidx);
 
     /* TODO: alternative initializations */
@@ -37,8 +37,8 @@ __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
     /* initialize random number generator */
     curand_init(clock64(), gidx, 0, &rand_state);
 
-    if (gidx == max - 1) {
-	h[max] = 0.0;
+    if (gidx == blockDim.x * gridDim.x - 1) {
+	h[gidx + 1] = 0.0;
     }
     h[gidx] = 0.0;
     e[gidx] = 0.0;
@@ -116,19 +116,19 @@ __global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
     __syncthreads();
 
     real j = ge[gidx] * gsc[region].sigma;
-    /*
-      real p_t = gsc[region].M_CP * gsc[region].d12 * dm.rhs(0, 1, 1)[gidx];
 
+    //real p_t = gsc[region].M_CP * gsc[region].d12 * dm.rhs(1, 0, 1)[gidx];
 
-    */
-    // real p_t = gsc[region].M_CP * gsc[region].d12
-    real p_t = gsc[region].M_CP * gsc[region].d12 * dm.rhs(1, 0, 1)[gidx];
+    real p_t = gsc[region].M_CP * gsc[region].d12 *
+	(gsc[region].w12 * dm.oldDM(0, 1)[gidx]
+	 - gsc[region].gamma12 * dm.oldDM(1, 0)[gidx]);
 
     ge[gidx] += gsc[region].M_CE *
 	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
 
     if (gidx == 0) {
-	ge[gidx] += src;
+	ge[gidx] += src; /* soft source */
+	//ge[gidx] = src; /* hard source */
     }
 }
 
@@ -152,7 +152,7 @@ __global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
 	    - dm.oldDM(0, 1)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 0)) {
 	/* real dm12 */
-	rhs = + dm.oldDM(0, 1)[gidx] * gsc[region].w12
+	rhs = dm.oldDM(0, 1)[gidx] * gsc[region].w12
 	    - dm.oldDM(1, 0)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 1)) {
 	/* dm22 */
@@ -189,7 +189,7 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     }
 
     /* determine grid point and time step size */
-    real C = 0.9; /* courant number */
+    real C = 0.5; /* courant number */
     real velocity = sqrt(MU0() * EPS0() * minRelPermittivity());
     m_scenario.GridPointSize = length()/(m_scenario.NumGridPoints - 1);
     real timestep  = C * m_scenario.GridPointSize * velocity;
@@ -380,7 +380,7 @@ SolverCUDA2lvl::run() const
 	    (m_dm->getData(), m_e);
 
 	/* makestep_h in maxwell stream */
-	makestep_h<<<block_maxwell, threads + 1, (threads + 1) * sizeof(real),
+	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real),
 	    comp_maxwell>>>(m_e, m_h);
 
 	/* gather e field in copy stream */
@@ -407,10 +407,11 @@ SolverCUDA2lvl::run() const
 	real T_p = 20/f_0;
 	real gamma = 2 * t/T_p - 1;
 	real E_0 = 4.2186e9;
+	//	real E_0 = 1e;
 	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
 
 	/* makestep_e kernel */
-	makestep_e<<<block_maxwell, threads + 1, (threads + 1) * sizeof(real),
+	makestep_e<<<block_maxwell, threads, (threads + 1) * sizeof(real),
 	    comp_maxwell>>>(m_dm->getData(), m_h, m_e, src);
 
 	/* gather h field and dm entries in copy stream */
