@@ -3,7 +3,7 @@ close all;
 
 load ~/mbsolve-build/Ziolkowski-Basic.mat
 
-t = 8;
+t = 100;
 
 x = 0:GridPointSize:XDim;
 
@@ -16,7 +16,6 @@ figure;
 plot(x, dm11(:, t) - dm22(:, t));
 ylabel('Population  inversion');
 xlim([0, XDim]);
-
 figure;
 plot(x, dm11(:, t));
 ylabel('dm11');

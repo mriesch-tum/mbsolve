@@ -7,6 +7,8 @@
 
 namespace mbsolve {
 
+static const real norm = 1.0;
+
 static SolverFactory<SolverCUDA2lvl> factory("cuda-2lvl");
 
 /* CUDA memory and kernels */
@@ -26,7 +28,8 @@ __device__ __inline__ unsigned int get_region(unsigned int idx)
 
 /* TODO: initialize may be reused by other CUDA solvers, make general */
 /* TODO: region-wise? initialization */
-__global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
+__global__ void init_memory(CUDADensityMatrixData dm, real *e, real *e_est,
+			    real *h)
 {
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     int region = get_region(gidx);
@@ -42,6 +45,7 @@ __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
     }
     h[gidx] = 0.0;
     e[gidx] = 0.0;
+    e_est[gidx] = 0.0;
     //   e[gidx] = curand_uniform(&rand_state) * 1e-15;
 
     real trace = 0.0;
@@ -65,6 +69,10 @@ __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *h)
 
     dm.oldDM(0, 0)[gidx] = gsc[region].dm11_init;
     dm.oldDM(1, 1)[gidx] = gsc[region].dm22_init;
+    dm.newDM(0, 0)[gidx] = gsc[region].dm11_init;
+    dm.newDM(1, 1)[gidx] = gsc[region].dm22_init;
+    dm.rhs(0, 0, 0)[gidx] = gsc[region].dm11_init;
+    dm.rhs(1, 1, 0)[gidx] = gsc[region].dm22_init;
 
     /*
     for (unsigned int i = 0; i < dm.getNumLevels(); i++) {
@@ -99,8 +107,8 @@ __global__ void makestep_h(const real *ge, real *gh)
     }
 }
 
-__global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
-			   real *ge, real src)
+__global__ void estimate_e(CUDADensityMatrixData dm, const real *gh,
+			   real *ge, real *ge_est, real src)
 {
     int idx = threadIdx.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -115,23 +123,32 @@ __global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
 
     __syncthreads();
 
-    real j = ge[gidx] * gsc[region].sigma;
+    real j = 0; /*TODO revise e *//* ge[gidx] * gsc[region].sigma;*/
 
-    //real p_t = gsc[region].M_CP * gsc[region].d12 * dm.rhs(1, 0, 1)[gidx];
+    real rho12i = 0.5 * (dm.oldDM(0, 1)[gidx] + dm.rhs(0, 1, 0)[gidx]);
+    real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
+    real p_t = gsc[region].M_CP * gsc[region].d12/norm *
+	(gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r);
 
-    real p_t = gsc[region].M_CP * gsc[region].d12 *
-	(gsc[region].w12 * dm.oldDM(0, 1)[gidx]
-	 - gsc[region].gamma12 * dm.oldDM(1, 0)[gidx]);
-
-    ge[gidx] += gsc[region].M_CE *
+    ge_est[gidx] = ge[gidx] + gsc[region].M_CE *
 	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
 
     if (gidx == 0) {
-	ge[gidx] += src; /* soft source */
-	//ge[gidx] = src; /* hard source */
+	/* soft source must be re-implemented, if required */
+	//ge[gidx] += src; /* soft source */
+	ge_est[gidx] = src; /* hard source */
     }
 }
 
+__global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
+			  real *ge, real *ge_est, real src)
+{
+    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
+
+    ge[gidx] = ge_est[gidx];
+}
+
+#if 0
 __global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
 {
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -143,12 +160,12 @@ __global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
 
     if ((row == 0) && (col == 0)) {
 	/* dm11 */
-	rhs = - dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
+	rhs = - dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx] * norm
 	    - dm.oldDM(0, 0)[gidx] * gsc[region].tau1;
     } else if ((row == 0) && (col == 1)) {
 	/* imag dm12 */
 	rhs = - dm.oldDM(1, 0)[gidx] * gsc[region].w12
-	    + (dm.oldDM(0, 0)[gidx] - dm.oldDM(1, 1)[gidx]) * gsc[region].d12 * ge[gidx]
+	    + (dm.oldDM(0, 0)[gidx] - dm.oldDM(1, 1)[gidx]) * gsc[region].d12 * ge[gidx] * norm
 	    - dm.oldDM(0, 1)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 0)) {
 	/* real dm12 */
@@ -156,20 +173,63 @@ __global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
 	    - dm.oldDM(1, 0)[gidx] * gsc[region].gamma12;
     } else if ((row == 1) && (col == 1)) {
 	/* dm22 */
-	rhs = dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx]
+	rhs = dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx] * norm
 	    + dm.oldDM(0, 0)[gidx] * gsc[region].tau1;
     } else {
 	/* do nothing */
     }
 
-    dm.rhs(row, col, 0)[gidx] = rhs;
+
     dm.newDM(row, col)[gidx] = dm.oldDM(row, col)[gidx] + gsc[region].d_t *
-	(+ dm.rhs(row, col, 0)[gidx] * 1901.0/720.0
-	 - dm.rhs(row, col, 1)[gidx] * 1387.0/360.0
-	 + dm.rhs(row, col, 2)[gidx] * 109.0/30.0
-	 - dm.rhs(row, col, 3)[gidx] * 637.0/360.0
-	 + dm.rhs(row, col, 4)[gidx] * 251.0/720.0);
+	rhs;
 }
+#endif
+
+__global__ void estimate_dm(CUDADensityMatrixData dm, const real *ge,
+    const real *ge_est)
+{
+    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
+    int region = get_region(gidx);
+    int row = blockIdx.y;
+    int col = blockIdx.z;
+
+    real rhs = 0.0;
+    real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
+    real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
+    real rho12i = 0.5 * (dm.oldDM(0, 1)[gidx] + dm.rhs(0, 1, 0)[gidx]);
+    real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
+    real rho22  = 0.5 * (dm.oldDM(1, 1)[gidx] + dm.rhs(1, 1, 0)[gidx]);
+
+    if ((row == 0) && (col == 0)) {
+	/* dm11 */
+	rhs = -2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11;
+    } else if ((row == 0) && (col == 1)) {
+	/* imag dm12 */
+	rhs = - gsc[region].w12 * rho12r + OmRabi * (rho11 - rho22)
+	    - gsc[region].gamma12 * rho12i;
+    } else if ((row == 1) && (col == 0)) {
+	/* real dm12 */
+	rhs = gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r;
+    } else if ((row == 1) && (col == 1)) {
+	/* dm22 */
+	rhs = 2.0 * OmRabi * rho12i + gsc[region].tau1 * rho11;
+    } else {
+	/* do nothing */
+    }
+
+    dm.rhs(row, col, 0)[gidx] = dm.oldDM(row, col)[gidx] + gsc[region].d_t *
+	rhs;
+}
+
+__global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
+{
+    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
+    int row = blockIdx.y;
+    int col = blockIdx.z;
+
+    dm.newDM(row, col)[gidx] = dm.rhs(row, col, 0)[gidx];
+}
+
 
 /* host members */
 SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
@@ -214,18 +274,27 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	sc[i].M_CH = m_scenario.TimeStepSize/(MU0() *
 					      m_scenario.GridPointSize);
 	/* TODO: overlap factor? */
-	sc[i].M_CP = -2.0 * reg.DopingDensity * HBAR();
+	//	sc[i].M_CP = -2.0 * reg.DopingDensity * HBAR();
+	sc[i].M_CP = -2.0 * 1e24 * 1.0545718e-34;
 	sc[i].sigma = 2.0 * sqrt(EPS0 * reg.RelPermittivity/MU0) * reg.Losses;
 
-	sc[i].w12 = (reg.TransitionFrequencies.size() < 1) ? 0.0 :
-	    reg.TransitionFrequencies[0]();
+	sc[i].w12 = M_PI * 4e14;
+
+	// (reg.TransitionFrequencies.size() < 1) ? 0.0 :
+	//  reg.TransitionFrequencies[0]();
 	/* TODO rename to rabi freqs or something */
-	sc[i].d12 = (reg.DipoleMoments.size() < 1) ? 0.0 :
-	    reg.DipoleMoments[0]() * E0()/HBAR();
-	sc[i].tau1 = (reg.ScatteringRates.size() < 1) ? 0.0 :
-	    reg.ScatteringRates[0]();
-	sc[i].gamma12 = (reg.DephasingRates.size() < 1) ? 0.0 :
-	    reg.DephasingRates[0]();
+	sc[i].d12 = 6.24e-9 * 1.602e-19/1.0545718e-34;
+	//(reg.DipoleMoments.size() < 1) ? 0.0 :
+
+	//reg.DipoleMoments[0]() * E0()/HBAR();
+	sc[i].tau1 = 5e9;
+
+	    //(reg.ScatteringRates.size() < 1) ? 0.0 :
+	    //reg.ScatteringRates[0]();
+	sc[i].gamma12 = 10e9;
+
+	    //(reg.DephasingRates.size() < 1) ? 0.0 :
+	    //reg.DephasingRates[0]();
 
 	sc[i].d_x = m_scenario.GridPointSize;
 	sc[i].d_t = m_scenario.TimeStepSize;
@@ -255,6 +324,7 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 
     /* allocate space */
     chk_err(cudaMalloc(&m_e, sizeof(real) * m_scenario.NumGridPoints));
+    chk_err(cudaMalloc(&m_e_est, sizeof(real) * m_scenario.NumGridPoints));
     chk_err(cudaMalloc(&m_h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
     m_dm = new CUDADensityMatrix(m_scenario.NumGridPoints, 2, 5);
 
@@ -262,7 +332,7 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     unsigned int threads = 128;
     unsigned int blocks = m_scenario.NumGridPoints/threads;
 
-    init_memory<<<blocks, threads>>>(m_dm->getData(), m_e, m_h);
+    init_memory<<<blocks, threads>>>(m_dm->getData(), m_e, m_e_est, m_h);
 
     /* set up results transfer data structures */
     BOOST_FOREACH(Record rec, m_scenario.Records) {
@@ -302,7 +372,8 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 		    entry = new CLEDensity(m_dm, rec.I - 1, rec.J - 1, res,
 					   col_ct, position_idx,
 					   interval);
-		    m_copyListBlack.push_back(entry);
+		    //m_copyListBlack.push_back(entry);
+		    m_copyListRed.push_back(entry);
 		} else {
 		    /* off-diagonal entry */
 		    /* TODO */
@@ -341,6 +412,7 @@ SolverCUDA2lvl::~SolverCUDA2lvl()
     /* free CUDA memory */
     cudaFree(m_h);
     cudaFree(m_e);
+    cudaFree(m_e_est);
 
     /* clean up streams */
     if (comp_maxwell) {
@@ -375,30 +447,15 @@ SolverCUDA2lvl::run() const
 
     /* main loop */
     for (unsigned int i = 0; i < m_scenario.NumTimeSteps; i++) {
-	/* makestep_dm in density stream */
-	makestep_dm<<<block_density, threads, 0, comp_density>>>
-	    (m_dm->getData(), m_e);
 
-	/* makestep_h in maxwell stream */
-	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real),
-	    comp_maxwell>>>(m_e, m_h);
-
-	/* gather e field in copy stream */
-	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
-	    if (entry->record(i)) {
+	/* gather h field in copy stream */
+	BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
+            if (entry->record(i)) {
 		chk_err(cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
 					entry->getSize(),
 					cudaMemcpyDeviceToHost, copy));
 	    }
 	}
-
-	/* sync */
-	chk_err(cudaStreamSynchronize(copy));
-	chk_err(cudaStreamSynchronize(comp_maxwell));
-	chk_err(cudaStreamSynchronize(comp_density));
-
-	/* switch density matrix double buffer */
-	m_dm->getData().next();
 
 	/* calculate source value */
 	/* TODO */
@@ -407,16 +464,47 @@ SolverCUDA2lvl::run() const
 	real T_p = 20/f_0;
 	real gamma = 2 * t/T_p - 1;
 	real E_0 = 4.2186e9;
-	//	real E_0 = 1e;
 	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
+	//src = src/2; // pi pulse
+	src = src/norm;
+	//src = src/100;
+
+	/* execute prediction - correction steps */
+	for (int pc_step = 0; pc_step < 5; pc_step++) {
+	    estimate_dm<<<block_density, threads, 0, comp_density>>>
+		(m_dm->getData(), m_e, m_e_est);
+
+	    estimate_e<<<block_maxwell, threads, (threads + 1) * sizeof(real),
+		comp_maxwell>>>(m_dm->getData(), m_h, m_e, m_e_est, src);
+
+	    /* sync */
+	    chk_err(cudaStreamSynchronize(comp_maxwell));
+	    chk_err(cudaStreamSynchronize(comp_density));
+	}
+
+	/* makestep_dm in density stream */
+	makestep_dm<<<block_density, threads, 0, comp_density>>>
+	    (m_dm->getData(), m_e);
 
 	/* makestep_e kernel */
 	makestep_e<<<block_maxwell, threads, (threads + 1) * sizeof(real),
-	    comp_maxwell>>>(m_dm->getData(), m_h, m_e, src);
+	    comp_maxwell>>>(m_dm->getData(), m_h, m_e, m_e_est, src);
 
-	/* gather h field and dm entries in copy stream */
-	BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
-            if (entry->record(i)) {
+	/* sync */
+	chk_err(cudaStreamSynchronize(comp_maxwell));
+	chk_err(cudaStreamSynchronize(comp_density));
+	chk_err(cudaStreamSynchronize(copy));
+
+	/* switch density matrix double buffer */
+	m_dm->getData().next();
+
+	/* makestep_h in maxwell stream */
+	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real),
+	    comp_maxwell>>>(m_e, m_h);
+
+	/* gather e field and dm entries in copy stream */
+	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
+	    if (entry->record(i)) {
 		chk_err(cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
 					entry->getSize(),
 					cudaMemcpyDeviceToHost, copy));

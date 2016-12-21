@@ -135,6 +135,7 @@ private:
 
     real *m_h;
     real *m_e;
+    real *m_e_est;
 
     std::vector<CopyListEntry *> m_copyListBlack;
     std::vector<CopyListEntry *> m_copyListRed;
