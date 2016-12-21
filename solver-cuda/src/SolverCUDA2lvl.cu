@@ -274,27 +274,18 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	sc[i].M_CH = m_scenario.TimeStepSize/(MU0() *
 					      m_scenario.GridPointSize);
 	/* TODO: overlap factor? */
-	//	sc[i].M_CP = -2.0 * reg.DopingDensity * HBAR();
-	sc[i].M_CP = -2.0 * 1e24 * 1.0545718e-34;
+	sc[i].M_CP = -2.0 * reg.DopingDensity * HBAR();
 	sc[i].sigma = 2.0 * sqrt(EPS0 * reg.RelPermittivity/MU0) * reg.Losses;
 
-	sc[i].w12 = M_PI * 4e14;
-
-	// (reg.TransitionFrequencies.size() < 1) ? 0.0 :
-	//  reg.TransitionFrequencies[0]();
+	sc[i].w12 = (reg.TransitionFrequencies.size() < 1) ? 0.0 :
+	    reg.TransitionFrequencies[0]();
 	/* TODO rename to rabi freqs or something */
-	sc[i].d12 = 6.24e-9 * 1.602e-19/1.0545718e-34;
-	//(reg.DipoleMoments.size() < 1) ? 0.0 :
-
-	//reg.DipoleMoments[0]() * E0()/HBAR();
-	sc[i].tau1 = 5e9;
-
-	    //(reg.ScatteringRates.size() < 1) ? 0.0 :
-	    //reg.ScatteringRates[0]();
-	sc[i].gamma12 = 10e9;
-
-	    //(reg.DephasingRates.size() < 1) ? 0.0 :
-	    //reg.DephasingRates[0]();
+	sc[i].d12 = (reg.DipoleMoments.size() < 1) ? 0.0 :
+	    reg.DipoleMoments[0]() * E0()/HBAR();
+	sc[i].tau1 = (reg.ScatteringRates.size() < 1) ? 0.0 :
+	    reg.ScatteringRates[0]();
+	sc[i].gamma12 = (reg.DephasingRates.size() < 1) ? 0.0 :
+	    reg.DephasingRates[0]();
 
 	sc[i].d_x = m_scenario.GridPointSize;
 	sc[i].d_t = m_scenario.TimeStepSize;
@@ -465,12 +456,12 @@ SolverCUDA2lvl::run() const
 	real gamma = 2 * t/T_p - 1;
 	real E_0 = 4.2186e9;
 	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
-	//src = src/2; // pi pulse
+	src = src/2; // pi pulse
+	//src = src*2; // 4*pi pulse
 	src = src/norm;
-	//src = src/100;
 
 	/* execute prediction - correction steps */
-	for (int pc_step = 0; pc_step < 5; pc_step++) {
+	for (int pc_step = 0; pc_step < 4; pc_step++) {
 	    estimate_dm<<<block_density, threads, 0, comp_density>>>
 		(m_dm->getData(), m_e, m_e_est);
 
