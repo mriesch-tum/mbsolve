@@ -2,8 +2,11 @@
 #define OPENMP_2LVL_PC_H
 
 #include <Solver.hpp>
+#include <DensityMatrixData.hpp>
 
 namespace mbsolve {
+
+static const unsigned int MaxRegions = 8;
 
 struct sim_constants
 {
@@ -40,7 +43,7 @@ public:
 
 private:
 
-    //    CUDADensityMatrix *m_dm;
+    DensityMatrixData *m_dm;
 
     real *m_h;
     real *m_e;
