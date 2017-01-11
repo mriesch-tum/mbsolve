@@ -194,24 +194,30 @@ __global__ void estimate_dm(CUDADensityMatrixData dm, const real *ge,
     int col = blockIdx.z;
 
     real rhs = 0.0;
-    real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
-    real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
+
     real rho12i = 0.5 * (dm.oldDM(0, 1)[gidx] + dm.rhs(0, 1, 0)[gidx]);
-    real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
-    real rho22  = 0.5 * (dm.oldDM(1, 1)[gidx] + dm.rhs(1, 1, 0)[gidx]);
 
     if ((row == 0) && (col == 0)) {
 	/* dm11 */
+	real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
+	real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
 	rhs = -2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11;
     } else if ((row == 0) && (col == 1)) {
 	/* imag dm12 */
+	real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
+	real rho22  = 0.5 * (dm.oldDM(1, 1)[gidx] + dm.rhs(1, 1, 0)[gidx]);
+	real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
+	real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
 	rhs = - gsc[region].w12 * rho12r + OmRabi * (rho11 - rho22)
 	    - gsc[region].gamma12 * rho12i;
     } else if ((row == 1) && (col == 0)) {
 	/* real dm12 */
+	real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
 	rhs = gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r;
     } else if ((row == 1) && (col == 1)) {
 	/* dm22 */
+	real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
+	real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
 	rhs = 2.0 * OmRabi * rho12i + gsc[region].tau1 * rho11;
     } else {
 	/* do nothing */
@@ -318,6 +324,7 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     chk_err(cudaMalloc(&m_e_est, sizeof(real) * m_scenario.NumGridPoints));
     chk_err(cudaMalloc(&m_h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
     m_dm = new CUDADensityMatrix(m_scenario.NumGridPoints, 2, 5);
+    //m_dm = new CUDADensityMatrix(m_scenario.NumGridPoints, 2, 1);
 
     /* initialize memory */
     unsigned int threads = 128;

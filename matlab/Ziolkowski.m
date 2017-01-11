@@ -1,7 +1,7 @@
 clear all;
 close all;
 
-load ~/mbsolve-build/Ziolkowski-Basic.mat
+load ~/mbsolve-cuda-working/Ziolkowski-Basic.mat
 
 t = 100;
 
