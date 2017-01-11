@@ -5,6 +5,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 
 option(WITH_MATLAB "with(out) MATLAB writer" ON)
 option(WITH_CUDA "with(out) CUDA solver" ON)
+option(WITH_OPENMP "with(out) OPENMP solver" ON)
 
 # mbsolve library
 add_subdirectory(mbsolve-lib)
@@ -26,6 +27,15 @@ if(WITH_CUDA)
     add_subdirectory(solver-cuda)
   endif(CUDA_FOUND)
 endif(WITH_CUDA)
+
+# OpenMP support?
+if(WITH_OPENMP)
+  find_package(OpenMP)
+  if(OPENMP_FOUND)
+    set(MBSOLVE_OPENMP TRUE)
+    add_subdirectory(solver-openmp)
+  endif(OPENMP_FOUND)
+endif(WITH_OPENMP)
 
 # Generic support
 add_subdirectory(solver-generic)

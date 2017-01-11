@@ -14,6 +14,10 @@ if(MBSOLVE_CUDA)
   target_link_libraries(mbsolve-tool solver-cuda)
 endif(MBSOLVE_CUDA)
 
+if(MBSOLVE_OPENMP)
+  target_link_libraries(mbsolve-tool solver-openmp)
+endif(MBSOLVE_OPENMP)
+
 if(MBSOLVE_MATLAB)
   target_link_libraries(mbsolve-tool writer-matlab)
 endif(MBSOLVE_MATLAB)
