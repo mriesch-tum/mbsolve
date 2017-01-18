@@ -104,7 +104,7 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     /* Ziolkowski settings */
     scen.Name = "Basic";
     //scen.SimEndTime = 10e-15;
-    scen.SimEndTime = 500e-15;
+    scen.SimEndTime = 200e-15;
     //scen.NumGridPoints = 23040;
     scen.NumGridPoints = 32768;
     //scen.NumGridPoints = 65536;

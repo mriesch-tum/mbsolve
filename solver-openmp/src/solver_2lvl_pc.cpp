@@ -18,6 +18,71 @@ inline unsigned int get_region(unsigned int idx)
     return 0;
 }
 
+inline void
+SolverOMP_2lvl_pc::estimate_step(int i, real src) const
+{
+    int region = get_region(i);
+
+    real rho11_o  = m_dm->oldDM(0, 0)[i];
+    real rho11_e  = rho11_o;
+    real rho22_o  = m_dm->oldDM(1, 1)[i];
+    real rho22_e  = rho22_o;
+    real rho12r_o = m_dm->oldDM(1, 0)[i];
+    real rho12r_e = rho12r_o;
+    real rho12i_o = m_dm->oldDM(0, 1)[i];
+    real rho12i_e = rho12i_o;
+    real field_o = m_e[i];
+    real field_e = field_o;
+
+    for (int pc_step = 0; pc_step < 4; pc_step++) {
+	/* execute prediction - correction steps */
+
+	real rho11  = 0.5 * (rho11_o + rho11_e);
+	real rho22  = 0.5 * (rho22_o + rho22_e);
+	real rho12r = 0.5 * (rho12r_o + rho12r_e);
+	real rho12i = 0.5 * (rho12i_o + rho12i_e);
+	real OmRabi = 0.5 * gsc[region].d12 * (field_o + field_e);
+
+	rho11_e = rho11_o + gsc[region].d_t *
+	    (- 2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11);
+
+	rho12i_e = rho12i_o + gsc[region].d_t *
+	    (- gsc[region].w12 * rho12r
+	     + OmRabi * (rho11 - rho22)
+	     - gsc[region].gamma12 * rho12i);
+
+	rho12r_e = rho12r_o + gsc[region].d_t *
+	    (+ gsc[region].w12 * rho12i
+	     - gsc[region].gamma12 * rho12r);
+
+	rho22_e = rho22_o + gsc[region].d_t *
+	    (+ 2.0 * OmRabi * rho12i
+	     + gsc[region].tau1 * rho11);
+
+	real j = 0;
+	real p_t = gsc[region].M_CP * gsc[region].d12 *
+	    (gsc[region].w12 * rho12i -
+	     gsc[region].gamma12 * rho12r);
+
+	field_e = field_o + gsc[region].M_CE *
+	    (-j - p_t + (m_h[i + 1] - m_h[i])/gsc[region].d_x);
+
+	if (i == 0) {
+	    /* TODO rework soft source for pred-corr scheme */
+	    //m_e_est[i] += src; /* soft source */
+	    field_e = src; /* hard source */
+	}
+    }
+
+    /* final update step */
+    m_dm->newDM(0, 0)[i] = rho11_e;
+    m_dm->newDM(0, 1)[i] = rho12i_e;
+    m_dm->newDM(1, 0)[i] = rho12r_e;
+    m_dm->newDM(1, 1)[i] = rho22_e;
+
+    m_e[i] = field_e;
+}
+
 SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 				     const Scenario& scenario) :
     ISolver(device, scenario)
@@ -93,8 +158,8 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 
     m_h = new real[m_scenario.NumGridPoints + 1];
     m_e = new real[m_scenario.NumGridPoints];
-    m_e_est = new real[m_scenario.NumGridPoints];
-
+    //m_e_est = new real[m_scenario.NumGridPoints];
+    /*
 #pragma omp parallel for
     for (int i = 0; i < m_scenario.NumGridPoints; i++) {
         int region = get_region(i);
@@ -123,7 +188,7 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
     for (int i = 0; i < m_scenario.NumGridPoints + 1; i++) {
         m_h[i] = 0.0;
     }
-
+    */
     /* set up results transfer data structures */
     BOOST_FOREACH(Record rec, m_scenario.Records) {
 	unsigned int row_ct = m_scenario.SimEndTime/rec.Interval;
@@ -196,7 +261,7 @@ SolverOMP_2lvl_pc::~SolverOMP_2lvl_pc()
     delete m_dm;
     delete[] m_h;
     delete[] m_e;
-    delete[] m_e_est;
+    //delete[] m_e_est;
 }
 
 std::string
@@ -208,108 +273,93 @@ SolverOMP_2lvl_pc::getName() const
 void
 SolverOMP_2lvl_pc::run() const
 {
-    /* main loop */
-    for (unsigned int i = 0; i < m_scenario.NumTimeSteps; i++) {
-        /* TODO parallel to update */
-        /* gather h field in copy stream */
-	BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
-            if (entry->record(i)) {
-                std::copy(entry->getSrc(), entry->getSrc() + entry->getCount(),
-                          entry->getDst(i));
+#pragma omp parallel
+    {
+	/* parallel initialization */
+#pragma omp for schedule(static)
+	for (int i = 0; i < m_scenario.NumGridPoints; i++) {
+	    int region = get_region(i);
+
+	    m_dm->oldDM(0, 0)[i] = gsc[region].dm11_init;
+	    m_dm->newDM(0, 0)[i] = gsc[region].dm11_init;
+	    m_dm->rhs(0, 0, 0)[i] = gsc[region].dm11_init;
+
+	    m_dm->oldDM(1, 1)[i] = gsc[region].dm22_init;
+	    m_dm->newDM(1, 1)[i] = gsc[region].dm22_init;
+	    m_dm->rhs(1, 1, 0)[i] = gsc[region].dm22_init;
+
+	    m_dm->oldDM(0, 1)[i] = 0.0;
+	    m_dm->newDM(0, 1)[i] = 0.0;
+	    m_dm->rhs(0, 1, 0)[i] = 0.0;
+
+	    m_dm->oldDM(1, 0)[i] = 0.0;
+	    m_dm->newDM(1, 0)[i] = 0.0;
+	    m_dm->rhs(1, 0, 0)[i] = 0.0;
+
+	    m_e[i] = 0.0;
+	    //m_e_est[i] = 0.0;
+	    m_h[i] = 0.0;
+	    if (i == m_scenario.NumGridPoints - 1) {
+		m_h[i + 1] = 0.0;
 	    }
 	}
 
-	/* calculate source value */
-	/* TODO */
-	real f_0 = 2e14;
-	real t = i * m_scenario.TimeStepSize;
-	real T_p = 20/f_0;
-	real gamma = 2 * t/T_p - 1;
-	real E_0 = 4.2186e9;
-	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
-	src = src/2; // pi pulse
+	/* main loop */
+	for (unsigned int n = 0; n < m_scenario.NumTimeSteps; n++) {
+	    /* calculate source value */
+	    /* TODO optimize divisions?`*/
+	    real f_0 = 2e14;
+	    real t = n * m_scenario.TimeStepSize;
+	    real T_p = 20/f_0;
+	    real gamma = 2 * t/T_p - 1;
+	    real E_0 = 4.2186e9;
+	    real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
+	    src = src/2; // pi pulse
+	    /* TODO:  private(src) ? */
+	    /* TODO: masteronly? */
 
-	/* execute prediction - correction steps */
-	for (int pc_step = 0; pc_step < 4; pc_step++) {
-
-            /* estimate dm and e in parallel */
-#pragma omp parallel for
-            for (int i = 0; i < m_scenario.NumGridPoints; i++) {
-                int region = get_region(i);
-
-                real rho11  = 0.5 *
-                    (m_dm->oldDM(0, 0)[i] + m_dm->rhs(0, 0, 0)[i]);
-                real rho22  = 0.5 *
-                    (m_dm->oldDM(1, 1)[i] + m_dm->rhs(1, 1, 0)[i]);
-                real rho12r  = 0.5 *
-                    (m_dm->oldDM(1, 0)[i] + m_dm->rhs(1, 0, 0)[i]);
-                real rho12i  = 0.5 *
-                    (m_dm->oldDM(0, 1)[i] + m_dm->rhs(0, 1, 0)[i]);
-                real OmRabi = 0.5 * gsc[region].d12 * (m_e[i] + m_e_est[i]);
-
-                m_dm->rhs(0, 0, 0)[i] =
-                    m_dm->oldDM(0, 0)[i] + gsc[region].d_t *
-                    (- 2.0 * OmRabi * rho12i
-                     - gsc[region].tau1 * rho11);
-
-                m_dm->rhs(0, 1, 0)[i] =
-                    m_dm->oldDM(0, 1)[i] + gsc[region].d_t *
-                    (- gsc[region].w12 * rho12r
-                     + OmRabi * (rho11 - rho22)
-                     - gsc[region].gamma12 * rho12i);
-
-                m_dm->rhs(1, 0, 0)[i] =
-                    m_dm->oldDM(1, 0)[i] + gsc[region].d_t *
-                    (+ gsc[region].w12 * rho12i
-                     - gsc[region].gamma12 * rho12r);
-
-                m_dm->rhs(1, 1, 0)[i] =
-                    m_dm->oldDM(1, 1)[i] + gsc[region].d_t *
-                    (+ 2.0 * OmRabi * rho12i
-                     + gsc[region].tau1 * rho11);
-
-                real j = 0;
-                real p_t = gsc[region].M_CP * gsc[region].d12 *
-                    (gsc[region].w12 * rho12i -
-                     gsc[region].gamma12 * rho12r);
-
-                m_e_est[i] = m_e[i] + gsc[region].M_CE *
-                    (-j - p_t + (m_h[i + 1] - m_h[i])/gsc[region].d_x);
-            }
-
-            //m_e_est[0] += src; /* soft source */
-            m_e_est[0] = src; /* hard source */
-        }
-
-        /* update dm and e in parallel */
-#pragma omp parallel for
-        for (int i = 0; i < m_scenario.NumGridPoints; i++) {
-            m_dm->newDM(0, 0)[i] = m_dm->rhs(0, 0, 0)[i];
-            m_dm->newDM(0, 1)[i] = m_dm->rhs(0, 1, 0)[i];
-            m_dm->newDM(1, 0)[i] = m_dm->rhs(1, 0, 0)[i];
-            m_dm->newDM(1, 1)[i] = m_dm->rhs(1, 1, 0)[i];
-
-            m_e[i] = m_e_est[i];
-        }
-
-        /* toggle density matrix data */
-        m_dm->next();
-
-        /* update h in parallel */
-#pragma omp parallel for
-        for (int i = 1; i < m_scenario.NumGridPoints; i++) {
-            int region = get_region(i);
-
-            m_h[i] += gsc[region].M_CH * (m_e[i] - m_e[i - 1]);
-        }
-
-        /* TODO parallel to update */
-        /* gather e field and dm entries in copy stream */
-	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
-            if (entry->record(i)) {
-                std::copy(entry->getSrc(), entry->getSrc() + entry->getCount(),
-                          entry->getDst(i));
+	    /* update dm and e in parallel */
+#pragma omp for schedule(static)
+	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
+		estimate_step(i, src);
 	    }
+
+	    /* update h in parallel */
+#pragma omp for schedule(static)
+	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
+		int region = get_region(i);
+
+		if (i != 0) {
+		    m_h[i] += gsc[region].M_CH * (m_e[i] - m_e[i - 1]);
+		}
+	    }
+
+#pragma omp master
+	    {
+		/* toggle density matrix data */
+		m_dm->next();
+
+		/* TODO parallel to update (or rather parallel copy) */
+		/* gather e field and dm entries in copy stream */
+		BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
+		    if (entry->record(n)) {
+			std::copy(entry->getSrc(),
+				  entry->getSrc() + entry->getCount(),
+				  entry->getDst(n));
+		    }
+		}
+
+		/* TODO parallel to update */
+		/* gather h field in copy stream */
+		BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
+		    if (entry->record(n)) {
+			std::copy(entry->getSrc(),
+				  entry->getSrc() + entry->getCount(),
+				  entry->getDst(n));
+		    }
+		}
+	    }
+#pragma omp barrier
 	}
     }
 }

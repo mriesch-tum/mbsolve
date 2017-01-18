@@ -114,6 +114,7 @@ public:
     void run() const;
 
 private:
+    inline void estimate_step(int i, real src) const;
 
     DensityMatrixData *m_dm;
 
