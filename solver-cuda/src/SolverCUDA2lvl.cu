@@ -7,8 +7,6 @@
 
 namespace mbsolve {
 
-static const real norm = 1.0;
-
 static SolverFactory<SolverCUDA2lvl> factory("cuda-2lvl");
 
 /* CUDA memory and kernels */
@@ -107,135 +105,87 @@ __global__ void makestep_h(const real *ge, real *gh)
     }
 }
 
-__global__ void estimate_e(CUDADensityMatrixData dm, const real *gh,
-			   real *ge, real *ge_est, real src)
+__global__ void makestep_e_dm(CUDADensityMatrixData dm, const real *gh,
+			      real *ge, real src)
 {
-    int idx = threadIdx.x;
+    int size = blockDim.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
+    int idx = threadIdx.x;
     int region = get_region(gidx);
 
     extern __shared__ real h[];
+    real *dm11 = &h[size + 1];
+    real *dm12i = &h[2 * size + 1];
+    real *dm12r = &h[3 * size + 1];
+    real *dm22 = &h[4 * size + 1];
+    real *e = &h[5 * size + 1];
 
     h[idx] = gh[gidx];
     if (idx == blockDim.x - 1) {
 	h[idx + 1] = gh[gidx + 1];
     }
+    dm11[idx] = dm.oldDM(0, 0)[gidx];
+    dm12i[idx] = dm.oldDM(0, 1)[gidx];
+    dm12r[idx] = dm.oldDM(1, 0)[gidx];
+    dm22[idx] = dm.oldDM(1, 1)[gidx];
+    e[idx] = ge[gidx];
 
     __syncthreads();
 
-    real j = 0; /*TODO revise e *//* ge[gidx] * gsc[region].sigma;*/
+    real dm11_e = dm11[idx];
+    real dm12i_e = dm12i[idx];
+    real dm12r_e = dm12r[idx];
+    real dm22_e = dm22[idx];
+    real e_e = e[idx];
 
-    real rho12i = 0.5 * (dm.oldDM(0, 1)[gidx] + dm.rhs(0, 1, 0)[gidx]);
-    real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
-    real p_t = gsc[region].M_CP * gsc[region].d12/norm *
-	(gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r);
+    /* execute prediction - correction steps */
+    for (int pc_step = 0; pc_step < 4; pc_step++) {
 
-    ge_est[gidx] = ge[gidx] + gsc[region].M_CE *
-	(-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
+	real rho11 = 0.5 * (dm11[idx] + dm11_e);
+	real rho12i = 0.5 * (dm12i[idx] + dm12i_e);
+	real rho12r = 0.5 * (dm12r[idx] + dm12r_e);
+	real rho22 = 0.5 * (dm22[idx] + dm22_e);
+	real OmRabi = gsc[region].d12 * 0.5 * (e[idx] + e_e);
 
-    if (gidx == 0) {
-	/* soft source must be re-implemented, if required */
-	//ge[gidx] += src; /* soft source */
-	ge_est[gidx] = src; /* hard source */
-    }
-}
-
-__global__ void makestep_e(CUDADensityMatrixData dm, const real *gh,
-			  real *ge, real *ge_est, real src)
-{
-    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-
-    ge[gidx] = ge_est[gidx];
-}
-
-#if 0
-__global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
-{
-    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int region = get_region(gidx);
-    int row = blockIdx.y;
-    int col = blockIdx.z;
-
-    real rhs = 0.0;
-
-    if ((row == 0) && (col == 0)) {
 	/* dm11 */
-	rhs = - dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx] * norm
-	    - dm.oldDM(0, 0)[gidx] * gsc[region].tau1;
-    } else if ((row == 0) && (col == 1)) {
+	dm11_e = dm11[idx] + gsc[region].d_t *
+	    (-2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11);
+
 	/* imag dm12 */
-	rhs = - dm.oldDM(1, 0)[gidx] * gsc[region].w12
-	    + (dm.oldDM(0, 0)[gidx] - dm.oldDM(1, 1)[gidx]) * gsc[region].d12 * ge[gidx] * norm
-	    - dm.oldDM(0, 1)[gidx] * gsc[region].gamma12;
-    } else if ((row == 1) && (col == 0)) {
+	dm12i_e = dm12i[idx] + gsc[region].d_t *
+	    (- gsc[region].w12 * rho12r + OmRabi * (rho11 - rho22)
+	     - gsc[region].gamma12 * rho12i);
+
 	/* real dm12 */
-	rhs = dm.oldDM(0, 1)[gidx] * gsc[region].w12
-	    - dm.oldDM(1, 0)[gidx] * gsc[region].gamma12;
-    } else if ((row == 1) && (col == 1)) {
+	dm12r_e = dm12r[idx] + gsc[region].d_t *
+	    (gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r);
+
 	/* dm22 */
-	rhs = dm.oldDM(0, 1)[gidx] * 2.0 * gsc[region].d12 * ge[gidx] * norm
-	    + dm.oldDM(0, 0)[gidx] * gsc[region].tau1;
-    } else {
-	/* do nothing */
+	dm22_e = dm22[idx] + gsc[region].d_t *
+	    (2.0 * OmRabi * rho12i + gsc[region].tau1 * rho11);
+
+
+	real j = 0; /*TODO revise e *//* ge[gidx] * gsc[region].sigma;*/
+
+	real p_t = gsc[region].M_CP * gsc[region].d12 *
+	    (gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r);
+
+	e_e = e[idx] + gsc[region].M_CE *
+	    (-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
+
+	if (gidx == 0) {
+	    /* soft source must be re-implemented, if required */
+	    //ge[gidx] += src; /* soft source */
+	    e_e = src; /* hard source */
+	}
     }
 
-
-    dm.newDM(row, col)[gidx] = dm.oldDM(row, col)[gidx] + gsc[region].d_t *
-	rhs;
+    ge[gidx] = e_e;
+    dm.newDM(0, 0)[gidx] = dm11_e;
+    dm.newDM(0, 1)[gidx] = dm12i_e;
+    dm.newDM(1, 0)[gidx] = dm12r_e;
+    dm.newDM(1, 1)[gidx] = dm22_e;
 }
-#endif
-
-__global__ void estimate_dm(CUDADensityMatrixData dm, const real *ge,
-    const real *ge_est)
-{
-    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int region = get_region(gidx);
-    int row = blockIdx.y;
-    int col = blockIdx.z;
-
-    real rhs = 0.0;
-
-    real rho12i = 0.5 * (dm.oldDM(0, 1)[gidx] + dm.rhs(0, 1, 0)[gidx]);
-
-    if ((row == 0) && (col == 0)) {
-	/* dm11 */
-	real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
-	real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
-	rhs = -2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11;
-    } else if ((row == 0) && (col == 1)) {
-	/* imag dm12 */
-	real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
-	real rho22  = 0.5 * (dm.oldDM(1, 1)[gidx] + dm.rhs(1, 1, 0)[gidx]);
-	real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
-	real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
-	rhs = - gsc[region].w12 * rho12r + OmRabi * (rho11 - rho22)
-	    - gsc[region].gamma12 * rho12i;
-    } else if ((row == 1) && (col == 0)) {
-	/* real dm12 */
-	real rho12r = 0.5 * (dm.oldDM(1, 0)[gidx] + dm.rhs(1, 0, 0)[gidx]);
-	rhs = gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r;
-    } else if ((row == 1) && (col == 1)) {
-	/* dm22 */
-	real rho11  = 0.5 * (dm.oldDM(0, 0)[gidx] + dm.rhs(0, 0, 0)[gidx]);
-	real OmRabi = gsc[region].d12 * 0.5 * (ge[gidx] + ge_est[gidx]) * norm;
-	rhs = 2.0 * OmRabi * rho12i + gsc[region].tau1 * rho11;
-    } else {
-	/* do nothing */
-    }
-
-    dm.rhs(row, col, 0)[gidx] = dm.oldDM(row, col)[gidx] + gsc[region].d_t *
-	rhs;
-}
-
-__global__ void makestep_dm(CUDADensityMatrixData dm, const real *ge)
-{
-    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int row = blockIdx.y;
-    int col = blockIdx.z;
-
-    dm.newDM(row, col)[gidx] = dm.rhs(row, col, 0)[gidx];
-}
-
 
 /* host members */
 SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
@@ -441,7 +391,7 @@ SolverCUDA2lvl::run() const
     /* TODO handle roundoff errors in thread/block partition */
 
     dim3 block_maxwell(blocks);
-    dim3 block_density(blocks, 2, 2);
+    //dim3 block_density(blocks, 2, 2);
 
     /* main loop */
     for (unsigned int i = 0; i < m_scenario.NumTimeSteps; i++) {
@@ -465,32 +415,14 @@ SolverCUDA2lvl::run() const
 	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
 	src = src/2; // pi pulse
 	//src = src*2; // 4*pi pulse
-	src = src/norm;
 
-	/* execute prediction - correction steps */
-	for (int pc_step = 0; pc_step < 4; pc_step++) {
-	    estimate_dm<<<block_density, threads, 0, comp_density>>>
-		(m_dm->getData(), m_e, m_e_est);
-
-	    estimate_e<<<block_maxwell, threads, (threads + 1) * sizeof(real),
-		comp_maxwell>>>(m_dm->getData(), m_h, m_e, m_e_est, src);
-
-	    /* sync */
-	    chk_err(cudaStreamSynchronize(comp_maxwell));
-	    chk_err(cudaStreamSynchronize(comp_density));
-	}
-
-	/* makestep_dm in density stream */
-	makestep_dm<<<block_density, threads, 0, comp_density>>>
-	    (m_dm->getData(), m_e);
-
-	/* makestep_e kernel */
-	makestep_e<<<block_maxwell, threads, (threads + 1) * sizeof(real),
-	    comp_maxwell>>>(m_dm->getData(), m_h, m_e, m_e_est, src);
+	makestep_e_dm<<<block_maxwell, threads,
+	    (6 * threads + 1) * sizeof(real),
+	    comp_maxwell>>>(m_dm->getData(), m_h, m_e, src);
 
 	/* sync */
 	chk_err(cudaStreamSynchronize(comp_maxwell));
-	chk_err(cudaStreamSynchronize(comp_density));
+	//	chk_err(cudaStreamSynchronize(comp_density));
 	chk_err(cudaStreamSynchronize(copy));
 
 	/* switch density matrix double buffer */
@@ -512,7 +444,7 @@ SolverCUDA2lvl::run() const
 	/* sync */
 	chk_err(cudaStreamSynchronize(copy));
 	chk_err(cudaStreamSynchronize(comp_maxwell));
-	chk_err(cudaStreamSynchronize(comp_density));
+	//chk_err(cudaStreamSynchronize(comp_density));
     }
 
     /* sync */
