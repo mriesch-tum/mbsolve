@@ -128,14 +128,11 @@ public:
 
 private:
     cudaStream_t comp_maxwell;
-    cudaStream_t comp_density;
     cudaStream_t copy;
-
-    CUDADensityMatrix *m_dm;
 
     real *m_h;
     real *m_e;
-    real *m_e_est;
+    real *m_d;
 
     std::vector<CopyListEntry *> m_copyListBlack;
     std::vector<CopyListEntry *> m_copyListRed;

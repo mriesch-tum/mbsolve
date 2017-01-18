@@ -26,9 +26,9 @@ __device__ __inline__ unsigned int get_region(unsigned int idx)
 
 /* TODO: initialize may be reused by other CUDA solvers, make general */
 /* TODO: region-wise? initialization */
-__global__ void init_memory(CUDADensityMatrixData dm, real *e, real *e_est,
-			    real *h)
+__global__ void init_memory(real *d, real *e, real *h)
 {
+    unsigned int gsize = blockDim.x * gridDim.x;
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     int region = get_region(gidx);
 
@@ -43,40 +43,12 @@ __global__ void init_memory(CUDADensityMatrixData dm, real *e, real *e_est,
     }
     h[gidx] = 0.0;
     e[gidx] = 0.0;
-    e_est[gidx] = 0.0;
     //   e[gidx] = curand_uniform(&rand_state) * 1e-15;
 
-    real trace = 0.0;
-
-    for (unsigned int row = 0; row < dm.getNumLevels(); row++) {
-	for (unsigned int col = 0; col < dm.getNumLevels(); col++) {
-	    if (row == col) {
-		/*
-		real entry = curand_uniform(&rand_state);
-		dm.oldDM(row, col)[gidx] = entry;
-		trace += entry;
-		*/
-	    } else {
-		dm.oldDM(row, col)[gidx] = 0.0;
-	    }
-	    for (int i = 0; i < dm.getNumMultistep(); i++) {
-		dm.rhs(row, col, i)[gidx] = 0.0;
-	    }
-	}
-    }
-
-    dm.oldDM(0, 0)[gidx] = gsc[region].dm11_init;
-    dm.oldDM(1, 1)[gidx] = gsc[region].dm22_init;
-    dm.newDM(0, 0)[gidx] = gsc[region].dm11_init;
-    dm.newDM(1, 1)[gidx] = gsc[region].dm22_init;
-    dm.rhs(0, 0, 0)[gidx] = gsc[region].dm11_init;
-    dm.rhs(1, 1, 0)[gidx] = gsc[region].dm22_init;
-
-    /*
-    for (unsigned int i = 0; i < dm.getNumLevels(); i++) {
-	dm.oldDM(i, i)[gidx] /= trace;
-    }
-    */
+    d[gsize * 0 + gidx] = gsc[region].dm11_init;
+    d[gsize * 1 + gidx] = 0.0;
+    d[gsize * 2 + gidx] = 0.0;
+    d[gsize * 3 + gidx] = gsc[region].dm22_init;
 }
 
 __global__ void makestep_h(const real *ge, real *gh)
@@ -105,9 +77,9 @@ __global__ void makestep_h(const real *ge, real *gh)
     }
 }
 
-__global__ void makestep_e_dm(CUDADensityMatrixData dm, const real *gh,
-			      real *ge, real src)
+__global__ void makestep_e_dm(real *d, const real *gh, real *ge, real src)
 {
+    int gsize = blockDim.x * gridDim.x;
     int size = blockDim.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     int idx = threadIdx.x;
@@ -124,10 +96,10 @@ __global__ void makestep_e_dm(CUDADensityMatrixData dm, const real *gh,
     if (idx == blockDim.x - 1) {
 	h[idx + 1] = gh[gidx + 1];
     }
-    dm11[idx] = dm.oldDM(0, 0)[gidx];
-    dm12i[idx] = dm.oldDM(0, 1)[gidx];
-    dm12r[idx] = dm.oldDM(1, 0)[gidx];
-    dm22[idx] = dm.oldDM(1, 1)[gidx];
+    dm11[idx] = d[gsize * 0 + gidx];
+    dm12i[idx] = d[gsize * 1 + gidx];
+    dm12r[idx] = d[gsize * 2 + gidx];
+    dm22[idx] = d[gsize * 3 + gidx];
     e[idx] = ge[gidx];
 
     __syncthreads();
@@ -181,16 +153,16 @@ __global__ void makestep_e_dm(CUDADensityMatrixData dm, const real *gh,
     }
 
     ge[gidx] = e_e;
-    dm.newDM(0, 0)[gidx] = dm11_e;
-    dm.newDM(0, 1)[gidx] = dm12i_e;
-    dm.newDM(1, 0)[gidx] = dm12r_e;
-    dm.newDM(1, 1)[gidx] = dm22_e;
+    d[gsize * 0 + gidx] = dm11_e;
+    d[gsize * 1 + gidx] = dm12i_e;
+    d[gsize * 2 + gidx] = dm12r_e;
+    d[gsize * 3 + gidx] = dm22_e;
 }
 
 /* host members */
 SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 			       const Scenario& scenario) :
-    ISolver(device, scenario), comp_maxwell(0), comp_density(0), copy(0)
+    ISolver(device, scenario), comp_maxwell(0), copy(0)
 {
     /* total device length */
     Quantity length = device.XDim();
@@ -266,21 +238,18 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 
     /* initialize streams */
     chk_err(cudaStreamCreate(&comp_maxwell));
-    chk_err(cudaStreamCreate(&comp_density));
     chk_err(cudaStreamCreate(&copy));
 
     /* allocate space */
     chk_err(cudaMalloc(&m_e, sizeof(real) * m_scenario.NumGridPoints));
-    chk_err(cudaMalloc(&m_e_est, sizeof(real) * m_scenario.NumGridPoints));
     chk_err(cudaMalloc(&m_h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
-    m_dm = new CUDADensityMatrix(m_scenario.NumGridPoints, 2, 5);
-    //m_dm = new CUDADensityMatrix(m_scenario.NumGridPoints, 2, 1);
+    chk_err(cudaMalloc(&m_d, sizeof(real) * m_scenario.NumGridPoints * 4));
 
     /* initialize memory */
     unsigned int threads = 128;
     unsigned int blocks = m_scenario.NumGridPoints/threads;
 
-    init_memory<<<blocks, threads>>>(m_dm->getData(), m_e, m_e_est, m_h);
+    init_memory<<<blocks, threads>>>(m_d, m_e, m_h);
 
     /* set up results transfer data structures */
     BOOST_FOREACH(Record rec, m_scenario.Records) {
@@ -317,11 +286,18 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
 		if (rec.I == rec.J) {
 		    /* main diagonal entry */
+		    /*
 		    entry = new CLEDensity(m_dm, rec.I - 1, rec.J - 1, res,
 					   col_ct, position_idx,
-					   interval);
+					   interval);*/
 		    //m_copyListBlack.push_back(entry);
+		    if (rec.I == 2) {
+			position_idx += m_scenario.NumGridPoints * 3;
+		    }
+		    entry = new CLEField(m_d, res, col_ct, position_idx,
+					 interval);
 		    m_copyListRed.push_back(entry);
+
 		} else {
 		    /* off-diagonal entry */
 		    /* TODO */
@@ -354,20 +330,14 @@ SolverCUDA2lvl::~SolverCUDA2lvl()
 	delete entry;
     }
 
-    /* delete density matrix */
-    delete(m_dm);
-
     /* free CUDA memory */
     cudaFree(m_h);
     cudaFree(m_e);
-    cudaFree(m_e_est);
+    cudaFree(m_d);
 
     /* clean up streams */
     if (comp_maxwell) {
 	cudaStreamDestroy(comp_maxwell);
-    }
-    if (comp_density) {
-	cudaStreamDestroy(comp_density);
     }
     if (copy) {
 	cudaStreamDestroy(copy);
@@ -418,15 +388,11 @@ SolverCUDA2lvl::run() const
 
 	makestep_e_dm<<<block_maxwell, threads,
 	    (6 * threads + 1) * sizeof(real),
-	    comp_maxwell>>>(m_dm->getData(), m_h, m_e, src);
+	    comp_maxwell>>>(m_d, m_h, m_e, src);
 
 	/* sync */
 	chk_err(cudaStreamSynchronize(comp_maxwell));
-	//	chk_err(cudaStreamSynchronize(comp_density));
 	chk_err(cudaStreamSynchronize(copy));
-
-	/* switch density matrix double buffer */
-	m_dm->getData().next();
 
 	/* makestep_h in maxwell stream */
 	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real),
@@ -444,7 +410,6 @@ SolverCUDA2lvl::run() const
 	/* sync */
 	chk_err(cudaStreamSynchronize(copy));
 	chk_err(cudaStreamSynchronize(comp_maxwell));
-	//chk_err(cudaStreamSynchronize(comp_density));
     }
 
     /* sync */
