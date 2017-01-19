@@ -148,13 +148,25 @@ int main(int argc, char **argv)
     }
 
     try {
+	ti::cpu_timer timer;
+	double total_time = 0;
+
+	/* tic */
+	timer.start();
+
 	mbsolve::Writer writer(writer_method);
 	mbsolve::Solver solver(solver_method, device, scenario);
+
+	/* toc */
+	timer.stop();
+	ti::cpu_times times = timer.elapsed();
+	std::cout << "Time required (setup): " << 1e-9 * times.wall
+		  << std::endl;
+	total_time +=1e-9 * times.wall;
 
 	std::cout << solver.getName() << std::endl;
 
 	/* tic */
-	ti::cpu_timer timer;
 	timer.start();
 
 	/* execute solver */
@@ -162,12 +174,25 @@ int main(int argc, char **argv)
 
 	/* toc */
 	timer.stop();
-	ti::cpu_times times = timer.elapsed();
-	std::cout << "Time required: " << 1e-9 * times.wall << std::endl;
+	times = timer.elapsed();
+	std::cout << "Time required (run): " << 1e-9 * times.wall << std::endl;
+	total_time +=1e-9 * times.wall;
+
+	/* tic */
+	timer.start();
 
 	/* write results */
 	writer.write(output_file, solver.getResults(), device,
 		     solver.getScenario());
+
+	/* toc */
+	timer.stop();
+	times = timer.elapsed();
+	std::cout << "Time required (write): " << 1e-9 * times.wall
+		  << std::endl;
+	total_time +=1e-9 * times.wall;
+
+	std::cout << "Time required (total): " << total_time << std::endl;
 
     } catch (std::exception& e) {
 	std::cout << "Error: " << e.what() << std::endl;
