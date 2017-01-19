@@ -369,9 +369,11 @@ SolverCUDA2lvl::run() const
 	/* gather h field in copy stream */
 	BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
             if (entry->record(i)) {
+		/*
 		chk_err(cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
 					entry->getSize(),
 					cudaMemcpyDeviceToHost, copy));
+		*/
 	    }
 	}
 
@@ -386,30 +388,43 @@ SolverCUDA2lvl::run() const
 	src = src/2; // pi pulse
 	//src = src*2; // 4*pi pulse
 
+	/*
 	makestep_e_dm<<<block_maxwell, threads,
 	    (6 * threads + 1) * sizeof(real),
 	    comp_maxwell>>>(m_d, m_h, m_e, src);
+	*/
+	makestep_e_dm<<<block_maxwell, threads,
+	    (6 * threads + 1) * sizeof(real)>>>(m_d, m_h, m_e, src);
+
 
 	/* sync */
-	chk_err(cudaStreamSynchronize(comp_maxwell));
+	/*
 	chk_err(cudaStreamSynchronize(copy));
-
-	/* makestep_h in maxwell stream */
-	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real),
-	    comp_maxwell>>>(m_e, m_h);
+	chk_err(cudaStreamSynchronize(comp_maxwell));
+	*/
 
 	/* gather e field and dm entries in copy stream */
 	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
 	    if (entry->record(i)) {
-		chk_err(cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
+		/*chk_err(cudaMemcpyAsync(entry->getDst(i), entry->getSrc(),
 					entry->getSize(),
-					cudaMemcpyDeviceToHost, copy));
+					cudaMemcpyDeviceToHost, copy));*/
+		chk_err(cudaMemcpy(entry->getDst(i), entry->getSrc(),
+				   entry->getSize(), cudaMemcpyDeviceToHost));
 	    }
 	}
 
+	/* makestep_h in maxwell stream */
+	/*	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real),
+	    comp_maxwell>>>(m_e, m_h);
+	*/
+	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real)>>>
+	    (m_e, m_h);
+
 	/* sync */
+	/*
 	chk_err(cudaStreamSynchronize(copy));
-	chk_err(cudaStreamSynchronize(comp_maxwell));
+	chk_err(cudaStreamSynchronize(comp_maxwell));*/
     }
 
     /* sync */

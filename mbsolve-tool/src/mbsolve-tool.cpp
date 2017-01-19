@@ -107,10 +107,10 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     scen.SimEndTime = 200e-15;
     //scen.SimEndTime = 500e-15;
     //scen.NumGridPoints = 23040;
-    scen.NumGridPoints = 32768;
+    //scen.NumGridPoints = 32768;
     //scen.NumGridPoints = 65536;
     //scen.NumGridPoints = 131072;
-    //scen.NumGridPoints = 262144;
+    scen.NumGridPoints = 262144;
 
     scen.Records.push_back(mbsolve::Record("dm11", mbsolve::Density, 1, 1,
 					   2e-15));
