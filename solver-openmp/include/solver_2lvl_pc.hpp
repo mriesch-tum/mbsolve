@@ -2,7 +2,6 @@
 #define OPENMP_2LVL_PC_H
 
 #include <Solver.hpp>
-#include <DensityMatrixData.hpp>
 
 namespace mbsolve {
 
@@ -79,7 +78,7 @@ public:
 	return m_address + m_position;
     }
 };
-
+/*
 class CLEDensity : public CopyListEntry
 {
 private:
@@ -100,7 +99,7 @@ public:
     {
 	return m_dm->oldDM(m_row, m_col) + m_position;
     }
-};
+    };*/
 
 class SolverOMP_2lvl_pc : public ISolver
 {
@@ -116,7 +115,12 @@ public:
 private:
     inline void estimate_step(int i, real src) const;
 
-    DensityMatrixData *m_dm;
+    //DensityMatrixData *m_dm;
+
+    real *m_dm11;
+    real *m_dm12r;
+    real *m_dm12i;
+    real *m_dm22;
 
     real *m_h;
     real *m_e;
