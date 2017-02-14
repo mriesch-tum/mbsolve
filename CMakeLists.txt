@@ -3,6 +3,18 @@ project(mbsolve)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 
+
+# compiler options
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -mavx2")
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -xCORE-AVX2")
+  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g -xCORE-AVX2")
+endif()
+
+
+
+
 option(WITH_MATLAB "with(out) MATLAB writer" ON)
 option(WITH_CUDA "with(out) CUDA solver" ON)
 option(WITH_OPENMP "with(out) OPENMP solver" ON)
