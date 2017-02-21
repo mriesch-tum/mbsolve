@@ -201,12 +201,6 @@ SolverOMP_2lvl_pc::~SolverOMP_2lvl_pc()
     delete[] m_dm12i;
     delete[] m_dm22;
 
-    delete[] m_dm11_est;
-    delete[] m_dm12r_est;
-    delete[] m_dm12i_est;
-    delete[] m_dm22_est;
-    delete[] m_e_est;
-
     delete[] region_indices;
 }
 
@@ -266,28 +260,34 @@ SolverOMP_2lvl_pc::run() const
 	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
 		int region = region_indices[i];
 
+		real rho11_e = m_dm11[i];
+		real rho12r_e = m_dm12r[i];
+		real rho12i_e = m_dm12i[i];
+		real rho22_e = m_dm22[i];
+		real field_e = m_e[i];
+
 		for (int pc_step = 0; pc_step < 4; pc_step++) {
 		    /* execute prediction - correction steps */
 
-		    real rho11  = 0.5 * (rho11_o + rho11_e);
-		    real rho22  = 0.5 * (rho22_o + rho22_e);
-		    real rho12r = 0.5 * (rho12r_o + rho12r_e);
-		    real rho12i = 0.5 * (rho12i_o + rho12i_e);
-		    real OmRabi = 0.5 * gsc[region].d12 * (field_o + field_e);
+		    real rho11  = 0.5 * (m_dm11[i] + rho11_e);
+		    real rho22  = 0.5 * (m_dm22[i] + rho22_e);
+		    real rho12r = 0.5 * (m_dm12r[i] + rho12r_e);
+		    real rho12i = 0.5 * (m_dm12i[i] + rho12i_e);
+		    real OmRabi = 0.5 * gsc[region].d12 * (m_e[i] + field_e);
 
-		    rho11_e = rho11_o + gsc[region].d_t *
+		    rho11_e = m_dm11[i] + gsc[region].d_t *
 			(- 2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11);
 
-		    rho12i_e = rho12i_o + gsc[region].d_t *
+		    rho12i_e = m_dm12i[i] + gsc[region].d_t *
 			(- gsc[region].w12 * rho12r
 			 + OmRabi * (rho11 - rho22)
 			 - gsc[region].gamma12 * rho12i);
 
-		    rho12r_e = rho12r_o + gsc[region].d_t *
+		    rho12r_e = m_dm12r[i] + gsc[region].d_t *
 			(+ gsc[region].w12 * rho12i
 			 - gsc[region].gamma12 * rho12r);
 
-		    rho22_e = rho22_o + gsc[region].d_t *
+		    rho22_e = m_dm22[i] + gsc[region].d_t *
 			(+ 2.0 * OmRabi * rho12i
 			 + gsc[region].tau1 * rho11);
 
@@ -296,7 +296,7 @@ SolverOMP_2lvl_pc::run() const
 			(gsc[region].w12 * rho12i -
 			 gsc[region].gamma12 * rho12r);
 
-		    field_e = field_o + gsc[region].M_CE *
+		    field_e = m_e[i] + gsc[region].M_CE *
 			(-j - p_t + (m_h[i + 1] - m_h[i])/gsc[region].d_x);
 
 		    if (i == 0) {
