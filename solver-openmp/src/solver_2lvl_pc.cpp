@@ -8,16 +8,6 @@ static SolverFactory<SolverOMP_2lvl_pc> factory("openmp-2lvl-pc");
 
 static struct sim_constants gsc[MaxRegions];
 
-inline unsigned int get_region(unsigned int idx)
-{
-    for (unsigned int i = 0; i < MaxRegions; i++) {
-	if (idx <= gsc[i].idx_end) {
-	    return i;
-	}
-    }
-    return 0;
-}
-
 SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 				     const Scenario& scenario) :
     ISolver(device, scenario)
@@ -96,7 +86,10 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 
     m_h = new real[m_scenario.NumGridPoints + 1];
     m_e = new real[m_scenario.NumGridPoints];
-    //m_e_est = new real[m_scenario.NumGridPoints];
+
+    region_indices = new unsigned int[m_scenario.NumGridPoints];
+
+
     /*
 #pragma omp parallel for
     for (int i = 0; i < m_scenario.NumGridPoints; i++) {
@@ -207,7 +200,14 @@ SolverOMP_2lvl_pc::~SolverOMP_2lvl_pc()
     delete[] m_dm12r;
     delete[] m_dm12i;
     delete[] m_dm22;
-    //delete[] m_e_est;
+
+    delete[] m_dm11_est;
+    delete[] m_dm12r_est;
+    delete[] m_dm12i_est;
+    delete[] m_dm22_est;
+    delete[] m_e_est;
+
+    delete[] region_indices;
 }
 
 std::string
@@ -224,7 +224,15 @@ SolverOMP_2lvl_pc::run() const
 	/* parallel initialization */
 #pragma omp for schedule(static)
 	for (int i = 0; i < m_scenario.NumGridPoints; i++) {
-	    int region = get_region(i);
+	    int region;
+	    for (unsigned int j = 0; j < MaxRegions; j++) {
+		if (i <= gsc[j].idx_end) {
+		    region = j;
+		    break;
+		}
+	    }
+
+	    region_indices[i] = region;
 
 	    m_dm11[i] = gsc[region].dm11_init;
 	    m_dm22[i] = gsc[region].dm22_init;
@@ -256,18 +264,7 @@ SolverOMP_2lvl_pc::run() const
 	    /* update dm and e in parallel */
 #pragma omp for schedule(static)
 	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
-		int region = get_region(i);
-
-		real rho11_o  = m_dm11[i];
-		real rho11_e  = rho11_o;
-		real rho22_o  = m_dm22[i];
-		real rho22_e  = rho22_o;
-		real rho12r_o = m_dm12r[i];
-		real rho12r_e = rho12r_o;
-		real rho12i_o = m_dm12i[i];
-		real rho12i_e = rho12i_o;
-		real field_o = m_e[i];
-		real field_e = field_o;
+		int region = region_indices[i];
 
 		for (int pc_step = 0; pc_step < 4; pc_step++) {
 		    /* execute prediction - correction steps */
@@ -321,7 +318,7 @@ SolverOMP_2lvl_pc::run() const
 	    /* update h in parallel */
 #pragma omp for schedule(static)
 	    for (int i = 1; i < m_scenario.NumGridPoints; i++) {
-		int region = get_region(i);
+		int region = region_indices[i];
 
 		//if (i != 0) {
 		    m_h[i] += gsc[region].M_CH * (m_e[i] - m_e[i - 1]);

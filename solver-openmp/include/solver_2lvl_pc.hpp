@@ -126,6 +126,8 @@ private:
     real *m_e;
     real *m_e_est;
 
+    unsigned int *region_indices;
+
     std::vector<CopyListEntry *> m_copyListBlack;
     std::vector<CopyListEntry *> m_copyListRed;
 };
