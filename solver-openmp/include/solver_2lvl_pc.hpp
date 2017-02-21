@@ -22,7 +22,7 @@ struct sim_constants
     unsigned int idx_start;
     unsigned int idx_end;
 
-    real d_x;
+    real d_x_inv;
     real d_t;
 
     real dm11_init;

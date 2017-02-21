@@ -37,7 +37,6 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
     if (device.Regions.size() > MaxRegions) {
 	throw std::invalid_argument("Too many regions requested");
     }
-    struct sim_constants sc[MaxRegions];
 
     unsigned int i = 0;
     BOOST_FOREACH(Region reg, device.Regions) {
@@ -62,7 +61,7 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 	gsc[i].gamma12 = (reg.DephasingRates.size() < 1) ? 0.0 :
 	    reg.DephasingRates[0]();
 
-	gsc[i].d_x = m_scenario.GridPointSize;
+	gsc[i].d_x_inv = 1.0/m_scenario.GridPointSize;
 	gsc[i].d_t = m_scenario.TimeStepSize;
 
 	if (reg.DopingDensity() < 1.0) {
@@ -215,6 +214,8 @@ SolverOMP_2lvl_pc::run() const
 {
 #pragma omp parallel
     {
+	struct sim_constants sc[MaxRegions];
+
 	/* parallel initialization */
 #pragma omp for schedule(static)
 	for (int i = 0; i < m_scenario.NumGridPoints; i++) {
@@ -226,10 +227,14 @@ SolverOMP_2lvl_pc::run() const
 		}
 	    }
 
+	    for (unsigned int j = 0; j < MaxRegions; j++) {
+		sc[j] = gsc[j];
+	    }
+
 	    region_indices[i] = region;
 
-	    m_dm11[i] = gsc[region].dm11_init;
-	    m_dm22[i] = gsc[region].dm22_init;
+	    m_dm11[i] = sc[region].dm11_init;
+	    m_dm22[i] = sc[region].dm22_init;
 	    m_dm12r[i] = 0.0;
 	    m_dm12i[i] = 0.0;
 
@@ -256,7 +261,7 @@ SolverOMP_2lvl_pc::run() const
 	    /* TODO: masteronly? */
 
 	    /* update dm and e in parallel */
-#pragma omp for schedule(static)
+#pragma omp for simd schedule(static)
 	    for (int i = 0; i < m_scenario.NumGridPoints; i++) {
 		int region = region_indices[i];
 
@@ -273,31 +278,31 @@ SolverOMP_2lvl_pc::run() const
 		    real rho22  = 0.5 * (m_dm22[i] + rho22_e);
 		    real rho12r = 0.5 * (m_dm12r[i] + rho12r_e);
 		    real rho12i = 0.5 * (m_dm12i[i] + rho12i_e);
-		    real OmRabi = 0.5 * gsc[region].d12 * (m_e[i] + field_e);
+		    real OmRabi = 0.5 * sc[region].d12 * (m_e[i] + field_e);
 
-		    rho11_e = m_dm11[i] + gsc[region].d_t *
-			(- 2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11);
+		    rho11_e = m_dm11[i] + sc[region].d_t *
+			(- 2.0 * OmRabi * rho12i - sc[region].tau1 * rho11);
 
-		    rho12i_e = m_dm12i[i] + gsc[region].d_t *
-			(- gsc[region].w12 * rho12r
+		    rho12i_e = m_dm12i[i] + sc[region].d_t *
+			(- sc[region].w12 * rho12r
 			 + OmRabi * (rho11 - rho22)
-			 - gsc[region].gamma12 * rho12i);
+			 - sc[region].gamma12 * rho12i);
 
-		    rho12r_e = m_dm12r[i] + gsc[region].d_t *
-			(+ gsc[region].w12 * rho12i
-			 - gsc[region].gamma12 * rho12r);
+		    rho12r_e = m_dm12r[i] + sc[region].d_t *
+			(+ sc[region].w12 * rho12i
+			 - sc[region].gamma12 * rho12r);
 
-		    rho22_e = m_dm22[i] + gsc[region].d_t *
+		    rho22_e = m_dm22[i] + sc[region].d_t *
 			(+ 2.0 * OmRabi * rho12i
-			 + gsc[region].tau1 * rho11);
+			 + sc[region].tau1 * rho11);
 
 		    real j = 0;
-		    real p_t = gsc[region].M_CP * gsc[region].d12 *
-			(gsc[region].w12 * rho12i -
-			 gsc[region].gamma12 * rho12r);
+		    real p_t = gsc[region].M_CP * sc[region].d12 *
+			(sc[region].w12 * rho12i -
+			 sc[region].gamma12 * rho12r);
 
-		    field_e = m_e[i] + gsc[region].M_CE *
-			(-j - p_t + (m_h[i + 1] - m_h[i])/gsc[region].d_x);
+		    field_e = m_e[i] + sc[region].M_CE *
+			(-j - p_t + (m_h[i + 1] - m_h[i]) * sc[region].d_x_inv);
 
 		    if (i == 0) {
 			/* TODO rework soft source for pred-corr scheme */
@@ -316,12 +321,12 @@ SolverOMP_2lvl_pc::run() const
 	    }
 
 	    /* update h in parallel */
-#pragma omp for schedule(static)
+#pragma omp for simd schedule(static)
 	    for (int i = 1; i < m_scenario.NumGridPoints; i++) {
 		int region = region_indices[i];
 
 		//if (i != 0) {
-		    m_h[i] += gsc[region].M_CH * (m_e[i] - m_e[i - 1]);
+		    m_h[i] += sc[region].M_CH * (m_e[i] - m_e[i - 1]);
 		    //}
 	    }
 
