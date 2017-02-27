@@ -18,12 +18,6 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
     /* minimum relative permittivity */
     Quantity minRelPermittivity = device.MinRelPermittivity();
 
-    /* TODO: sanity check scenario? */
-    if (m_scenario.NumGridPoints % 32 != 0) {
-	throw std::invalid_argument("Number of grid points must be multiple"
-				    " of 32");
-    }
-
     /* determine grid point and time step size */
     real C = 0.5; /* courant number */
     real velocity = sqrt(MU0() * EPS0() * minRelPermittivity());
@@ -216,6 +210,10 @@ SolverOMP_2lvl_pc::run() const
     {
 	struct sim_constants sc[MaxRegions];
 
+	for (unsigned int j = 0; j < MaxRegions; j++) {
+	    sc[j] = gsc[j];
+	}
+
 	/* parallel initialization */
 #pragma omp for schedule(static)
 	for (int i = 0; i < m_scenario.NumGridPoints; i++) {
@@ -225,10 +223,6 @@ SolverOMP_2lvl_pc::run() const
 		    region = j;
 		    break;
 		}
-	    }
-
-	    for (unsigned int j = 0; j < MaxRegions; j++) {
-		sc[j] = gsc[j];
 	    }
 
 	    region_indices[i] = region;
