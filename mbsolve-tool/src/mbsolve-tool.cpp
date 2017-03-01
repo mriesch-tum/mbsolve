@@ -178,6 +178,13 @@ int main(int argc, char **argv)
 	std::cout << "Time required (run): " << 1e-9 * times.wall << std::endl;
 	total_time +=1e-9 * times.wall;
 
+	/* grid point updates per second */
+	double gpups = 1e-6 * 1e9/times.wall *
+	    solver.getScenario().NumGridPoints *
+	    solver.getScenario().SimEndTime/solver.getScenario().TimeStepSize;
+	std::cout << "Performance: " << gpups << " MGPU/s" << std::endl;
+
+
 	/* tic */
 	timer.start();
 

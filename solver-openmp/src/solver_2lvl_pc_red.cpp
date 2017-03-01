@@ -7,6 +7,9 @@ namespace mbsolve{
 static SolverFactory<SolverOMP_2lvl_pc_red> factory("openmp-2lvl-pc-red");
 
 struct sim_constants gsc[MaxRegions];
+
+/* redundant calculation overlap */
+//const unsigned int OL = 100;
 unsigned int OL;
 
 SolverOMP_2lvl_pc_red::SolverOMP_2lvl_pc_red(const Device& device,
@@ -21,9 +24,12 @@ SolverOMP_2lvl_pc_red::SolverOMP_2lvl_pc_red(const Device& device,
 
     /* determine grid point and time step size */
     real C = 0.5; /* courant number */
-    real velocity = sqrt(MU0() * EPS0() * minRelPermittivity());
+    real velocity_inv = sqrt(MU0() * EPS0() * minRelPermittivity());
     m_scenario.GridPointSize = length()/(m_scenario.NumGridPoints - 1);
-    real timestep  = C * m_scenario.GridPointSize * velocity;
+
+
+    /* WTF? confused mult and div? */
+    real timestep  = C * m_scenario.GridPointSize * velocity_inv;
     m_scenario.NumTimeSteps = ceil(m_scenario.SimEndTime/timestep) + 1;
     m_scenario.TimeStepSize = m_scenario.SimEndTime /
 	(m_scenario.NumTimeSteps - 1);
@@ -73,8 +79,7 @@ SolverOMP_2lvl_pc_red::SolverOMP_2lvl_pc_red(const Device& device,
 	gsc[i - 1].idx_end = m_scenario.NumGridPoints - 1;
     }
 
-    /* redundant calculation overlap */
-    OL = 1;
+    OL = 100;
 
     unsigned int P = omp_get_max_threads();
     unsigned int chunk = m_scenario.NumGridPoints/P;
@@ -260,6 +265,7 @@ SolverOMP_2lvl_pc_red::run() const
 
 	    /* exchange data */
 	    if (tid > 0) {
+#pragma ivdep
 		for (int i = 0; i < OL; i++) {
 		    m_dm11[tid][i] = m_dm11[tid - 1][chunk + i];
 		    m_dm12r[tid][i] = m_dm12r[tid - 1][chunk + i];
@@ -272,6 +278,7 @@ SolverOMP_2lvl_pc_red::run() const
 	    }
 
 	    if (tid < P - 1) {
+#pragma ivdep
 		for (int i = 0; i < OL; i++) {
 		    m_dm11[tid][OL + chunk + i] = m_dm11[tid + 1][OL + i];
 		    m_dm12r[tid][OL + chunk + i] = m_dm12r[tid + 1][OL + i];
@@ -288,8 +295,17 @@ SolverOMP_2lvl_pc_red::run() const
 
 	    /* sub-loop */
 	    for (unsigned int m = 0; m < OL; m++) {
+		/* calculate source value */
+		real f_0 = 2e14;
+		real t = (n * OL + m) * m_scenario.TimeStepSize;
+		real T_p = 20/f_0;
+		real gamma = 2 * t/T_p - 1;
+		real E_0 = 4.2186e9 * 0.5; /* pi pulse */
+		real src = E_0 * 1/std::cosh(10 * gamma) *
+		    std::sin(2 * M_PI * f_0 * t);
 
 		/* update dm and e */
+#pragma simd
 		for (int i = m; i < chunk + 2 * OL - m; i++) {
 		    int region = region_indices[tid][i];
 
@@ -334,21 +350,6 @@ SolverOMP_2lvl_pc_red::run() const
 			e_e = m_e[tid][i] + sc[region].M_CE *
 			    (-j - p_t + (m_h[tid][i + 1] - m_h[tid][i]) *
 			     sc[region].d_x_inv);
-
-			/* TODO fix source condition */
-			if (tid * chunk_base + (i - OL) == 0) {
-			    /* calculate source value */
-			    real f_0 = 2e14;
-			    real t = (n * OL + m) * m_scenario.TimeStepSize;
-			    real T_p = 20/f_0;
-			    real gamma = 2 * t/T_p - 1;
-			    real E_0 = 4.2186e9;
-			    real src = E_0 * 1/std::cosh(10 * gamma) *
-				sin(2 * M_PI * f_0 * t);
-			    src = src/2; // pi pulse
-
-			    e_e = src; /* hard source */
-			}
 		    }
 
 		    /* final update step */
@@ -356,20 +357,26 @@ SolverOMP_2lvl_pc_red::run() const
 		    m_dm12i[tid][i] = rho12i_e;
 		    m_dm12r[tid][i] = rho12r_e;
 		    m_dm22[tid][i] = rho22_e;
-
 		    m_e[tid][i] = e_e;
+
+		    /* TODO fix boundary condition */
+		    if (tid * chunk_base + (i - OL) == 0) {
+			m_e[tid][i] = src; /* hard source */
+		    }
 		}
 
 		/* update h */
+#pragma ivdep
 		for (int i = m; i < chunk + 2 * OL - m; i++) {
 		    int region = region_indices[tid][i];
 
 		    m_h[tid][i] += sc[region].M_CH *
 			(m_e[tid][i] - m_e[tid][i - 1]);
+		}
 
-		    if (tid * chunk_base + (i - OL) == 0) {
-			m_h[tid][i] = 0;
-		    }
+		/* apply boundary condition */
+		if (tid == 0) {
+		    m_h[tid][OL] = 0;
 		}
 
 		/* copy result data */

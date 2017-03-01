@@ -20,9 +20,10 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 
     /* determine grid point and time step size */
     real C = 0.5; /* courant number */
-    real velocity = sqrt(MU0() * EPS0() * minRelPermittivity());
+    real velocity_inv = sqrt(MU0() * EPS0() * minRelPermittivity());
     m_scenario.GridPointSize = length()/(m_scenario.NumGridPoints - 1);
-    real timestep  = C * m_scenario.GridPointSize * velocity;
+
+    real timestep  = C * m_scenario.GridPointSize * velocity_inv;
     m_scenario.NumTimeSteps = ceil(m_scenario.SimEndTime/timestep) + 1;
     m_scenario.TimeStepSize = m_scenario.SimEndTime /
 	(m_scenario.NumTimeSteps - 1);
