@@ -8,7 +8,8 @@ project(solver-openmp)
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 
-add_library(solver-openmp SHARED src/solver_2lvl_pc.cpp)
+add_library(solver-openmp SHARED src/solver_2lvl_pc.cpp
+  src/solver_2lvl_pc_red.cpp)
 
 #target_compile_options(solver-openmp PRIVATE "-xCORE-AVX2")
 target_compile_options(solver-openmp PRIVATE ${OpenMP_CXX_FLAGS})
