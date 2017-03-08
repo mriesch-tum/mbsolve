@@ -185,7 +185,6 @@ int main(int argc, char **argv)
 	    solver.getScenario().SimEndTime/solver.getScenario().TimeStepSize;
 	std::cout << "Performance: " << gpups << " MGPU/s" << std::endl;
 
-
 	/* tic */
 	timer.start();
 

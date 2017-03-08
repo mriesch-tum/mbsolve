@@ -134,6 +134,8 @@ private:
     real *m_e;
     real *m_d;
 
+    unsigned int *m_indices;
+
     std::vector<CopyListEntry *> m_copyListBlack;
     std::vector<CopyListEntry *> m_copyListRed;
 };

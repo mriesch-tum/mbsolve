@@ -26,7 +26,7 @@ __device__ __inline__ unsigned int get_region(unsigned int idx)
 
 /* TODO: initialize may be reused by other CUDA solvers, make general */
 /* TODO: region-wise? initialization */
-__global__ void init_memory(real *d, real *e, real *h)
+__global__ void init_memory(real *d, real *e, real *h, unsigned int *indices)
 {
     unsigned int gsize = blockDim.x * gridDim.x;
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -49,13 +49,15 @@ __global__ void init_memory(real *d, real *e, real *h)
     d[gsize * 1 + gidx] = 0.0;
     d[gsize * 2 + gidx] = 0.0;
     d[gsize * 3 + gidx] = gsc[region].dm22_init;
+
+    indices[gidx] = region;
 }
 
-__global__ void makestep_h(const real *ge, real *gh)
+__global__ void makestep_h(const real *ge, real *gh, unsigned int *indices)
 {
     int idx = threadIdx.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int region = get_region(gidx);
+    int region = indices[gidx];
 
     extern __shared__ real e[];
 
@@ -77,13 +79,14 @@ __global__ void makestep_h(const real *ge, real *gh)
     }
 }
 
-__global__ void makestep_e_dm(real *d, const real *gh, real *ge, real src)
+__global__ void makestep_e_dm(real *d, const real *gh, real *ge, real src,
+			      unsigned int *indices)
 {
     int gsize = blockDim.x * gridDim.x;
     int size = blockDim.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     int idx = threadIdx.x;
-    int region = get_region(gidx);
+    int region = indices[gidx];
 
     extern __shared__ real h[];
     real *dm11 = &h[size + 1];
@@ -244,12 +247,14 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
     chk_err(cudaMalloc(&m_e, sizeof(real) * m_scenario.NumGridPoints));
     chk_err(cudaMalloc(&m_h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
     chk_err(cudaMalloc(&m_d, sizeof(real) * m_scenario.NumGridPoints * 4));
+    chk_err(cudaMalloc(&m_indices, sizeof(unsigned int) *
+		       m_scenario.NumGridPoints));
 
     /* initialize memory */
     unsigned int threads = 128;
     unsigned int blocks = m_scenario.NumGridPoints/threads;
 
-    init_memory<<<blocks, threads>>>(m_d, m_e, m_h);
+	    init_memory<<<blocks, threads>>>(m_d, m_e, m_h, m_indices);
 
     /* set up results transfer data structures */
     BOOST_FOREACH(Record rec, m_scenario.Records) {
@@ -334,6 +339,7 @@ SolverCUDA2lvl::~SolverCUDA2lvl()
     cudaFree(m_h);
     cudaFree(m_e);
     cudaFree(m_d);
+    cudaFree(m_indices);
 
     /* clean up streams */
     if (comp_maxwell) {
@@ -394,7 +400,7 @@ SolverCUDA2lvl::run() const
 	    comp_maxwell>>>(m_d, m_h, m_e, src);
 	*/
 	makestep_e_dm<<<block_maxwell, threads,
-	    (6 * threads + 1) * sizeof(real)>>>(m_d, m_h, m_e, src);
+	    (6 * threads + 1) * sizeof(real)>>>(m_d, m_h, m_e, src, m_indices);
 
 
 	/* sync */
@@ -419,7 +425,7 @@ SolverCUDA2lvl::run() const
 	    comp_maxwell>>>(m_e, m_h);
 	*/
 	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real)>>>
-	    (m_e, m_h);
+	    (m_e, m_h, m_indices);
 
 	/* sync */
 	/*
