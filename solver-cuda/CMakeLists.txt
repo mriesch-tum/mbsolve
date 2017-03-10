@@ -14,6 +14,7 @@ set(CUDA_SEPARABLE_COMPILATION ON)
 
 cuda_add_library(solver-cuda SHARED src/CUDADensityMatrix.cu
   src/SolverCUDA2lvl.cu include/SolverCUDA2lvl.hpp
+  src/SolverCUDA2lvl-red.cu include/SolverCUDA2lvl-red.hpp
   include/CUDADensityMatrix.hpp include/CUDACommon.hpp)
 
 target_include_directories(solver-cuda PUBLIC include/)
