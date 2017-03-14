@@ -375,7 +375,7 @@ SolverCUDA2lvl::run() const
     real T_p = 20/f_0;
 
     real E_0 = 4.2186e9;
-    E_0 /= 2; /* pi pulse */
+    //E_0 /= 2; /* pi pulse */
 
     /* main loop */
     for (unsigned int i = 0; i < m_scenario.NumTimeSteps; i++) {

@@ -46,71 +46,54 @@ struct sim_constants
 
 class CopyListEntry
 {
-protected:
-    Result *m_res;
-    unsigned int m_size;
+private:
+    real *m_dst;
+
     unsigned int m_interval;
     unsigned int m_position;
+    unsigned int m_count;
+
+    RecordType m_type;
 
 public:
-    CopyListEntry(Result *result, unsigned int count,
-		  unsigned int position, unsigned int interval) :
-	m_res(result), m_size(sizeof(real) * count),
-	m_position(position), m_interval(interval)
+    __host__ __device__ CopyListEntry(real *dst,
+				      unsigned int count,
+				      unsigned int position,
+				      unsigned int interval,
+				      RecordType t) :
+	m_dst(dst), m_count(count),
+	m_position(position), m_interval(interval), m_type(t)
     {
     }
 
-    ~CopyListEntry()
+    //__host__ __device__ CopyListEntry(
+
+    __host__ __device__ CopyListEntry() { }
+
+    __host__ __device__ ~CopyListEntry()
     {
     }
 
-    virtual real *getSrc() const = 0;
-
-    real *getDst(unsigned int idx) const {
-	return m_res->data(idx/m_interval);
+    __host__ __device__ real *get_dst(unsigned int idx) const {
+	return &m_dst[idx/m_interval * m_count];
     }
 
-    unsigned int getSize() const { return m_size; }
-
-    bool record(unsigned int idx) const { return (idx % m_interval) == 0; }
-};
-
-class CLEField : public CopyListEntry
-{
-private:
-    real *m_address;
-public:
-    CLEField(real *address, Result *result, unsigned int count,
-	     unsigned int position, unsigned int interval) :
-	CopyListEntry(result, count, position, interval), m_address(address)
-    {
+    __host__ __device__ unsigned int get_size() const {
+	return m_count * sizeof(real);
     }
 
-    real *getSrc() const
-    {
-	return m_address + m_position;
-    }
-};
-
-class CLEDensity : public CopyListEntry
-{
-private:
-    CUDADensityMatrix *m_dm;
-    unsigned int m_row;
-    unsigned int m_col;
-
-public:
-    CLEDensity(CUDADensityMatrix *dm, unsigned int row, unsigned int col,
-	     Result *result, unsigned int count,
-	     unsigned int position, unsigned int interval) :
-	CopyListEntry(result, count, position, interval), m_dm(dm), m_row(row),
-	m_col(col)
-    {
+    __host__ __device__ unsigned int get_position() const {
+	return m_position;
     }
 
-    real *getSrc() const
-    {
-	return m_dm->getData().oldDM(m_row, m_col) + m_position;
+    __host__ __device__ unsigned int get_count() const {
+	return m_count;
+    }
+
+    __host__ __device__ RecordType get_type() const { return m_type; }
+
+    __host__ __device__ bool record(unsigned int idx) const {
+	return (idx % m_interval) == 0;
     }
 };
 
@@ -136,8 +119,7 @@ private:
 
     unsigned int *m_indices;
 
-    std::vector<CopyListEntry *> m_copyListBlack;
-    std::vector<CopyListEntry *> m_copyListRed;
+    std::vector<real *> m_results_gpu;
 };
 
 }

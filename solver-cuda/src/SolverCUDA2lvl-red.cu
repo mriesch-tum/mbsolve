@@ -12,6 +12,10 @@ static SolverFactory<SolverCUDA2lvl_red> factory("cuda-2lvl-red");
 /* CUDA memory and kernels */
 __device__ __constant__ struct sim_constants gsc_red[MaxRegions];
 
+__device__ __constant__ CopyListEntry copy_list[10];
+
+static const unsigned int threads = 120;
+
 /* TODO: hash function or something? */
 /* TODO: otherwise divergence within warp */
 __device__ __inline__ unsigned int get_region(unsigned int idx)
@@ -26,7 +30,8 @@ __device__ __inline__ unsigned int get_region(unsigned int idx)
 
 /* TODO: initialize may be reused by other CUDA solvers, make general */
 /* TODO: region-wise? initialization */
-__global__ void init_memory_red(real *d, real *e, real *h, unsigned int *indices)
+__global__ void init_memory_red(real *d, real *e, real *h,
+				unsigned int *indices)
 {
     unsigned int gsize = blockDim.x * gridDim.x;
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -53,113 +58,149 @@ __global__ void init_memory_red(real *d, real *e, real *h, unsigned int *indices
     indices[gidx] = region;
 }
 
-__global__ void makestep_h_red(const real *ge, real *gh, unsigned int *indices)
+const unsigned int OL = 10;
+
+__global__ void makestep(real *d, real *gh, real *ge, unsigned int n,
+			 unsigned int *indices, unsigned int copy_list_ct)
 {
+    int gsize = threads * gridDim.x;
+    int gidx = threads * blockIdx.x + threadIdx.x - OL;
     int idx = threadIdx.x;
-    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int region = indices[gidx];
+    int region = 0;
 
-    extern __shared__ real e[];
+    __shared__ real h[threads + 2 * OL];
+    __shared__ real e[threads + 2 * OL];
+    __shared__ real dm11[threads + 2 * OL];
+    __shared__ real dm12i[threads + 2 * OL];
+    __shared__ real dm12r[threads + 2 * OL];
+    __shared__ real dm22[threads + 2 * OL];
 
-    if ((idx == 0) && (gidx != 0)) {
-	e[idx] = ge[gidx - 1];
+    if ((gidx >= 0) && (gidx < gsize)) {
+	e[idx] = ge[gidx];
+	h[idx] = gh[gidx];
+	dm11[idx] = d[gsize * 0 + gidx];
+	dm12i[idx] = d[gsize * 1 + gidx];
+	dm12r[idx] = d[gsize * 2 + gidx];
+	dm22[idx] = d[gsize * 3 + gidx];
+
+	region = indices[gidx];
     }
-    e[idx + 1] = ge[gidx];
-
-    __syncthreads();
-
-    /* TODO: alternative boundary conditions? */
-    /* TODO: different kernel or templated version?? */
-    /* open circuit boundary conditions already set */
-    /* gh_ghz[0] = 0; */
-    /* gh_ghz[N_x] = 0; */
-
-    if (gidx != 0) {
-	gh[gidx] += gsc_red[region].M_CH * (e[idx + 1] - e[idx]);
+    if (gidx == gsize) {
+	h[idx] = 0;
     }
-}
 
-__global__ void makestep_e_dm_red(real *d, const real *gh, real *ge, real src,
-			      unsigned int *indices)
-{
-    int gsize = blockDim.x * gridDim.x;
-    int size = blockDim.x;
-    int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int idx = threadIdx.x;
-    int region = indices[gidx];
+    for (int i = 0; i < OL; i++) {
+	__syncthreads();
 
-    extern __shared__ real h[];
-    real *dm11 = &h[size + 1];
-    real *dm12i = &h[2 * size + 1];
-    real *dm12r = &h[3 * size + 1];
-    real *dm22 = &h[4 * size + 1];
-    real *e = &h[5 * size + 1];
+	real dm11_e = dm11[idx];
+	real dm12i_e = dm12i[idx];
+	real dm12r_e = dm12r[idx];
+	real dm22_e = dm22[idx];
+	real e_e = e[idx];
 
-    h[idx] = gh[gidx];
-    if (idx == blockDim.x - 1) {
-	h[idx + 1] = gh[gidx + 1];
-    }
-    dm11[idx] = d[gsize * 0 + gidx];
-    dm12i[idx] = d[gsize * 1 + gidx];
-    dm12r[idx] = d[gsize * 2 + gidx];
-    dm22[idx] = d[gsize * 3 + gidx];
-    e[idx] = ge[gidx];
+	/* calculate source value */
+	real f_0 = 2e14;
+	real T_p = 20/f_0;
+	real E_0 = 4.2186e9;
+	//E_0 /= 2; /* pi pulse */
+	real t = (n * OL + i) * gsc_red[region].d_t;
+	real gamma = 2 * t/T_p - 1;
+	real src = E_0 * 1/cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
 
-    __syncthreads();
+	if ((idx >= i) && (idx < blockDim.x - i - 1)) {
+	    /* execute prediction - correction steps */
+#pragma unroll
+	    for (int pc_step = 0; pc_step < 4; pc_step++) {
+		real rho11 = 0.5 * (dm11[idx] + dm11_e);
+		real rho12i = 0.5 * (dm12i[idx] + dm12i_e);
+		real rho12r = 0.5 * (dm12r[idx] + dm12r_e);
+		real rho22 = 0.5 * (dm22[idx] + dm22_e);
+		real OmRabi = gsc_red[region].d12 * 0.5 * (e[idx] + e_e);
 
-    real dm11_e = dm11[idx];
-    real dm12i_e = dm12i[idx];
-    real dm12r_e = dm12r[idx];
-    real dm22_e = dm22[idx];
-    real e_e = e[idx];
+		/* dm11 */
+		dm11_e = dm11[idx] + gsc_red[region].d_t *
+		    (-2.0 * OmRabi * rho12i - gsc_red[region].tau1 * rho11);
 
-    /* execute prediction - correction steps */
-    for (int pc_step = 0; pc_step < 4; pc_step++) {
+		/* imag dm12 */
+		dm12i_e = dm12i[idx] + gsc_red[region].d_t *
+		    (- gsc_red[region].w12 * rho12r + OmRabi * (rho11 - rho22)
+		     - gsc_red[region].gamma12 * rho12i);
 
-	real rho11 = 0.5 * (dm11[idx] + dm11_e);
-	real rho12i = 0.5 * (dm12i[idx] + dm12i_e);
-	real rho12r = 0.5 * (dm12r[idx] + dm12r_e);
-	real rho22 = 0.5 * (dm22[idx] + dm22_e);
-	real OmRabi = gsc_red[region].d12 * 0.5 * (e[idx] + e_e);
+		/* real dm12 */
+		dm12r_e = dm12r[idx] + gsc_red[region].d_t *
+		    (+ gsc_red[region].w12 * rho12i
+		     - gsc_red[region].gamma12 * rho12r);
 
-	/* dm11 */
-	dm11_e = dm11[idx] + gsc_red[region].d_t *
-	    (-2.0 * OmRabi * rho12i - gsc_red[region].tau1 * rho11);
+		/* dm22 */
+		dm22_e = dm22[idx] + gsc_red[region].d_t *
+		    (2.0 * OmRabi * rho12i + gsc_red[region].tau1 * rho11);
 
-	/* imag dm12 */
-	dm12i_e = dm12i[idx] + gsc_red[region].d_t *
-	    (- gsc_red[region].w12 * rho12r + OmRabi * (rho11 - rho22)
-	     - gsc_red[region].gamma12 * rho12i);
+		real j = 0; /* ge[gidx] * gsc[region].sigma;*/
 
-	/* real dm12 */
-	dm12r_e = dm12r[idx] + gsc_red[region].d_t *
-	    (gsc_red[region].w12 * rho12i - gsc_red[region].gamma12 * rho12r);
+		real p_t = gsc_red[region].M_CP * gsc_red[region].d12 *
+		    (+ gsc_red[region].w12 * rho12i
+		     - gsc_red[region].gamma12 * rho12r);
 
-	/* dm22 */
-	dm22_e = dm22[idx] + gsc_red[region].d_t *
-	    (2.0 * OmRabi * rho12i + gsc_red[region].tau1 * rho11);
+		e_e = e[idx] + gsc_red[region].M_CE *
+		    (-j - p_t + (h[idx + 1] - h[idx])/gsc_red[region].d_x);
 
+		if (gidx == 0) {
+		    e_e = src; /* hard source */
+		}
+	    }
+	    e[idx] = e_e;
+	    dm11[idx] = dm11_e;
+	    dm12i[idx] = dm12i_e;
+	    dm12r[idx] = dm12r_e;
+	    dm22[idx] = dm22_e;
+	}
 
-	real j = 0; /*TODO revise e *//* ge[gidx] * gsc[region].sigma;*/
+	__syncthreads();
 
-	real p_t = gsc_red[region].M_CP * gsc_red[region].d12 *
-	    (gsc_red[region].w12 * rho12i - gsc_red[region].gamma12 * rho12r);
-
-	e_e = e[idx] + gsc_red[region].M_CE *
-	    (-j - p_t + (h[idx + 1] - h[idx])/gsc_red[region].d_x);
-
+	if ((idx > i) && (idx < blockDim.x - i)) {
+	    h[idx] += gsc_red[region].M_CH * (e[idx] - e[idx - 1]);
+	}
 	if (gidx == 0) {
-	    /* soft source must be re-implemented, if required */
-	    //ge[gidx] += src; /* soft source */
-	    e_e = src; /* hard source */
+	    h[idx] = 0;
+	}
+	if (gidx == gsize) {
+	    h[idx] = 0;
+	}
+
+	/* copy result data */
+	for (int k = 0; k < copy_list_ct; k++) {
+	    if (copy_list[k].record(n * OL + i)) {
+		if ((idx >= OL) && (idx < OL + threads)) {
+		    //if ((gidx >= copy_list[k].get_position()) &&
+		    //	(gidx < copy_list[k].get_position()
+		    //	 + copy_list[k].get_count())) {
+			switch (copy_list[k].get_type()) {
+			case EField:
+			    copy_list[k].get_dst(n * OL + i)[gidx] = e[idx];
+			    break;
+			case D11:
+			    copy_list[k].get_dst(n * OL + i)[gidx] = dm11[idx];
+			    break;
+			case D22:
+			    copy_list[k].get_dst(n * OL + i)[gidx] = dm22[idx];
+			    break;
+			default:
+			    break;
+			}
+			//}
+		}
+	    }
 	}
     }
 
-    ge[gidx] = e_e;
-    d[gsize * 0 + gidx] = dm11_e;
-    d[gsize * 1 + gidx] = dm12i_e;
-    d[gsize * 2 + gidx] = dm12r_e;
-    d[gsize * 3 + gidx] = dm22_e;
+    if ((idx >= OL) && (idx < OL + threads)) {
+	gh[gidx] = h[idx];
+	ge[gidx] = e[idx];
+	d[gsize * 0 + gidx] = dm11[idx];
+	d[gsize * 1 + gidx] = dm12i[idx];
+	d[gsize * 2 + gidx] = dm12r[idx];
+	d[gsize * 3 + gidx] = dm22[idx];
+    }
 }
 
 /* host members */
@@ -174,10 +215,10 @@ SolverCUDA2lvl_red::SolverCUDA2lvl_red(const Device& device,
     Quantity minRelPermittivity = device.MinRelPermittivity();
 
     /* TODO: sanity check scenario? */
-    if (m_scenario.NumGridPoints % 32 != 0) {
+    /*    if (m_scenario.NumGridPoints % 32 != 0) {
 	throw std::invalid_argument("Number of grid points must be multiple"
 				    " of 32");
-    }
+				    }*/
 
     /* determine grid point and time step size */
     real C = 0.5; /* courant number */
@@ -250,14 +291,12 @@ SolverCUDA2lvl_red::SolverCUDA2lvl_red(const Device& device,
     chk_err(cudaMalloc(&m_indices, sizeof(unsigned int) *
 		       m_scenario.NumGridPoints));
 
-    /* initialize memory */
-    unsigned int threads = 128;
-    unsigned int blocks = m_scenario.NumGridPoints/threads;
-
-    init_memory_red<<<blocks, threads>>>(m_d, m_e, m_h, m_indices);
-
     /* set up results transfer data structures */
-    BOOST_FOREACH(Record rec, m_scenario.Records) {
+    CopyListEntry *list = new CopyListEntry[m_scenario.Records.size()];
+
+    for (int k = 0; k < m_scenario.Records.size(); k++) {
+	Record rec = m_scenario.Records[k];
+
 	unsigned int row_ct = m_scenario.SimEndTime/rec.Interval;
 	unsigned int interval = ceil(1.0 * m_scenario.NumTimeSteps/row_ct);
 	unsigned int position_idx;
@@ -276,33 +315,28 @@ SolverCUDA2lvl_red::SolverCUDA2lvl_red(const Device& device,
 	Result *res = new Result(rec.Name, col_ct, row_ct);
 	m_results.push_back(res);
 
+	/* allocate results memory on GPU */
+	real *data;
+	chk_err(cudaMalloc(&data, sizeof(real) * col_ct * row_ct));
+	m_results_gpu.push_back(data);
+
 	/* create copy list entry */
-	CopyListEntry *entry;
+
 	if (rec.Type == EField) {
-	    entry = new CLEField(m_e, res, col_ct, position_idx,
-				 interval);
-	    m_copyListRed.push_back(entry);
+	    list[k] = CopyListEntry(data, col_ct, position_idx, interval,
+				    EField);
 	} else if (rec.Type == HField) {
 	    /* TODO: numGridPoints + 1 */
-	    entry = new CLEField(m_h, res, col_ct, position_idx,
-				 interval);
-	    m_copyListBlack.push_back(entry);
-	} else if (rec.Type == Density) {
+	    list[k] = CopyListEntry(data, col_ct, position_idx, interval,
+				    HField);
+	} else {
 	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
-		if (rec.I == rec.J) {
-		    /* main diagonal entry */
-		    /*
-		    entry = new CLEDensity(m_dm, rec.I - 1, rec.J - 1, res,
-					   col_ct, position_idx,
-					   interval);*/
-		    //m_copyListBlack.push_back(entry);
-		    if (rec.I == 2) {
-			position_idx += m_scenario.NumGridPoints * 3;
-		    }
-		    entry = new CLEField(m_d, res, col_ct, position_idx,
-					 interval);
-		    m_copyListRed.push_back(entry);
-
+		if ((rec.I == 1) && (rec.J == 1)) {
+		    list[k] = CopyListEntry(data, col_ct, position_idx,
+					    interval, D11);
+		} else if ((rec.I == 2) && (rec.J == 2)) {
+		    list[k] = CopyListEntry(data, col_ct, position_idx,
+					    interval, D22);
 		} else {
 		    /* off-diagonal entry */
 		    /* TODO */
@@ -314,12 +348,19 @@ SolverCUDA2lvl_red::SolverCUDA2lvl_red(const Device& device,
 		    /* imag part: GetSrcDensity(&dm, rec.J, rec.I); */
 		}
 	    } else {
-	    // throw exc
+		// throw exc
 	    }
-	} else {
-	    // throw exc
 	}
     }
+
+    /* copy copy_list entries to CUDA constant memory */
+    chk_err(cudaMemcpyToSymbol(copy_list, list, m_scenario.Records.size() *
+			       sizeof(CopyListEntry)));
+    delete[] list;
+
+    /* initialize memory */
+    unsigned int blocks = m_scenario.NumGridPoints/threads;
+    init_memory_red<<<blocks, threads>>>(m_d, m_e, m_h, m_indices);
 
     /* sync */
     cudaDeviceSynchronize();
@@ -327,16 +368,13 @@ SolverCUDA2lvl_red::SolverCUDA2lvl_red(const Device& device,
 
 SolverCUDA2lvl_red::~SolverCUDA2lvl_red()
 {
-    /* delete copy lists */
-    BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
-	delete entry;
-    }
-    BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
-	delete entry;
-    }
-
     /* sync */
     cudaDeviceSynchronize();
+
+    /* delete result data on GPU */
+    BOOST_FOREACH(real *data, m_results_gpu) {
+	cudaFree(data);
+    }
 
     /* free CUDA memory */
     cudaFree(m_h);
@@ -365,40 +403,23 @@ SolverCUDA2lvl_red::getName() const
 void
 SolverCUDA2lvl_red::run() const
 {
-    unsigned int threads = 128;
     unsigned int blocks = m_scenario.NumGridPoints/threads;
     /* TODO handle roundoff errors in thread/block partition */
 
-    dim3 block_maxwell(blocks);
-
-    real f_0 = 2e14;
-    real T_p = 20/f_0;
-
-    real E_0 = 4.2186e9;
-    E_0 /= 2; /* pi pulse */
-
     /* main loop */
-    for (unsigned int i = 0; i < m_scenario.NumTimeSteps; i++) {
-	/* calculate source value */
-	real t = i * m_scenario.TimeStepSize;
-	real gamma = 2 * t/T_p - 1;
-	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
+    for (unsigned int i = 0; i < m_scenario.NumTimeSteps/OL; i++) {
 
-	/* makestep e and density matrix */
-	makestep_e_dm_red<<<block_maxwell, threads,
-	    (6 * threads + 1) * sizeof(real)>>>(m_d, m_h, m_e, src, m_indices);
+	/* makestep */
+	makestep<<<blocks, threads + 2 * OL>>>
+	    (m_d, m_h, m_e, i, m_indices, m_scenario.Records.size());
 
-	/* makestep h */
-	makestep_h_red<<<block_maxwell, threads, (threads + 1) * sizeof(real)>>>
-	    (m_e, m_h, m_indices);
+    }
 
-	/* gather e field and dm entries in copy stream */
-	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
-	    if (entry->record(i)) {
-		chk_err(cudaMemcpy(entry->getDst(i), entry->getSrc(),
-				   entry->getSize(), cudaMemcpyDeviceToHost));
-	    }
-	}
+    /* copy result data to host */
+    for (int k = 0; k < m_results.size(); k++) {
+	chk_err(cudaMemcpy(m_results[k]->data(), m_results_gpu[k],
+			   m_results[k]->count() * sizeof(real),
+			   cudaMemcpyDeviceToHost));
     }
 }
 

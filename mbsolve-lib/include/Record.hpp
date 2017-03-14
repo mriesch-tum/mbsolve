@@ -6,7 +6,7 @@
 
 namespace mbsolve {
 
-enum RecordType { HField, EField, Density };
+enum RecordType { HField, EField, Density, D22, D11 };
 
 class Record
 {
