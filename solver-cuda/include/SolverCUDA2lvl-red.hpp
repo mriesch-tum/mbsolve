@@ -26,7 +26,7 @@ struct sim_constants
     unsigned int idx_start;
     unsigned int idx_end;
 
-    real d_x;
+    real d_x_inv;
     real d_t;
 
     real dm11_init;
@@ -113,9 +113,16 @@ private:
     cudaStream_t comp_maxwell;
     cudaStream_t copy;
 
-    real *m_h;
-    real *m_e;
-    real *m_d;
+    real *m_h1;
+    real *m_e1;
+    real *m_d1;
+
+    real *m_h2;
+    real *m_e2;
+    real *m_d2;
+
+
+    real *m_src;
 
     unsigned int *m_indices;
 

@@ -146,7 +146,7 @@ __global__ void makestep_e_dm(real *d, const real *gh, real *ge, real src,
 	    (gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r);
 
 	e_e = e[idx] + gsc[region].M_CE *
-	    (-j - p_t + (h[idx + 1] - h[idx])/gsc[region].d_x);
+	    (-j - p_t + (h[idx + 1] - h[idx]) * gsc[region].d_x_inv);
 
 	if (gidx == 0) {
 	    /* soft source must be re-implemented, if required */
@@ -218,7 +218,7 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 	sc[i].gamma12 = (reg.DephasingRates.size() < 1) ? 0.0 :
 	    reg.DephasingRates[0]();
 
-	sc[i].d_x = m_scenario.GridPointSize;
+	sc[i].d_x_inv = 1.0/m_scenario.GridPointSize;
 	sc[i].d_t = m_scenario.TimeStepSize;
 
 	if (reg.DopingDensity() < 1.0) {
