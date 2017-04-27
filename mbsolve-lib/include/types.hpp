@@ -45,7 +45,12 @@ typedef double real;
     /* TODO: Result assignment operator???? */
     /* TODO: use library for matrices? */
 
-
+/**
+ * Represents a simulation result trace requested with a corresponding
+ * \ref Record.
+ *
+ * \ingroup MBSOLVE_LIB
+ */
 class Result
 {
 private:
