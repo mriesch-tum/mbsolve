@@ -1,10 +1,12 @@
 clear all;
 close all;
 
-%load ~/mbsolve-cuda-working/Ziolkowski-Basic.mat
-load ~/mbsolve-openmp/Ziolkowski-Basic.mat
+%[filename, folder] = uigetfile('~/Desktop/*.mat', 'Select performance data');
+%[filename, folder] = uigetfile('~/CPH/Articles/riesch2017a/Data/*.mat', 'Select performance data');
+[filename, folder] = uigetfile('~/CPH/Work/mbsolve/build-openmp/*.mat', 'Select performance data');
+load(fullfile(folder, filename));
 
-t = 100;
+t = 1;
 
 x = 0:GridPointSize:XDim;
 

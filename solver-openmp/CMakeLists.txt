@@ -6,7 +6,9 @@ project(solver-openmp)
 #set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 #set(CMAKE_CXX_FLAGS_DEBUG "-O3 -g")
 
-include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
+find_package(Boost REQUIRED COMPONENTS program_options system timer)
+
+include_directories(${mbsolve-lib_INCLUDE_DIR} include/ ${Boost_INCLUDE_DIR})
 
 add_library(solver-openmp SHARED src/solver_2lvl_pc.cpp
   src/solver_2lvl_pc_red.cpp)

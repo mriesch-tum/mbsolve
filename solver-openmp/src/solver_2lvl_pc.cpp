@@ -6,7 +6,10 @@ namespace mbsolve{
 
 static SolverFactory<SolverOMP_2lvl_pc> factory("openmp-2lvl-pc");
 
-static struct sim_constants gsc[MaxRegions];
+struct sim_constants gsc[MaxRegions];
+unsigned int num_grid_points;
+unsigned int num_time_steps;
+real time_step_size;
 
 SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 				     const Scenario& scenario) :
@@ -82,6 +85,11 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
     m_e = new real[m_scenario.NumGridPoints];
 
     region_indices = new unsigned int[m_scenario.NumGridPoints];
+
+
+    num_grid_points = m_scenario.NumGridPoints;
+    num_time_steps = m_scenario.NumTimeSteps;
+    time_step_size = m_scenario.TimeStepSize;
 
 
     /*
@@ -207,6 +215,16 @@ SolverOMP_2lvl_pc::getName() const
 void
 SolverOMP_2lvl_pc::run() const
 {
+#pragma offload target(mic) in(gsc, num_grid_points, num_time_steps) \
+  in(time_step_size) \
+  inout(m_e:length(m_scenario.NumGridPoints)) \
+  inout(m_h:length(m_scenario.NumGridPoints + 1)) \
+  inout(m_dm11:length(m_scenario.NumGridPoints)) \
+  inout(m_dm12r:length(m_scenario.NumGridPoints)) \
+  inout(m_dm12i:length(m_scenario.NumGridPoints)) \
+  inout(m_dm22:length(m_scenario.NumGridPoints)) \
+  in(region_indices:length(m_scenario.NumGridPoints))
+  {
 #pragma omp parallel
     {
 	struct sim_constants sc[MaxRegions];
@@ -251,7 +269,7 @@ SolverOMP_2lvl_pc::run() const
 	    real gamma = 2 * t/T_p - 1;
 	    real E_0 = 4.2186e9;
 	    real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
-	    src = src/2; // pi pulse
+	    //src = src/2; // pi pulse
 	    /* TODO:  private(src) ? */
 	    /* TODO: masteronly? */
 
@@ -325,6 +343,7 @@ SolverOMP_2lvl_pc::run() const
 		    //}
 	    }
 
+#if 0
 #pragma omp master
 	    {
 		/* TODO parallel to update (or rather parallel copy) */
@@ -348,8 +367,24 @@ SolverOMP_2lvl_pc::run() const
 		}
 	    }
 #pragma omp barrier
+#endif
 	}
+
     }
+  }
+
+
+  BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
+    std::copy(entry->getSrc(),
+	      entry->getSrc() + entry->getCount(),
+	      entry->getDst(0));
+  }
+
+  BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
+    std::copy(entry->getSrc(),
+	      entry->getSrc() + entry->getCount(),
+	      entry->getDst(0));
+  }
 }
 
 }

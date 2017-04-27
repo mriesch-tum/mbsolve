@@ -6,7 +6,10 @@ namespace mbsolve{
 
 static SolverFactory<SolverOMP_2lvl_pc_red> factory("openmp-2lvl-pc-red");
 
-struct sim_constants gsc[MaxRegions];
+extern struct sim_constants gsc[MaxRegions];
+extern unsigned int num_grid_points;
+extern unsigned int num_time_steps;
+extern real time_step_size;
 
 /* redundant calculation overlap */
 //const unsigned int OL = 100;
@@ -79,7 +82,11 @@ SolverOMP_2lvl_pc_red::SolverOMP_2lvl_pc_red(const Device& device,
 	gsc[i - 1].idx_end = m_scenario.NumGridPoints - 1;
     }
 
-    OL = 100;
+    num_grid_points = m_scenario.NumGridPoints;
+    num_time_steps = m_scenario.NumTimeSteps;
+    time_step_size = m_scenario.TimeStepSize;
+
+    OL = 1;
 
     unsigned int P = omp_get_max_threads();
     unsigned int chunk = m_scenario.NumGridPoints/P;
@@ -93,23 +100,27 @@ SolverOMP_2lvl_pc_red::SolverOMP_2lvl_pc_red(const Device& device,
     m_h = new real*[P];
     region_indices = new unsigned int*[P];
 
-    for (int tid = 0; tid < P; tid++) {
-	unsigned int size = chunk + 2 * OL;
+#pragma offload target(mic) in(num_grid_points, chunk, P, OL) \
+    inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
+    {
+        for (int tid = 0; tid < P; tid++) {
+            unsigned int size = chunk + 2 * OL;
 
-	if (tid == P - 1) {
-	    size += m_scenario.NumGridPoints % P;
-	}
+            if (tid == P - 1) {
+                size += num_grid_points % P;
+            }
 
-	/* allocation */
-	m_dm11[tid] = new real[size];
-	m_dm12r[tid] = new real[size];
-	m_dm12i[tid] = new real[size];
-	m_dm22[tid] = new real[size];
+            /* allocation */
+            m_dm11[tid] = new real[size];
+            m_dm12r[tid] = new real[size];
+            m_dm12i[tid] = new real[size];
+            m_dm22[tid] = new real[size];
 
-	m_h[tid] = new real[size];
-	m_e[tid] = new real[size];
+            m_h[tid] = new real[size];
+            m_e[tid] = new real[size];
 
-	region_indices[tid] = new unsigned int[size];
+            region_indices[tid] = new unsigned int[size];
+        }
     }
 
     std::cout << "m_dm11 " << m_dm11 << std::endl;
@@ -185,16 +196,22 @@ SolverOMP_2lvl_pc_red::~SolverOMP_2lvl_pc_red()
 	delete entry;
     }
 
-    for (int tid = 0; tid < omp_get_max_threads(); tid++) {
-	delete[] m_h[tid];
-	delete[] m_e[tid];
+    unsigned int P = omp_get_max_threads();
 
-	delete[] m_dm11[tid];
-	delete[] m_dm12r[tid];
-	delete[] m_dm12i[tid];
-	delete[] m_dm22[tid];
+#pragma offload target(mic) in(P) \
+    inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
+    {
+        for (int tid = 0; tid < P; tid++) {
+            delete[] m_h[tid];
+            delete[] m_e[tid];
 
-	delete[] region_indices[tid];
+            delete[] m_dm11[tid];
+            delete[] m_dm12r[tid];
+            delete[] m_dm12i[tid];
+            delete[] m_dm22[tid];
+
+            delete[] region_indices[tid];
+        }
     }
 
     delete[] m_dm11;
@@ -217,183 +234,189 @@ SolverOMP_2lvl_pc_red::getName() const
 void
 SolverOMP_2lvl_pc_red::run() const
 {
-#pragma omp parallel
+    unsigned int P = omp_get_max_threads();
+#pragma offload target(mic) in(gsc, num_grid_points, num_time_steps)    \
+    in(time_step_size, P)                                               \
+    inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
     {
-	struct sim_constants sc[MaxRegions];
+#pragma omp parallel
+        {
+            struct sim_constants sc[MaxRegions];
 
-	for (unsigned int j = 0; j < MaxRegions; j++) {
-	    sc[j] = gsc[j];
-	}
+            for (unsigned int j = 0; j < MaxRegions; j++) {
+                sc[j] = gsc[j];
+            }
 
-	unsigned int P = omp_get_max_threads();
-	unsigned int tid = omp_get_thread_num();
-	unsigned int chunk_base = m_scenario.NumGridPoints/P;
-	unsigned int chunk = chunk_base;
+            unsigned int tid = omp_get_thread_num();
+            unsigned int chunk_base = num_grid_points/P;
+            unsigned int chunk = chunk_base;
 
-	if (tid == P - 1) {
-	    chunk += m_scenario.NumGridPoints % P;
-	}
+            if (tid == P - 1) {
+                chunk += num_grid_points % P;
+            }
 
-	/* initialization */
-	for (int i = 0; i < chunk + 2 * OL; i++) {
-	    unsigned int region = 0;
-	    int global_idx = tid * chunk_base + (i - OL);
+            /* initialization */
+            for (int i = 0; i < chunk + 2 * OL; i++) {
+                unsigned int region = 0;
+                int global_idx = tid * chunk_base + (i - OL);
 
-	    if ((global_idx >= 0) && (global_idx < m_scenario.NumGridPoints)) {
-		for (unsigned int j = 0; j < MaxRegions; j++) {
-		    if (global_idx <= sc[j].idx_end) {
-			region = j;
-			break;
-		    }
-		}
-		m_dm11[tid][i] = sc[region].dm11_init;
-		m_dm22[tid][i] = sc[region].dm22_init;
-		region_indices[tid][i] = region;
-	    } else {
-		region_indices[tid][i] = 0;
-	    }
+                if ((global_idx >= 0) && (global_idx < num_grid_points)) {
+                    for (unsigned int j = 0; j < MaxRegions; j++) {
+                        if (global_idx <= sc[j].idx_end) {
+                            region = j;
+                            break;
+                        }
+                    }
+                    m_dm11[tid][i] = sc[region].dm11_init;
+                    m_dm22[tid][i] = sc[region].dm22_init;
+                    region_indices[tid][i] = region;
+                } else {
+                    region_indices[tid][i] = 0;
+                }
 
-	    m_dm12r[tid][i] = 0.0;
-	    m_dm12i[tid][i] = 0.0;
-	    m_e[tid][i] = 0.0;
-	    m_h[tid][i] = 0.0;
-	}
+                m_dm12r[tid][i] = 0.0;
+                m_dm12i[tid][i] = 0.0;
+                m_e[tid][i] = 0.0;
+                m_h[tid][i] = 0.0;
+            }
 #pragma omp barrier
 
-	/* main loop */
-	for (unsigned int n = 0; n < m_scenario.NumTimeSteps/OL; n++) {
+            /* main loop */
+            for (unsigned int n = 0; n < num_time_steps/OL; n++) {
 
-	    /* exchange data */
-	    if (tid > 0) {
+                /* exchange data */
+                if (tid > 0) {
 #pragma ivdep
-		for (int i = 0; i < OL; i++) {
-		    m_dm11[tid][i] = m_dm11[tid - 1][chunk + i];
-		    m_dm12r[tid][i] = m_dm12r[tid - 1][chunk + i];
-		    m_dm12i[tid][i] = m_dm12i[tid - 1][chunk + i];
-		    m_dm22[tid][i] = m_dm22[tid - 1][chunk + i];
+                    for (int i = 0; i < OL; i++) {
+                        m_dm11[tid][i] = m_dm11[tid - 1][chunk + i];
+                        m_dm12r[tid][i] = m_dm12r[tid - 1][chunk + i];
+                        m_dm12i[tid][i] = m_dm12i[tid - 1][chunk + i];
+                        m_dm22[tid][i] = m_dm22[tid - 1][chunk + i];
 
-		    m_e[tid][i] = m_e[tid - 1][chunk + i];
-		    m_h[tid][i] = m_h[tid - 1][chunk + i];
-		}
-	    }
+                        m_e[tid][i] = m_e[tid - 1][chunk + i];
+                        m_h[tid][i] = m_h[tid - 1][chunk + i];
+                        }
+                    }
 
-	    if (tid < P - 1) {
+                    if (tid < P - 1) {
 #pragma ivdep
-		for (int i = 0; i < OL; i++) {
-		    m_dm11[tid][OL + chunk + i] = m_dm11[tid + 1][OL + i];
-		    m_dm12r[tid][OL + chunk + i] = m_dm12r[tid + 1][OL + i];
-		    m_dm12i[tid][OL + chunk + i] = m_dm12i[tid + 1][OL + i];
-		    m_dm22[tid][OL + chunk + i] = m_dm22[tid + 1][OL + i];
+                        for (int i = 0; i < OL; i++) {
+                            m_dm11[tid][OL + chunk + i] = m_dm11[tid + 1][OL + i];
+                            m_dm12r[tid][OL + chunk + i] = m_dm12r[tid + 1][OL + i];
+                            m_dm12i[tid][OL + chunk + i] = m_dm12i[tid + 1][OL + i];
+                            m_dm22[tid][OL + chunk + i] = m_dm22[tid + 1][OL + i];
 
-		    m_e[tid][OL + chunk + i] = m_e[tid + 1][OL + i];
-		    m_h[tid][OL + chunk + i] = m_h[tid + 1][OL + i];
-		}
-	    }
+                            m_e[tid][OL + chunk + i] = m_e[tid + 1][OL + i];
+                            m_h[tid][OL + chunk + i] = m_h[tid + 1][OL + i];
+                        }
+                    }
 
-	    /* sync after communication */
+                    /* sync after communication */
 #pragma omp barrier
 
-	    /* sub-loop */
-	    for (unsigned int m = 0; m < OL; m++) {
-		/* calculate source value */
-		real f_0 = 2e14;
-		real t = (n * OL + m) * m_scenario.TimeStepSize;
-		real T_p = 20/f_0;
-		real gamma = 2 * t/T_p - 1;
-		real E_0 = 4.2186e9 * 0.5; /* pi pulse */
-		real src = E_0 * 1/std::cosh(10 * gamma) *
-		    std::sin(2 * M_PI * f_0 * t);
+                    /* sub-loop */
+                    for (unsigned int m = 0; m < OL; m++) {
+                        /* calculate source value */
+                        real f_0 = 2e14;
+                        real t = (n * OL + m) * time_step_size;
+                        real T_p = 20/f_0;
+                        real gamma = 2 * t/T_p - 1;
+                        real E_0 = 4.2186e9; /* 2pi pulse */
+                        real src = E_0 * 1/std::cosh(10 * gamma) *
+                            std::sin(2 * M_PI * f_0 * t);
 
-		/* update dm and e */
+                        /* update dm and e */
 #pragma simd
-		for (int i = m; i < chunk + 2 * OL - m; i++) {
-		    int region = region_indices[tid][i];
+                        for (int i = m; i < chunk + 2 * OL - m - 1; i++) {
+                            int region = region_indices[tid][i];
 
-		    real rho11_e = m_dm11[tid][i];
-		    real rho12r_e = m_dm12r[tid][i];
-		    real rho12i_e = m_dm12i[tid][i];
-		    real rho22_e = m_dm22[tid][i];
-		    real e_e = m_e[tid][i];
+                            real rho11_e = m_dm11[tid][i];
+                            real rho12r_e = m_dm12r[tid][i];
+                            real rho12i_e = m_dm12i[tid][i];
+                            real rho22_e = m_dm22[tid][i];
+                            real e_e = m_e[tid][i];
 
-		    for (int pc_step = 0; pc_step < 4; pc_step++) {
-			/* execute prediction - correction steps */
+                            for (int pc_step = 0; pc_step < 4; pc_step++) {
+                                /* execute prediction - correction steps */
 
-			real rho11  = 0.5 * (m_dm11[tid][i] + rho11_e);
-			real rho22  = 0.5 * (m_dm22[tid][i] + rho22_e);
-			real rho12r = 0.5 * (m_dm12r[tid][i] + rho12r_e);
-			real rho12i = 0.5 * (m_dm12i[tid][i] + rho12i_e);
-			real OmRabi = 0.5 * sc[region].d12 *
-			    (m_e[tid][i] + e_e);
+                                real rho11  = 0.5 * (m_dm11[tid][i] + rho11_e);
+                                real rho22  = 0.5 * (m_dm22[tid][i] + rho22_e);
+                                real rho12r = 0.5 * (m_dm12r[tid][i] + rho12r_e);
+                                real rho12i = 0.5 * (m_dm12i[tid][i] + rho12i_e);
+                                real OmRabi = 0.5 * sc[region].d12 *
+                                    (m_e[tid][i] + e_e);
 
-			rho11_e = m_dm11[tid][i] + sc[region].d_t *
-			    (- 2.0 * OmRabi * rho12i -
-			     sc[region].tau1 * rho11);
+                                rho11_e = m_dm11[tid][i] + sc[region].d_t *
+                                    (- 2.0 * OmRabi * rho12i -
+                                     sc[region].tau1 * rho11);
 
-			rho12i_e = m_dm12i[tid][i] + sc[region].d_t *
-			    (- sc[region].w12 * rho12r
-			     + OmRabi * (rho11 - rho22)
-			     - sc[region].gamma12 * rho12i);
+                                rho12i_e = m_dm12i[tid][i] + sc[region].d_t *
+                                    (- sc[region].w12 * rho12r
+                                     + OmRabi * (rho11 - rho22)
+                                     - sc[region].gamma12 * rho12i);
 
-			rho12r_e = m_dm12r[tid][i] + sc[region].d_t *
-			    (+ sc[region].w12 * rho12i
-			     - sc[region].gamma12 * rho12r);
+                                rho12r_e = m_dm12r[tid][i] + sc[region].d_t *
+                                    (+ sc[region].w12 * rho12i
+                                     - sc[region].gamma12 * rho12r);
 
-			rho22_e = m_dm22[tid][i] + sc[region].d_t *
-			    (+ 2.0 * OmRabi * rho12i
-			     + sc[region].tau1 * rho11);
+                                rho22_e = m_dm22[tid][i] + sc[region].d_t *
+                                    (+ 2.0 * OmRabi * rho12i
+                                     + sc[region].tau1 * rho11);
 
-			real j = 0;
-			real p_t = sc[region].M_CP * sc[region].d12 *
-			    (sc[region].w12 * rho12i -
-			     sc[region].gamma12 * rho12r);
+                                real j = 0;
+                                real p_t = sc[region].M_CP * sc[region].d12 *
+                                    (sc[region].w12 * rho12i -
+                                     sc[region].gamma12 * rho12r);
 
-			e_e = m_e[tid][i] + sc[region].M_CE *
-			    (-j - p_t + (m_h[tid][i + 1] - m_h[tid][i]) *
-			     sc[region].d_x_inv);
-		    }
+                                e_e = m_e[tid][i] + sc[region].M_CE *
+                                    (-j - p_t + (m_h[tid][i + 1] - m_h[tid][i]) *
+                                     sc[region].d_x_inv);
+                            }
 
-		    /* final update step */
-		    m_dm11[tid][i] = rho11_e;
-		    m_dm12i[tid][i] = rho12i_e;
-		    m_dm12r[tid][i] = rho12r_e;
-		    m_dm22[tid][i] = rho22_e;
-		    m_e[tid][i] = e_e;
+                            /* final update step */
+                            m_dm11[tid][i] = rho11_e;
+                            m_dm12i[tid][i] = rho12i_e;
+                            m_dm12r[tid][i] = rho12r_e;
+                            m_dm22[tid][i] = rho22_e;
+                            m_e[tid][i] = e_e;
 
-		    /* TODO fix boundary condition */
-		    if (tid * chunk_base + (i - OL) == 0) {
-			m_e[tid][i] = src; /* hard source */
-		    }
-		}
+                            /* TODO fix boundary condition */
+                            if (tid * chunk_base + (i - OL) == 0) {
+                                m_e[tid][i] = src; /* hard source */
+                            }
+                        }
 
-		/* update h */
+                        /* update h */
 #pragma ivdep
-		for (int i = m; i < chunk + 2 * OL - m; i++) {
-		    int region = region_indices[tid][i];
+                        for (int i = m + 1; i < chunk + 2 * OL - m - 1; i++) {
+                            int region = region_indices[tid][i];
 
-		    m_h[tid][i] += sc[region].M_CH *
-			(m_e[tid][i] - m_e[tid][i - 1]);
-		}
+                            m_h[tid][i] += sc[region].M_CH *
+                                (m_e[tid][i] - m_e[tid][i - 1]);
+                        }
 
-		/* apply boundary condition */
-		if (tid == 0) {
-		    m_h[tid][OL] = 0;
-		}
+                        /* apply boundary condition */
+                        if (tid == 0) {
+                            m_h[tid][OL] = 0;
+                        }
 
-		/* copy result data */
-		BOOST_FOREACH(CopyListEntry *entry, m_copyList) {
-		    if (entry->record(n * OL + m)) {
-			std::copy(entry->getSrc(tid) + OL,
-				  entry->getSrc(tid) + OL + chunk,
-				  entry->getDst(n * OL + m)
-				  + tid * chunk_base);
-		    }
-		}
-	    }
+#if 0
+                        /* copy result data */
+                        BOOST_FOREACH(CopyListEntry *entry, m_copyList) {
+                            if (entry->record(n * OL + m)) {
+                                std::copy(entry->getSrc(tid) + OL,
+                                          entry->getSrc(tid) + OL + chunk,
+                                          entry->getDst(n * OL + m)
+                                          + tid * chunk_base);
+                            }
+                        }
+#endif
+                    }
 
-	    /* sync after computation */
+                    /* sync after computation */
 #pragma omp barrier
-	}
-    }
-}
-
-}
+            }
+        }
+            }
+        }
+                       }
