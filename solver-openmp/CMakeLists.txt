@@ -12,6 +12,7 @@ include_directories(${mbsolve-lib_INCLUDE_DIR} include/ ${Boost_INCLUDE_DIR})
 
 add_library(solver-openmp SHARED src/solver_2lvl_pc.cpp
   src/solver_2lvl_pc_red.cpp)
+set_property(TARGET solver-openmp PROPERTY CXX_STANDARD 11)
 
 #target_compile_options(solver-openmp PRIVATE "-xCORE-AVX2")
 target_compile_options(solver-openmp PRIVATE ${OpenMP_CXX_FLAGS})

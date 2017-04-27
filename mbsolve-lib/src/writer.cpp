@@ -53,7 +53,7 @@ void
 Writer::write(const std::string& file, const std::vector<Result *>& results,
 	      const Device& device, const Scenario& scenario) const
 {
-    std::string def = device.Name + "-" + scenario.Name + "." +
+    std::string def = device.get_name() + "-" + scenario.Name + "." +
         m_writer->getExtension();
 
     m_writer->write(file.empty() ? def : file, results, device, scenario);

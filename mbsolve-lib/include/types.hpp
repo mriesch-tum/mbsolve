@@ -37,6 +37,9 @@ namespace mbsolve {
 
 typedef std::complex<double> complex;
 
+/**
+ * May be set to single or double precision.
+ */
 typedef double real;
 //typedef float real;
 

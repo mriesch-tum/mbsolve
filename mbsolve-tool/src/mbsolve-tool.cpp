@@ -113,6 +113,9 @@ mbsolve::Device parse_device(const std::string& file)
     vacuum.X0 = 142.5e-6;
     dev.Regions.push_back(vacuum);
 
+    /* TODO: what happens if no Regions inserted */
+    /* check settings */
+
     return dev;
 }
 

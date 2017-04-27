@@ -19,92 +19,111 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef DEVICE_H
-#define DEVICE_H
+#ifndef MBSOLVE_DEVICE_H
+#define MBSOLVE_DEVICE_H
 
 #include <string>
 #include <vector>
-#include <Quantity.hpp>
+#include <material.hpp>
 #include <types.hpp>
 
 namespace mbsolve {
 
-class Region
+/**
+ * Represents a section in the device or setup, has a certain \ref material.
+ * \ingroup MBSOLVE_LIB
+ */
+class region
 {
-public:
-    Region() : RelPermeability(1.0),
-	       RelPermittivity(1.0),
-	       Overlap(1.0) { }
+private:
+    /* region name */
+    std::string m_name;
 
-    std::string Name;
+    /* region material */
+    material *m_mat;
 
     /* dimensions */
-    Quantity X0;
-    Quantity XDim;
+    real m_x_start;
+    real m_x_end;
 
-    /* electromagnetic properties */
-    Quantity RelPermeability; /* default 1.0 */
-    Quantity RelPermittivity; /* default 1.0 */
+public:
+    region(const std::string& name,
+           material *mat,
+           real x_start,
+           real x_end) :
+        m_name(name),
+        m_mat(mat),
+        m_x_start(x_start),
+        m_x_end(x_end)
+    {
+    }
 
-    Quantity Overlap;
-    Quantity Losses;
-
-    /* carrier properties */
-    Quantity DopingDensity;
-    Quantity PeriodLength;
-
-    /*
-      use some sparse structures that provide unique access to a given
-      element. transition frequencies are dense, but coupling and anticrossing
-      are likely to be sparse. use operator()(int lvl1, int lvl2)
+    /**
+     * Get region length.
      */
+    real get_length() const
+    {
+        /* assert negative length */
+        return (m_x_end - m_x_start);
+    }
 
-    /* transistion frequencies */
-    /* (n-1)*n/2, dense */
-    std::vector<Quantity> TransitionFrequencies;
-
-    /* dipole moments */
-    /* max. (n-1)*n/2, probably sparse */
-    std::vector<Quantity> DipoleMoments;
-
-    /* anticrossing energies */
-    /* max. n-2, probably sparse */
-    std::vector<Quantity> AnticrossingEnergies;
-
-    /* scattering matrix */
-    /* n^2, probably dense */
-    std::vector<Quantity> ScatteringRates;
-
-    /* dephasing rates */
-    /* (n-1)*n/2, dense */
-    std::vector<Quantity> DephasingRates;
-
+    /**
+     * Get material.
+     */
+    material *get_material() const { return m_mat; }
 
 };
 
+/**
+ * Represents a certain device or setup, consists of one or more \ref region.
+ * \ingroup MBSOLVE_LIB
+ */
 class Device
 {
+private:
+    std::string m_name;
+
+    std::vector<region *> m_regions;
+
 public:
-    std::string Name;
-    std::vector<Region> Regions;
 
-    /* TODO: what happens if no Regions inserted */
+    Device(const std::string& name) :
+        m_name(name)
+    {
+    }
 
-    Quantity XDim() const {
-	Quantity total;
-	std::vector<Region>::const_iterator it;
-	for (it = Regions.begin(); it != Regions.end(); it++) {
-	    total += it->XDim;
+    /**
+     * Add new region to device.
+     */
+    void add_region(region *reg) {
+        m_regions.push_back(reg);
+    }
+
+    /**
+     * Get device name.
+     */
+    const std::string& get_name() const { return m_name; }
+
+    /**
+     * Get device length.
+     */
+    real get_length() const {
+	real total = 0.0;
+	for (auto r : m_regions) {
+	    total += r->get_length();
 	}
 	return total;
     }
 
-    Quantity MinRelPermittivity() const {
-	Quantity min(1e12);
-	std::vector<Region>::const_iterator it;
-	for (it = Regions.begin(); it != Regions.end(); it++) {
-	    if (it->RelPermittivity < min) {
-		min = it->RelPermittivity;
+    /**
+     * Get the minimum relative permittivity value.
+     */
+    real get_minimum_permittivity() const {
+	real min = 1e42;
+	for (auto r : m_regions) {
+            real eps_r = r->get_material()->get_rel_permittivity();
+	    if (eps_r < min) {
+		min = eps_r;
 	    }
 	}
 	return min;

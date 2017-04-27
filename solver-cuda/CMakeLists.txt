@@ -16,6 +16,7 @@ cuda_add_library(solver-cuda SHARED src/CUDADensityMatrix.cu
   src/SolverCUDA2lvl.cu include/SolverCUDA2lvl.hpp
   src/SolverCUDA2lvl-red.cu include/SolverCUDA2lvl-red.hpp
   include/CUDADensityMatrix.hpp include/CUDACommon.hpp)
+set_property(TARGET solver-cuda PROPERTY CXX_STANDARD 11)
 
 target_include_directories(solver-cuda PUBLIC include/)
 target_link_libraries(solver-cuda mbsolve-lib)

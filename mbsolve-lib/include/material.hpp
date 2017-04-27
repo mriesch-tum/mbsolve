@@ -19,10 +19,94 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_TYPES_H
-#define MBSOLVE_TYPES_H
+#ifndef MBSOLVE_MATERIAL_H
+#define MBSOLVE_MATERIAL_H
+
+#include <string>
+#include <types.hpp>
 
 namespace mbsolve {
+
+/**
+ * Provides the quantum mechanical description of an active \ref region.
+ * \ingroup MBSOLVE_LIB
+ */
+class qm_description
+{
+private:
+
+    /* density of charge carriers */
+    real m_carriers;
+
+    /*
+      real m_period_length;
+    */
+
+public:
+    qm_description()
+    {
+    }
+
+    /*
+      use some sparse structures that provide unique access to a given
+      element. transition frequencies are dense, but coupling and anticrossing
+      are likely to be sparse.
+     */
+
+};
+
+/**
+ * Quantum mechanical description of a 2-level system.
+ * \ingroup MBSOLVE_LIB
+ */
+class qm_desc_2lvl : public qm_description
+{
+private:
+    /* transition frequency */
+    real m_trans_freq;
+
+    /* dipole moment */
+    real m_dipole_mom;
+
+    /* scattering rate from upper laser level to lower laser level */
+    real m_scattering;
+
+    /* dephasing rate */
+    real m_dephasing;
+
+public:
+    explicit qm_desc_2lvl(real transition_freq = 0.0,
+                          real dipole_moment = 0.0,
+                          real scattering_rate = 0.0,
+                          real dephasing_rate = 0.0) :
+        qm_description(),
+        m_trans_freq(transition_freq),
+        m_dipole_mom(dipole_moment),
+        m_scattering(scattering_rate),
+        m_dephasing(dephasing_rate)
+    {
+    }
+
+    /**
+     * Get transition frequency between upper and lower laser level.
+     */
+    real get_transition_freq() const { return m_trans_freq; }
+
+    /**
+     * Get dipole moment between upper and lower laser level.
+     */
+    real get_dipole_moment() const { return m_dipole_mom; }
+
+    /**
+     * Get scattering rate between upper and lower laser level.
+     */
+    real get_scattering_rate() const { return m_scattering; }
+
+    /**
+     * Get dephasing rate.
+     */
+    real get_dephasing_rate() const { return m_dephasing; }
+};
 
 /**
  * The material contains electromagnetic properties and -- if specified -- a
@@ -31,8 +115,39 @@ namespace mbsolve {
  */
 class material
 {
+private:
+    std::string m_id;
 
+    /* electromagnetic properties */
+    real m_rel_permittivity;
+    real m_rel_permeability;
+    real m_overlap_factor;
+    real m_losses;
 
+public:
+
+    explicit material(const std::string& id,
+                      real rel_permittivity = 1.0,
+                      real overlap_factor = 1.0,
+                      real losses = 0.0,
+                      real rel_permeability = 1.0) :
+        m_id(id),
+        m_rel_permittivity(rel_permittivity),
+        m_rel_permeability(rel_permeability),
+        m_losses(losses),
+        m_overlap_factor(overlap_factor)
+    {
+    }
+
+    /**
+     * Get the material ID.
+     */
+    const std::string& get_id() const { return m_id; }
+
+    /**
+     * Get relative permittivity &epsilon;<sub>r</sub>
+     */
+    const real get_rel_permittivity() const { return m_rel_permittivity; }
 };
 
 }

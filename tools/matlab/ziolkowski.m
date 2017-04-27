@@ -1,12 +1,10 @@
 clear all;
 close all;
 
-%[filename, folder] = uigetfile('~/Desktop/*.mat', 'Select performance data');
-%[filename, folder] = uigetfile('~/CPH/Articles/riesch2017a/Data/*.mat', 'Select performance data');
-[filename, folder] = uigetfile('~/CPH/Work/mbsolve/build-openmp/*.mat', 'Select performance data');
+[filename, folder] = uigetfile('../../*.mat', 'Select result data');
 load(fullfile(folder, filename));
 
-t = 1;
+t = 100;
 
 x = 0:GridPointSize:XDim;
 

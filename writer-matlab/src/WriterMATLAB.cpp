@@ -52,7 +52,7 @@ WriterMATLAB::write(const std::string& file,
     matPutVariable(pmat, "GridPointSize", t);
     mxDestroyArray(t);
     /* put device data */
-    t = mxCreateDoubleScalar(device.XDim());
+    t = mxCreateDoubleScalar(device.get_length());
     matPutVariable(pmat, "XDim", t);
     mxDestroyArray(t);
 
