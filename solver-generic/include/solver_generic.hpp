@@ -26,18 +26,16 @@
 
 namespace mbsolve {
 
-class solver_generic : public solver
+class solver_generic : public ISolver
 {
 public:
-    solver_generic();
+    solver_generic(const Device& dev, const Scenario& scen);
 
     ~solver_generic();
 
-    void do_setup(const Device& device, const Scenario& scenario);
+    std::string getName() const;
 
-    void do_cleanup();
-
-    void do_run(std::vector<Result *>& results);
+    void run() const;
 };
 
 }

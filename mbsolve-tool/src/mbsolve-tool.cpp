@@ -1,13 +1,34 @@
+/*
+ * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ *
+ * Copyright (c) 2016, Computational Photonics Group, Technical University of
+ * Munich.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+ */
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
-#include <Device.hpp>
+#include <device.hpp>
 #include <Record.hpp>
-#include <Scenario.hpp>
-#include <Solver.hpp>
-#include <Writer.hpp>
+#include <scenario.hpp>
+#include <solver.hpp>
+#include <writer.hpp>
 
 namespace po = boost::program_options;
 namespace ti = boost::timer;
@@ -107,10 +128,10 @@ mbsolve::Scenario parse_scenario(const std::string& file)
     scen.SimEndTime = 200e-15;
     //scen.SimEndTime = 500e-15;
     //scen.NumGridPoints = 23040;
-    //scen.NumGridPoints = 32768;
+    scen.NumGridPoints = 32768;
     //scen.NumGridPoints = 65536;
     //scen.NumGridPoints = 131072;
-    scen.NumGridPoints = 262144;
+    //scen.NumGridPoints = 262144;
 
     scen.Records.push_back(mbsolve::Record("dm11", mbsolve::Density, 1, 1,
 					   2e-15));

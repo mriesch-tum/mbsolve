@@ -2,7 +2,7 @@
 #define QUANTITY_H
 
 #include <string>
-#include <Types.hpp>
+#include <types.hpp>
 
 namespace mbsolve {
 

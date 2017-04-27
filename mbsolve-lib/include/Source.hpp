@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <Quantity.hpp>
-#include <Types.hpp>
+#include <types.hpp>
 
 namespace mbsolve {
 

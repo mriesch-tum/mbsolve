@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.6)
 project(mbsolve-tool)
 
 find_package(Boost REQUIRED COMPONENTS program_options system timer)

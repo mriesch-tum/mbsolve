@@ -1,9 +1,8 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.6)
 project(mbsolve-lib)
 
-find_package(Boost REQUIRED COMPONENTS program_options system timer)
+include_directories(include/)
 
-include_directories(include/ ${Boost_INCLUDE_DIR})
-
-add_library(mbsolve-lib SHARED src/solver.cpp src/writer.cpp)
+add_library(mbsolve-lib SHARED src/solver.cpp src/writer.cpp
+  src/Quantity.cpp)
 target_include_directories(mbsolve-lib PUBLIC include/)
