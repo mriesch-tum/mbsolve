@@ -1,4 +1,4 @@
-#include <Writer.hpp>
+#include <writer.hpp>
 
 namespace mbsolve {
 
@@ -18,7 +18,7 @@ Writer::Writer(const std::string& name)
     std::map<std::string, IWriterFactory *>::iterator it;
     it = m_factories.find(name);
     if (it == m_factories.end()) {
-	throw std::invalid_argument("Unknown writer " + name);
+        throw std::invalid_argument("Unknown writer " + name);
     }
     m_writer = it->second->createInstance();
 }

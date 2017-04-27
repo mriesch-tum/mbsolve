@@ -5,9 +5,5 @@ find_package(Boost REQUIRED COMPONENTS program_options system timer)
 
 include_directories(include/ ${Boost_INCLUDE_DIR})
 
-add_library(mbsolve-lib SHARED
-  src/Quantity.cpp src/Solver.cpp src/Writer.cpp
-  include/Device.hpp include/Quantity.hpp
-  include/Scenario.hpp include/Solver.hpp
-  include/Types.hpp include/Writer.hpp)
+add_library(mbsolve-lib SHARED src/solver.cpp src/writer.cpp)
 target_include_directories(mbsolve-lib PUBLIC include/)

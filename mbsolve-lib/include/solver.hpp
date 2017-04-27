@@ -81,7 +81,7 @@ private:
     std::string m_name;
 public:
     explicit SolverFactory(const std::string& name) : m_name(name) {
-	Solver::registerFactory(name, this);
+        Solver::register_new(name, this);
     }
 
     ISolver* createInstance(const Device& device,

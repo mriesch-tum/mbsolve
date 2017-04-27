@@ -11,6 +11,11 @@ namespace mbsolve {
 /* complex number? boost? */
 
 //typedef std::complex<double> complex;
+
+/* use standard container */
+
+typedef std::complex<double> complex;
+
 typedef double real;
 //typedef float real;
 
