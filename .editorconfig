@@ -1,0 +1,14 @@
+# EditorConfig is awesome: http://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# for all files, assume that build directory is outside of the source tree
+[*]
+end_of_line = lf                        # Unix-style newlines
+insert_final_newline = true             # newline ending every file
+charset = utf-8                         # Set default charset utf-8
+indent_style = space                    # Use spaces to indent
+indent_size = 4                         # Set default indentation size
+trim_trailing_whitespace = true         # remove trailing whitespaces
+max_line_length = 78                    # maximum characters per line

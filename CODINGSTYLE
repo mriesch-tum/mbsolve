@@ -1,0 +1,46 @@
+CODING STYLE
+
+Please follow the rules below when contributing to the mbsolve project.
+
+Code Formatting
+  - Avoid lines with more than 78 characters.
+  - Remove whitespaces at the end. However, insert a newline at the end of the
+    file.
+  - Use 4 spaces for indentation. No tabs.
+  - Use UNIX-style newlines (In order to use e.g. Windows-style newlines
+    locally, you can adjust git accordingly).
+  - Follow the conventions used in the existing code.
+
+Documentation
+  - Document your code using Doxygen annotation.
+
+Naming
+  - Use lower case names and separate words with underscores, e.g. my_class.
+  - Keep names as short as possible.
+  - Do not use nested namespaces, use only the namespace "mbsolve".
+
+Editor settings
+  - The file .editorconfig is provided for editors that use the editorconfig
+    project.
+  - EMACS: add the following to your .emacs file
+
+;; treat CUDA code as C++ source files
+(add-to-list 'auto-mode-alist '("\\.cu$" . c++-mode))
+
+;; do not indent within namespace region
+(c-set-offset 'innamespace 0)
+
+;; indent with spaces
+(setq-default indent-tabs-mode nil)
+
+;; indentation size 4 spaces
+(setq-default c-basic-offset 4)
+
+;; delete trailing whitespace when saving
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+;; maintain newline at the end of the file
+(setq require-final-newline t)
+
+;; automatically reload buffers
+(global-auto-revert-mode t)
