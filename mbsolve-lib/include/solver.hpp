@@ -19,99 +19,47 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef SOLVER_H
-#define SOLVER_H
+#ifndef MBSOLVE_SOLVER_H
+#define MBSOLVE_SOLVER_H
 
 #include <map>
 #include <string>
 #include <vector>
 #include <device.hpp>
 #include <scenario.hpp>
+#include <solver_int.hpp>
 #include <types.hpp>
 
 namespace mbsolve {
 
-class ISolver
-{
-protected:
-    Scenario m_scenario;
-    Device m_device;
+class solver_factory_int;
 
-    std::vector<Result *> m_results;
-public:
-    ISolver(const Device& device, const Scenario& scenario) :
-	m_device(device), m_scenario(scenario) { }
-
-    virtual ~ISolver();
-
-    const Scenario& getScenario() const { return m_scenario; }
-
-    const Device& getDevice() const { return m_device; }
-
-    virtual std::string getName() const = 0;
-
-    virtual void run() const = 0;
-
-    const std::vector<Result *>& getResults() const
-    {
-	return m_results;
-    }
-};
-
-class ISolverFactory;
-
-class Solver
+class solver
 {
 private:
-    static std::map<std::string, ISolverFactory *> m_factories;
-    ISolver *m_solver;
+    static std::map<std::string, solver_factory_int *> m_factories;
+    solver_int *m_solver;
 
 public:
-    Solver(const std::string& name, const Device& device,
+    solver(const std::string& name, device * const dev,
 	   const Scenario& scenario);
 
-    ~Solver();
+    ~solver();
 
-    std::string getName() const;
+    std::string get_name() const;
 
-    const Scenario& getScenario() const { return m_solver->getScenario(); }
+    const Scenario& get_scenario() const { return m_solver->get_scenario(); }
 
-    const Device& getDevice() const { return m_solver->getDevice(); }
+    //const Device& getDevice() const { return m_solver->getDevice(); }
 
     void run() const;
 
-    const std::vector<Result *>& getResults() const;
+    const std::vector<Result *>& get_results() const;
 
-    static void registerFactory(const std::string& name,
-				ISolverFactory *factory);
+    static void register_factory(const std::string& name,
+                                 solver_factory_int *factory);
 };
 
-class ISolverFactory
-{
-public:
-    ISolverFactory() { }
-    virtual ~ISolverFactory() { }
-    virtual ISolver* createInstance(const Device& device,
-				    const Scenario& scenario) const = 0;
-};
-
-template<typename T>
-class SolverFactory : ISolverFactory
-{
-private:
-    std::string m_name;
-public:
-    explicit SolverFactory(const std::string& name) : m_name(name) {
-        Solver::registerFactory(name, this);
-    }
-
-    ISolver* createInstance(const Device& device,
-			    const Scenario& scenario) const {
-	return new T(device, scenario);
-    }
-
-    const std::string& getName() const { return m_name; }
-};
 
 }
 

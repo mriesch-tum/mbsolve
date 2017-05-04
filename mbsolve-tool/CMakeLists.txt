@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.6)
 project(mbsolve-tool)
 
-find_package(Boost REQUIRED COMPONENTS program_options system timer)
-
 include_directories(${mbsolve-lib_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
 
 add_executable(mbsolve-tool src/mbsolve-tool.cpp)

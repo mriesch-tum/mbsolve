@@ -19,39 +19,45 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef SCENARIO_H
-#define SCENARIO_H
-
-#include <string>
-#include <vector>
-#include <Record.hpp>
-#include <Source.hpp>
+#include <device.hpp>
 
 namespace mbsolve {
 
-class Scenario
+device::device(const std::string& name) : m_name(name)
 {
-public:
-    std::string Name;
-
-    unsigned int NumTimeSteps;
-
-    unsigned int NumGridPoints;
-
-    real TimeStepSize;
-
-    real GridPointSize;
-
-    real SimEndTime;
-
-    std::vector<Record> Records;
-
-    /* TODO: add sources vector */
-    //std::vector<ISource *> Sources;
-
-
-};
-
 }
 
-#endif
+void
+device::add_region(region *reg) {
+    m_regions.push_back(reg);
+}
+
+real
+device::get_length() const {
+    real total = 0.0;
+    for (auto r : m_regions) {
+        total += r->get_length();
+    }
+    return total;
+}
+
+const std::string&
+device::get_name() const
+{
+    return m_name;
+}
+
+real
+device::get_minimum_permittivity() const
+{
+    real min = 1e42;
+    for (auto r : m_regions) {
+        real eps_r = r->get_material()->get_rel_permittivity();
+        if (eps_r < min) {
+            min = eps_r;
+        }
+    }
+    return min;
+}
+
+}

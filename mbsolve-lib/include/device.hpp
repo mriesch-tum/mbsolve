@@ -64,6 +64,8 @@ public:
     real get_length() const
     {
         /* assert negative length */
+        /* TODO: implement asserts */
+
         return (m_x_end - m_x_start);
     }
 
@@ -78,7 +80,7 @@ public:
  * Represents a certain device or setup, consists of one or more \ref region.
  * \ingroup MBSOLVE_LIB
  */
-class Device
+class device
 {
 private:
     std::string m_name;
@@ -87,47 +89,27 @@ private:
 
 public:
 
-    Device(const std::string& name) :
-        m_name(name)
-    {
-    }
+    device(const std::string& name);
 
     /**
      * Add new region to device.
      */
-    void add_region(region *reg) {
-        m_regions.push_back(reg);
-    }
+    void add_region(region *reg);
 
     /**
      * Get device name.
      */
-    const std::string& get_name() const { return m_name; }
+    const std::string& get_name() const;
 
     /**
      * Get device length.
      */
-    real get_length() const {
-	real total = 0.0;
-	for (auto r : m_regions) {
-	    total += r->get_length();
-	}
-	return total;
-    }
+    real get_length() const;
 
     /**
      * Get the minimum relative permittivity value.
      */
-    real get_minimum_permittivity() const {
-	real min = 1e42;
-	for (auto r : m_regions) {
-            real eps_r = r->get_material()->get_rel_permittivity();
-	    if (eps_r < min) {
-		min = eps_r;
-	    }
-	}
-	return min;
-    }
+    real get_minimum_permittivity() const;
 
 };
 

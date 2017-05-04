@@ -21,6 +21,18 @@ option(WITH_MATLAB "with(out) MATLAB writer" ON)
 option(WITH_CUDA "with(out) CUDA solver" ON)
 option(WITH_OPENMP "with(out) OPENMP solver" ON)
 option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
+option(WITH_PYTHON "with(out) Python interface" ON)
+option(WITH_CPPTOOL "with(out) C++ tool" ON)
+
+# Python interface
+if(WITH_PYTHON)
+  find_package(SWIG)
+  find_package(PythonLibs)
+  if(SWIG_FOUND AND PythonLibs_FOUND)
+    include(${SWIG_USE_FILE})
+    set(MBSOLVE_PYTHON TRUE)
+  endif(SWIG_FOUND AND PythonLibs_FOUND)
+endif(WITH_PYTHON)
 
 # mbsolve library
 add_subdirectory(mbsolve-lib)
@@ -55,8 +67,13 @@ endif(WITH_OPENMP)
 # Generic support
 add_subdirectory(solver-generic)
 
-# executable
-add_subdirectory(mbsolve-tool)
+# C++ tool
+if(WITH_CPPTOOL)
+  find_package(Boost COMPONENTS program_options system timer)
+  if(Boost_FOUND)
+    add_subdirectory(mbsolve-tool)
+  endif(Boost_FOUND)
+endif(WITH_CPPTOOL)
 
 # Doxygen documentation
 if(WITH_DOXYGEN)

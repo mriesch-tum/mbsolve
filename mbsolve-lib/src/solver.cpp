@@ -19,25 +19,24 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
+#include <solver_int.hpp>
 #include <solver.hpp>
-
-#include <boost/foreach.hpp>
 
 namespace mbsolve {
 
-std::map<std::string, ISolverFactory *>
-Solver::m_factories;
+std::map<std::string, solver_factory_int *>
+solver::m_factories;
 
-ISolver::~ISolver()
+solver_int::~solver_int()
 {
     /* clean up results */
-    BOOST_FOREACH(Result *result, m_results) {
-	delete result;
+    for (auto r : m_results) {
+	delete *r;
     }
 }
 
 void
-Solver::registerFactory(const std::string& name, ISolverFactory *factory)
+solver::register_factory(const std::string& name, solver_factory_int *factory)
 {
     if (m_factories[name]) {
 	throw std::invalid_argument("Solver already registered.");
@@ -45,40 +44,39 @@ Solver::registerFactory(const std::string& name, ISolverFactory *factory)
     m_factories[name] = factory;
 }
 
-Solver::Solver(const std::string& name, const Device& device,
+solver::solver(const std::string& name, device * const dev,
 	       const Scenario& scenario)
 {
     /* create solver */
-    std::map<std::string, ISolverFactory *>::iterator it;
-    it = m_factories.find(name);
+    auto it = m_factories.find(name);
     if (it == m_factories.end()) {
 	throw std::invalid_argument("Unknown solver " + name);
     }
-    m_solver = it->second->createInstance(device, scenario);
+    m_solver = it->second->createInstance(dev, scenario);
 }
 
-Solver::~Solver()
+solver::~solver()
 {
     /* clean up solver */
     delete m_solver;
 }
 
 std::string
-Solver::getName() const
+solver::get_name() const
 {
-    return m_solver->getName();
+    return m_solver->get_name();
 }
 
 void
-Solver::run() const
+solver::run() const
 {
     m_solver->run();
 }
 
 const std::vector<Result *>&
-Solver::getResults() const
+solver::get_results() const
 {
-    return m_solver->getResults();
+    return m_solver->get_results();
 }
 
 }
