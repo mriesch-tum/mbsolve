@@ -25,18 +25,19 @@
 namespace mbsolve {
 
 std::map<std::string, solver_factory_int *>
-solver::m_factories;
+solver_int::m_factories;
 
 solver_int::~solver_int()
 {
     /* clean up results */
     for (auto r : m_results) {
-	delete *r;
+	delete r;
     }
 }
 
 void
-solver::register_factory(const std::string& name, solver_factory_int *factory)
+solver_int::register_factory(const std::string& name,
+                             solver_factory_int *factory)
 {
     if (m_factories[name]) {
 	throw std::invalid_argument("Solver already registered.");
@@ -44,15 +45,22 @@ solver::register_factory(const std::string& name, solver_factory_int *factory)
     m_factories[name] = factory;
 }
 
+solver_factory_int *
+solver_int::find_factory(const std::string& name)
+{
+    auto it = m_factories.find(name);
+    if (it == m_factories.end()) {
+        throw std::invalid_argument("Unknown solver " + name);
+    }
+    return it->second;
+}
+
 solver::solver(const std::string& name, device * const dev,
 	       const Scenario& scenario)
 {
     /* create solver */
-    auto it = m_factories.find(name);
-    if (it == m_factories.end()) {
-	throw std::invalid_argument("Unknown solver " + name);
-    }
-    m_solver = it->second->createInstance(dev, scenario);
+    solver_factory_int *factory = solver_int::find_factory(name);
+    m_solver = factory->create_instance(dev, scenario);
 }
 
 solver::~solver()

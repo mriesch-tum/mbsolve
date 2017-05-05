@@ -22,5 +22,5 @@ PROJECT_NAME = "mbsolve v@MBSOLVE_VERSION_MAJOR@.@MBSOLVE_VERSION_MINOR@"
 
 # input files
 
-INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/"
-#        "@CMAKE_CURRENT_SOURCE_DIR@//include/" \
+INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/" \
+        "@CMAKE_CURRENT_SOURCE_DIR@/solver-generic/include/"

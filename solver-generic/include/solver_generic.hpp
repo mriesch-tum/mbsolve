@@ -19,21 +19,30 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef SOLVERGENERIC_H
-#define SOLVERGENERIC_H
+#ifndef MBSOLVE_SOLVER_GENERIC_H
+#define MBSOLVE_SOLVER_GENERIC_H
 
 #include <solver.hpp>
 
 namespace mbsolve {
 
-class solver_generic : public ISolver
+/**
+ * \defgroup MBSOLVE_SOLVER_GENERIC solver-generic
+ * Generic solver with no operation. Use for test purposes.
+ */
+
+/**
+ *
+ * \ingroup MBSOLVE_SOLVER_GENERIC
+ */
+class solver_generic : public solver_int
 {
 public:
-    solver_generic(const Device& dev, const Scenario& scen);
+    solver_generic(device * const dev, const Scenario& scen);
 
     ~solver_generic();
 
-    std::string getName() const;
+    std::string get_name() const;
 
     void run() const;
 };

@@ -19,8 +19,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef WRITER_H
-#define WRITER_H
+#ifndef MBSOLVE_WRITER_H
+#define MBSOLVE_WRITER_H
 
 #include <map>
 #include <string>

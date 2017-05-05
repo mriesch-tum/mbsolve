@@ -19,58 +19,45 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <device.hpp>
+#include <material.hpp>
 
 namespace mbsolve {
 
-device::device(const std::string& name) : m_name(name)
-{
-}
+std::map<std::string, std::shared_ptr<material> >
+material::m_materials;
 
-device::device(const std::string& file, const std::vector<material *>& mats)
+void
+material::add_to_library(std::shared_ptr<material> mat)
 {
-
-}
-
-device::~device()
-{
-    /* clean up regions */
-    for (auto r : m_regions) {
-        delete r;
+    auto it = m_materials.find(mat->get_id());
+    if (it != m_materials.end()) {
+        throw std::invalid_argument("Material already available in library.");
     }
+    m_materials[mat->get_id()] = mat;
 }
 
 void
-device::add_region(region *reg) {
-    m_regions.push_back(reg);
-}
-
-real
-device::get_length() const {
-    real total = 0.0;
-    for (auto r : m_regions) {
-        total += r->get_length();
-    }
-    return total;
-}
-
-const std::string&
-device::get_name() const
+material::add_to_library(const material& mat)
 {
-    return m_name;
+    auto ptr = std::make_shared<material>(mat);
+    material::add_to_library(ptr);
 }
 
-real
-device::get_minimum_permittivity() const
+std::shared_ptr<material>
+material::get_from_library(const std::string& id)
 {
-    real min = 1e42;
-    for (auto r : m_regions) {
-        real eps_r = r->get_material()->get_rel_permittivity();
-        if (eps_r < min) {
-            min = eps_r;
-        }
+    auto it = m_materials.find(id);
+    if (it == m_materials.end()) {
+        throw std::invalid_argument("Material not available in library.");
     }
-    return min;
+    return it->second;
 }
+
+/*
+void
+material::add_to_library() const
+{
+
+}*/
 
 }

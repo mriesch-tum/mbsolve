@@ -22,13 +22,14 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
 #include <device.hpp>
 #include <Record.hpp>
 #include <scenario.hpp>
 #include <solver.hpp>
-#include <writer.hpp>
+//#include <writer.hpp>
 
 namespace po = boost::program_options;
 namespace ti = boost::timer;
@@ -78,14 +79,18 @@ static void parse_args(int argc, char **argv)
     }
 }
 
+#if 0
 mbsolve::Device parse_device(const std::string& file)
 {
-    mbsolve::Device dev;
-    dev.Name = "Ziolkowski";
+
+
+
+
 
     /* TODO: read xml file */
 
     /* Ziolkowski settings */
+
     mbsolve::Region vacuum;
     vacuum.XDim = 7.5e-6;
     vacuum.Overlap = 1;
@@ -118,6 +123,7 @@ mbsolve::Device parse_device(const std::string& file)
 
     return dev;
 }
+#endif
 
 mbsolve::Scenario parse_scenario(const std::string& file)
 {
@@ -148,20 +154,12 @@ mbsolve::Scenario parse_scenario(const std::string& file)
 
 int main(int argc, char **argv)
 {
-    mbsolve::Device device;
     mbsolve::Scenario scenario;
+
 
     /* parse command line arguments */
     parse_args(argc, argv);
 
-    /* parse device file */
-    try {
-	device = parse_device(device_file);
-    } catch (std::exception& e) {
-	std::cout << "Error: Could not parse device file " << device_file
-		  << std::endl << e.what() << std::endl;
-	exit(1);
-    }
 
     /* parse scenario file */
     try {
@@ -176,11 +174,20 @@ int main(int argc, char **argv)
 	ti::cpu_timer timer;
 	double total_time = 0;
 
+
+
+        auto mat1 = std::make_shared<mbsolve::material>("Vacuum");
+
+        mbsolve::material::add_to_library(mat1);
+
+        /* set up device */
+        mbsolve::device dev("Ziolkowski");
+
 	/* tic */
 	timer.start();
 
-	mbsolve::Writer writer(writer_method);
-	mbsolve::Solver solver(solver_method, device, scenario);
+	//mbsolve::Writer writer(writer_method);
+	mbsolve::solver solver(solver_method, &dev, scenario);
 
 	/* toc */
 	timer.stop();
@@ -189,7 +196,7 @@ int main(int argc, char **argv)
 		  << std::endl;
 	total_time +=1e-9 * times.wall;
 
-	std::cout << solver.getName() << std::endl;
+	std::cout << solver.get_name() << std::endl;
 
 	/* tic */
 	timer.start();
@@ -205,16 +212,17 @@ int main(int argc, char **argv)
 
 	/* grid point updates per second */
 	double gpups = 1e-6 * 1e9/times.wall *
-	    solver.getScenario().NumGridPoints *
-	    solver.getScenario().SimEndTime/solver.getScenario().TimeStepSize;
+	    solver.get_scenario().NumGridPoints *
+	    solver.get_scenario().SimEndTime/
+            solver.get_scenario().TimeStepSize;
 	std::cout << "Performance: " << gpups << " MGPU/s" << std::endl;
 
 	/* tic */
 	timer.start();
 
 	/* write results */
-	writer.write(output_file, solver.getResults(), device,
-		     solver.getScenario());
+	//writer.write(output_file, solver.getResults(), device,
+	//	     solver.getScenario());
 
 	/* toc */
 	timer.stop();

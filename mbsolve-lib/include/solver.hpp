@@ -32,12 +32,15 @@
 
 namespace mbsolve {
 
-class solver_factory_int;
-
+/**
+ * This class provides the interface to create an instance of a solver
+ * implementation. Each implementation is a subclass of \ref solver_int and
+ * is created internally.
+ * \ingroup MBSOLVE_LIB
+ */
 class solver
 {
 private:
-    static std::map<std::string, solver_factory_int *> m_factories;
     solver_int *m_solver;
 
 public:
@@ -56,10 +59,7 @@ public:
 
     const std::vector<Result *>& get_results() const;
 
-    static void register_factory(const std::string& name,
-                                 solver_factory_int *factory);
 };
-
 
 }
 

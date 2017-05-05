@@ -91,6 +91,10 @@ public:
 
     device(const std::string& name);
 
+    device(const std::string& file, const std::vector<material *>& materials);
+
+    ~device();
+
     /**
      * Add new region to device.
      */

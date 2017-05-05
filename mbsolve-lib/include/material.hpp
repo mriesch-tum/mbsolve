@@ -22,6 +22,8 @@
 #ifndef MBSOLVE_MATERIAL_H
 #define MBSOLVE_MATERIAL_H
 
+#include <map>
+#include <memory>
 #include <string>
 #include <types.hpp>
 
@@ -44,6 +46,10 @@ private:
 
 public:
     qm_description()
+    {
+    }
+
+    virtual ~qm_description()
     {
     }
 
@@ -87,6 +93,10 @@ public:
     {
     }
 
+    ~qm_desc_2lvl()
+    {
+    }
+
     /**
      * Get transition frequency between upper and lower laser level.
      */
@@ -116,6 +126,7 @@ public:
 class material
 {
 private:
+    /* material id */
     std::string m_id;
 
     /* electromagnetic properties */
@@ -123,6 +134,12 @@ private:
     real m_rel_permeability;
     real m_overlap_factor;
     real m_losses;
+
+    /* quantum mechanical description of active material */
+    std::shared_ptr<qm_description> m_qm;
+
+    /* material library */
+    static std::map<std::string, std::shared_ptr<material> > m_materials;
 
 public:
 
@@ -139,6 +156,14 @@ public:
     {
     }
 
+    ~material()
+    {
+    }
+
+    /* TODO copy constructor */
+
+    /* TODO assignment operator */
+
     /**
      * Get the material ID.
      */
@@ -148,6 +173,14 @@ public:
      * Get relative permittivity &epsilon;<sub>r</sub>
      */
     const real get_rel_permittivity() const { return m_rel_permittivity; }
+
+    //    void add_to_library() const;
+
+    static void add_to_library(std::shared_ptr<material> mat);
+
+    static void add_to_library(const material& mat);
+
+    static std::shared_ptr<material> get_from_library(const std::string& id);
 };
 
 }

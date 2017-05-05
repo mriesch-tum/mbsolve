@@ -30,8 +30,36 @@
 
 namespace mbsolve {
 
+class solver_int;
+
+/**
+ * Abstract solver factory class.
+ * \ingroup MBSOLVE_LIB
+ */
+class solver_factory_int
+{
+public:
+    solver_factory_int() { }
+
+    virtual ~solver_factory_int() { }
+
+    virtual solver_int* create_instance(device * const dev,
+                                        const Scenario& scenario) const = 0;
+
+    virtual const std::string& get_name() const = 0;
+
+};
+
+/**
+ * This internal class provides the base class for the different solver
+ * implementations and collects the corresponding factories in a static array.
+ * \ingroup MBSOLVE_LIB
+ */
 class solver_int
 {
+private:
+    static std::map<std::string, solver_factory_int *> m_factories;
+
 protected:
     Scenario m_scenario;
     const device * const m_device;
@@ -39,7 +67,7 @@ protected:
     std::vector<Result *> m_results;
 public:
     solver_int(device * const dev, const Scenario& scenario) :
-	m_device(dev), m_scenario(scenario) { }
+        m_device(dev), m_scenario(scenario) { }
 
     virtual ~solver_int();
 
@@ -55,26 +83,27 @@ public:
     {
 	return m_results;
     }
+
+    static void register_factory(const std::string& name,
+                                 solver_factory_int *factory);
+
+    static solver_factory_int *find_factory(const std::string& name);
+
 };
 
-class solver_factory_int
-{
-public:
-    solver_factory_int() { }
-    virtual ~solver_factory_int() { }
-    virtual solver_int* create_instance(device * const dev,
-                                        const Scenario& scenario) const = 0;
-    virtual const std::string& get_name() const = 0;
-};
-
+/*
+ * Solver factory template. Every solver implementation T has to provide
+ * a \ref solver_factory<T> to create an instance of the solver class
+ * \ingroup MBSOLVE_LIB
+ */
 template<typename T>
-class solver_factory : solver_factory_int
+class solver_factory : public solver_factory_int
 {
 private:
     std::string m_name;
 public:
     explicit solver_factory(const std::string& name) : m_name(name) {
-        solver::register_factory(name, this);
+        solver_int::register_factory(name, this);
     }
 
     solver_int* create_instance(device * const dev,

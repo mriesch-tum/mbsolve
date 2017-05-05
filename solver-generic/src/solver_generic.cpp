@@ -23,10 +23,10 @@
 
 namespace mbsolve {
 
-static SolverFactory<solver_generic> factory("generic");
+static solver_factory<solver_generic> factory("generic");
 
-solver_generic::solver_generic(const Device& dev, const Scenario& scen) :
-    ISolver(dev, scen)
+solver_generic::solver_generic(device * const dev, const Scenario& scen) :
+    solver_int(dev, scen)
 {
 }
 
@@ -35,15 +35,15 @@ solver_generic::~solver_generic()
 }
 
 std::string
-solver_generic::getName() const
+solver_generic::get_name() const
 {
-    return factory.getName();
+    return factory.get_name();
 }
 
 void
 solver_generic::run() const
 {
-
+    /* noop */
 }
 
 }
