@@ -83,10 +83,6 @@ static void parse_args(int argc, char **argv)
 mbsolve::Device parse_device(const std::string& file)
 {
 
-
-
-
-
     /* TODO: read xml file */
 
     /* Ziolkowski settings */
@@ -108,10 +104,6 @@ mbsolve::Device parse_device(const std::string& file)
     active.Overlap = 1;
     active.Losses = 0;
     active.DopingDensity = 1e24;
-    active.TransitionFrequencies.push_back(mbsolve::Quantity(M_PI * 4e14));
-    active.DipoleMoments.push_back(mbsolve::Quantity(6.24e-11));
-    active.ScatteringRates.push_back(mbsolve::Quantity(0.5e10));
-    active.DephasingRates.push_back(mbsolve::Quantity(1.0e10));
     dev.Regions.push_back(active);
 
     vacuum.Name = "Vacuum right";
@@ -174,20 +166,30 @@ int main(int argc, char **argv)
 	ti::cpu_timer timer;
 	double total_time = 0;
 
+        auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
+            (2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
 
+        auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+        auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
 
-        auto mat1 = std::make_shared<mbsolve::material>("Vacuum");
-
-        mbsolve::material::add_to_library(mat1);
+        mbsolve::material::add_to_library(mat_vac);
+        mbsolve::material::add_to_library(mat_ar);
 
         /* set up device */
-        mbsolve::device dev("Ziolkowski");
+        auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Vacuum left", mat_vac, 0, 7.5e-6));
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Active region", mat_ar, 7.5e-6, 142.5e-6));
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
+
 
 	/* tic */
 	timer.start();
 
 	//mbsolve::Writer writer(writer_method);
-	mbsolve::solver solver(solver_method, &dev, scenario);
+	mbsolve::solver solver(solver_method, dev, scenario);
 
 	/* toc */
 	timer.stop();

@@ -19,32 +19,51 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_GENERIC_H
-#define MBSOLVE_SOLVER_GENERIC_H
+#ifndef MBSOLVE_RESULT_H
+#define MBSOLVE_RESULT_H
 
-#include <solver.hpp>
+#include <stdexcept>
+#include <valarray>
+#include <types.hpp>
 
 namespace mbsolve {
 
 /**
- * \defgroup MBSOLVE_SOLVER_GENERIC solver-generic
- * Generic solver with no operation. Use for test purposes.
- */
-
-/**
+ * Represents a simulation result trace requested with a corresponding
+ * \ref Record.
  *
- * \ingroup MBSOLVE_SOLVER_GENERIC
+ * \ingroup MBSOLVE_LIB
  */
-class solver_generic : public solver_int
+class result
 {
+private:
+    std::string m_name;
+    unsigned int m_cols;
+    unsigned int m_rows;
+    unsigned int m_count;
+    std::valarray<complex> m_values;
+
 public:
-    solver_generic(std::shared_ptr<const device> dev, const Scenario& scen);
+    explicit result(const std::string& name, unsigned int cols,
+		    unsigned int rows) :
+	m_name(name), m_cols(cols), m_rows(rows), m_count(cols * rows),
+        m_values(cols * rows)
+    {
+    }
 
-    ~solver_generic();
+    ~result() {
+    }
 
-    std::string get_name() const;
+    std::string get_name() const { return m_name; }
 
-    void run() const;
+    unsigned int count() const { return m_count; }
+
+    unsigned int cols() const { return m_cols; }
+
+    unsigned int rows() const { return m_rows; }
+
+    complex *data(unsigned int row = 0) { return &m_values[row * m_cols]; }
+
 };
 
 }

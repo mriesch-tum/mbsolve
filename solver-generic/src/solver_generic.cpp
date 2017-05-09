@@ -25,7 +25,7 @@ namespace mbsolve {
 
 static solver_factory<solver_generic> factory("generic");
 
-solver_generic::solver_generic(device * const dev, const Scenario& scen) :
+solver_generic::solver_generic(std::shared_ptr<const device> dev, const Scenario& scen) :
     solver_int(dev, scen)
 {
 }

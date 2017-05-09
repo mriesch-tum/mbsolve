@@ -29,10 +29,6 @@ solver_int::m_factories;
 
 solver_int::~solver_int()
 {
-    /* clean up results */
-    for (auto r : m_results) {
-	delete r;
-    }
 }
 
 void
@@ -55,7 +51,7 @@ solver_int::find_factory(const std::string& name)
     return it->second;
 }
 
-solver::solver(const std::string& name, device * const dev,
+solver::solver(const std::string& name, std::shared_ptr<const device> dev,
 	       const Scenario& scenario)
 {
     /* create solver */
@@ -81,7 +77,7 @@ solver::run() const
     m_solver->run();
 }
 
-const std::vector<Result *>&
+const std::vector<std::shared_ptr<result> >&
 solver::get_results() const
 {
     return m_solver->get_results();

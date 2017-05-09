@@ -23,6 +23,7 @@
 #define MBSOLVE_DEVICE_H
 
 #include <string>
+#include <memory>
 #include <vector>
 #include <material.hpp>
 #include <types.hpp>
@@ -40,7 +41,7 @@ private:
     std::string m_name;
 
     /* region material */
-    material *m_mat;
+    std::shared_ptr<material> m_mat;
 
     /* dimensions */
     real m_x_start;
@@ -48,7 +49,7 @@ private:
 
 public:
     region(const std::string& name,
-           material *mat,
+           std::shared_ptr<material> mat,
            real x_start,
            real x_end) :
         m_name(name),
@@ -72,7 +73,7 @@ public:
     /**
      * Get material.
      */
-    material *get_material() const { return m_mat; }
+    std::shared_ptr<material> get_material() const { return m_mat; }
 
 };
 
@@ -85,7 +86,7 @@ class device
 private:
     std::string m_name;
 
-    std::vector<region *> m_regions;
+    std::vector<std::shared_ptr<region> > m_regions;
 
 public:
 
@@ -98,7 +99,7 @@ public:
     /**
      * Add new region to device.
      */
-    void add_region(region *reg);
+    void add_region(std::shared_ptr<region> reg);
 
     /**
      * Get device name.

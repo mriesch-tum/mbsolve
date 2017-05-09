@@ -23,6 +23,7 @@
 #define MBSOLVE_SOLVER_H
 
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 #include <device.hpp>
@@ -44,7 +45,7 @@ private:
     solver_int *m_solver;
 
 public:
-    solver(const std::string& name, device * const dev,
+    solver(const std::string& name, std::shared_ptr<const device> dev,
 	   const Scenario& scenario);
 
     ~solver();
@@ -53,11 +54,11 @@ public:
 
     const Scenario& get_scenario() const { return m_solver->get_scenario(); }
 
-    //const Device& getDevice() const { return m_solver->getDevice(); }
+    const device& get_device() const { return m_solver->get_device(); }
 
     void run() const;
 
-    const std::vector<Result *>& get_results() const;
+    const std::vector<std::shared_ptr<result> >& get_results() const;
 
 };
 

@@ -34,14 +34,10 @@ device::device(const std::string& file, const std::vector<material *>& mats)
 
 device::~device()
 {
-    /* clean up regions */
-    for (auto r : m_regions) {
-        delete r;
-    }
 }
 
 void
-device::add_region(region *reg) {
+device::add_region(std::shared_ptr<region> reg) {
     m_regions.push_back(reg);
 }
 

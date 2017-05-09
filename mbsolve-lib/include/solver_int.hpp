@@ -23,9 +23,11 @@
 #define MBSOLVE_SOLVER_INT_H
 
 #include <string>
+#include <memory>
 #include <vector>
 #include <device.hpp>
 #include <scenario.hpp>
+#include <result.hpp>
 #include <types.hpp>
 
 namespace mbsolve {
@@ -43,7 +45,7 @@ public:
 
     virtual ~solver_factory_int() { }
 
-    virtual solver_int* create_instance(device * const dev,
+    virtual solver_int* create_instance(std::shared_ptr<const device> dev,
                                         const Scenario& scenario) const = 0;
 
     virtual const std::string& get_name() const = 0;
@@ -62,24 +64,26 @@ private:
 
 protected:
     Scenario m_scenario;
-    const device * const m_device;
 
-    std::vector<Result *> m_results;
+    std::shared_ptr<const device> m_device;
+
+    std::vector<std::shared_ptr<result> > m_results;
+
 public:
-    solver_int(device * const dev, const Scenario& scenario) :
+    solver_int(std::shared_ptr<const device> dev, const Scenario& scenario) :
         m_device(dev), m_scenario(scenario) { }
 
     virtual ~solver_int();
 
     const Scenario& get_scenario() const { return m_scenario; }
 
-    //   const Device& getDevice() const { return m_device; }
+    const device& get_device() const { return *m_device; }
 
     virtual std::string get_name() const = 0;
 
     virtual void run() const = 0;
 
-    const std::vector<Result *>& get_results() const
+    const std::vector<std::shared_ptr<result> >& get_results() const
     {
 	return m_results;
     }
@@ -106,7 +110,7 @@ public:
         solver_int::register_factory(name, this);
     }
 
-    solver_int* create_instance(device * const dev,
+    solver_int* create_instance(std::shared_ptr<const device> dev,
                                 const Scenario& scenario) const {
 	return new T(dev, scenario);
     }

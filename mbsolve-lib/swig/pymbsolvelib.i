@@ -11,3 +11,4 @@
 %include "../include/types.hpp"
 %include "../include/material.hpp"
 %include "../include/device.hpp"
+%include "../include/result.hpp"

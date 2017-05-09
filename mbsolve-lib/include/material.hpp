@@ -144,11 +144,13 @@ private:
 public:
 
     explicit material(const std::string& id,
+                      std::shared_ptr<qm_description> qm = nullptr,
                       real rel_permittivity = 1.0,
                       real overlap_factor = 1.0,
                       real losses = 0.0,
                       real rel_permeability = 1.0) :
         m_id(id),
+        m_qm(qm),
         m_rel_permittivity(rel_permittivity),
         m_rel_permeability(rel_permeability),
         m_losses(losses),
@@ -173,6 +175,12 @@ public:
      * Get relative permittivity &epsilon;<sub>r</sub>
      */
     const real get_rel_permittivity() const { return m_rel_permittivity; }
+
+    const real get_rel_permeability() const { return m_rel_permeability; }
+
+    const real get_losses() const { return m_losses; }
+
+    const real get_overlap_factor() const { return m_overlap_factor; }
 
     //    void add_to_library() const;
 
