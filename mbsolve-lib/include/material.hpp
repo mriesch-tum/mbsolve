@@ -38,14 +38,15 @@ class qm_description
 private:
 
     /* density of charge carriers */
-    real m_carriers;
+    real m_carrier_density;
 
     /*
       real m_period_length;
     */
 
 public:
-    qm_description()
+    explicit qm_description(real carrier_density) :
+        m_carrier_density(carrier_density)
     {
     }
 
@@ -58,6 +59,11 @@ public:
       element. transition frequencies are dense, but coupling and anticrossing
       are likely to be sparse.
      */
+
+    real get_carrier_density() const
+    {
+        return m_carrier_density;
+    }
 
 };
 
@@ -81,11 +87,12 @@ private:
     real m_dephasing;
 
 public:
-    explicit qm_desc_2lvl(real transition_freq = 0.0,
+    explicit qm_desc_2lvl(real carrier_density = 0.0,
+                          real transition_freq = 0.0,
                           real dipole_moment = 0.0,
                           real scattering_rate = 0.0,
                           real dephasing_rate = 0.0) :
-        qm_description(),
+        qm_description(carrier_density),
         m_trans_freq(transition_freq),
         m_dipole_mom(dipole_moment),
         m_scattering(scattering_rate),

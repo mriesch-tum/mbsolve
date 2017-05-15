@@ -37,6 +37,11 @@ typedef double real;
 
 typedef std::complex<real> complex;
 
+static const real HBAR = 1.05457266e-34;
+static const real MU0 = M_PI * 4e-7;
+static const real EPS0 = 8.854187817e-12;
+static const real E0 = 1.60217733e-19;
+
 }
 
 #endif

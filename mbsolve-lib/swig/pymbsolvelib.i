@@ -11,4 +11,8 @@
 %include "../include/types.hpp"
 %include "../include/material.hpp"
 %include "../include/device.hpp"
+%include "../include/record.hpp"
 %include "../include/result.hpp"
+%include "../include/source.hpp"
+%include "../include/scenario.hpp"
+%include "../include/solver.hpp"

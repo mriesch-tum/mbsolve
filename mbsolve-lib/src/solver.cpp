@@ -27,6 +27,12 @@ namespace mbsolve {
 std::map<std::string, solver_factory_int *>
 solver_int::m_factories;
 
+solver_int::solver_int(std::shared_ptr<const device> dev,
+                       std::shared_ptr<scenario> scen) :
+    m_device(dev), m_scenario(scen)
+{
+}
+
 solver_int::~solver_int()
 {
 }
@@ -52,17 +58,15 @@ solver_int::find_factory(const std::string& name)
 }
 
 solver::solver(const std::string& name, std::shared_ptr<const device> dev,
-	       const Scenario& scenario)
+	       std::shared_ptr<scenario> scen)
 {
     /* create solver */
     solver_factory_int *factory = solver_int::find_factory(name);
-    m_solver = factory->create_instance(dev, scenario);
+    m_solver = factory->create_instance(dev, scen);
 }
 
 solver::~solver()
 {
-    /* clean up solver */
-    delete m_solver;
 }
 
 std::string

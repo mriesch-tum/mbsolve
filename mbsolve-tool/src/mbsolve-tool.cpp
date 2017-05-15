@@ -25,11 +25,7 @@
 #include <vector>
 #include <boost/program_options.hpp>
 #include <boost/timer/timer.hpp>
-#include <device.hpp>
-#include <Record.hpp>
-#include <scenario.hpp>
-#include <solver.hpp>
-//#include <writer.hpp>
+#include <mbsolve.hpp>
 
 namespace po = boost::program_options;
 namespace ti = boost::timer;
@@ -79,95 +75,18 @@ static void parse_args(int argc, char **argv)
     }
 }
 
-#if 0
-mbsolve::Device parse_device(const std::string& file)
-{
-
-    /* TODO: read xml file */
-
-    /* Ziolkowski settings */
-
-    mbsolve::Region vacuum;
-    vacuum.XDim = 7.5e-6;
-    vacuum.Overlap = 1;
-    vacuum.Losses = 0;
-    vacuum.DopingDensity = 0;
-
-    vacuum.Name = "Vacuum left";
-    vacuum.X0 = 0;
-    dev.Regions.push_back(vacuum);
-
-    mbsolve::Region active;
-    active.Name = "Active Region";
-    active.X0 = 7.5e-6;
-    active.XDim = 135e-6;
-    active.Overlap = 1;
-    active.Losses = 0;
-    active.DopingDensity = 1e24;
-    dev.Regions.push_back(active);
-
-    vacuum.Name = "Vacuum right";
-    vacuum.X0 = 142.5e-6;
-    dev.Regions.push_back(vacuum);
-
-    /* TODO: what happens if no Regions inserted */
-    /* check settings */
-
-    return dev;
-}
-#endif
-
-mbsolve::Scenario parse_scenario(const std::string& file)
-{
-    mbsolve::Scenario scen;
-
-    /* TODO: read xml file */
-
-    /* Ziolkowski settings */
-    scen.Name = "Basic";
-    //scen.SimEndTime = 10e-15;
-    scen.SimEndTime = 200e-15;
-    //scen.SimEndTime = 500e-15;
-    //scen.NumGridPoints = 23040;
-    scen.NumGridPoints = 32768;
-    //scen.NumGridPoints = 65536;
-    //scen.NumGridPoints = 131072;
-    //scen.NumGridPoints = 262144;
-
-    scen.Records.push_back(mbsolve::Record("dm11", mbsolve::Density, 1, 1,
-					   2e-15));
-
-    scen.Records.push_back(mbsolve::Record("dm22", mbsolve::Density, 2, 2,
-					   2e-15));
-    scen.Records.push_back(mbsolve::Record("e", mbsolve::EField, 1, 1,
-					   2e-15));
-    return scen;
-}
-
 int main(int argc, char **argv)
 {
-    mbsolve::Scenario scenario;
-
-
     /* parse command line arguments */
     parse_args(argc, argv);
-
-
-    /* parse scenario file */
-    try {
-	scenario = parse_scenario(scenario_file);
-    } catch (std::exception& e) {
-	std::cout << "Error: Could not parse scenario file " << scenario_file
-		  << std::endl << e.what() << std::endl;
-	exit(1);
-    }
 
     try {
 	ti::cpu_timer timer;
 	double total_time = 0;
 
+        /* Ziolkowski setup */
         auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
-            (2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
+            (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
 
         auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
         auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
@@ -184,12 +103,23 @@ int main(int argc, char **argv)
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
 
+        /* Ziolkowski basic scenario */
+        auto scen = std::make_shared<mbsolve::scenario>
+            ("Basic", 32768, 200e-15);
+        //32768;
+        //65536;
+        //131072;
+        //262144;
+
+        scen->add_record(std::make_shared<mbsolve::record>("d11", 2e-15));
+        scen->add_record(std::make_shared<mbsolve::record>("d22", 2e-15));
+        scen->add_record(std::make_shared<mbsolve::record>("e", 2e-15));
 
 	/* tic */
 	timer.start();
 
 	//mbsolve::Writer writer(writer_method);
-	mbsolve::solver solver(solver_method, dev, scenario);
+	mbsolve::solver solver(solver_method, dev, scen);
 
 	/* toc */
 	timer.stop();
@@ -213,10 +143,8 @@ int main(int argc, char **argv)
 	total_time +=1e-9 * times.wall;
 
 	/* grid point updates per second */
-	double gpups = 1e-6 * 1e9/times.wall *
-	    solver.get_scenario().NumGridPoints *
-	    solver.get_scenario().SimEndTime/
-            solver.get_scenario().TimeStepSize;
+	double gpups = 1e-6 * 1e9/times.wall * scen->get_num_gridpoints() *
+            scen->get_endtime()/scen->get_timestep_size();
 	std::cout << "Performance: " << gpups << " MGPU/s" << std::endl;
 
 	/* tic */

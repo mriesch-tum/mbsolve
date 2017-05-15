@@ -45,8 +45,9 @@ public:
 
     virtual ~solver_factory_int() { }
 
-    virtual solver_int* create_instance(std::shared_ptr<const device> dev,
-                                        const Scenario& scenario) const = 0;
+    virtual std::shared_ptr<solver_int>
+    create_instance(std::shared_ptr<const device> dev,
+                    std::shared_ptr<scenario> scen) const = 0;
 
     virtual const std::string& get_name() const = 0;
 
@@ -63,19 +64,19 @@ private:
     static std::map<std::string, solver_factory_int *> m_factories;
 
 protected:
-    Scenario m_scenario;
-
     std::shared_ptr<const device> m_device;
+
+    std::shared_ptr<scenario> m_scenario;
 
     std::vector<std::shared_ptr<result> > m_results;
 
 public:
-    solver_int(std::shared_ptr<const device> dev, const Scenario& scenario) :
-        m_device(dev), m_scenario(scenario) { }
+    solver_int(std::shared_ptr<const device> dev,
+               std::shared_ptr<scenario> scen);
 
     virtual ~solver_int();
 
-    const Scenario& get_scenario() const { return m_scenario; }
+    const scenario& get_scenario() const { return *m_scenario; }
 
     const device& get_device() const { return *m_device; }
 
@@ -110,9 +111,10 @@ public:
         solver_int::register_factory(name, this);
     }
 
-    solver_int* create_instance(std::shared_ptr<const device> dev,
-                                const Scenario& scenario) const {
-	return new T(dev, scenario);
+    std::shared_ptr<solver_int>
+    create_instance(std::shared_ptr<const device> dev,
+                    std::shared_ptr<scenario> scen) const {
+	return std::make_shared<T>(dev, scen);
     }
 
     const std::string& get_name() const { return m_name; }

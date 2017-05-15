@@ -19,36 +19,67 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef SCENARIO_H
-#define SCENARIO_H
+#ifndef MBSOLVE_SCENARIO_H
+#define MBSOLVE_SCENARIO_H
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <Record.hpp>
-#include <Source.hpp>
+#include <record.hpp>
+#include <source.hpp>
 
 namespace mbsolve {
 
-class Scenario
+/**
+ * Stores simulation scenario (simulation settings as well as \ref source
+ * objects and a collection of \ref record.
+ * \ingroup MBSOLVE_LIB
+ */
+class scenario
 {
+private:
+    std::string m_name;
+
+    unsigned int m_num_timesteps;
+
+    unsigned int m_num_gridpoints;
+
+    real m_timestep_size;
+
+    real m_gridpoint_size;
+
+    real m_endtime;
+
+    std::vector<std::shared_ptr<record> > m_records;
+
+    std::vector<std::shared_ptr<source> > m_sources;
+
 public:
-    std::string Name;
 
-    unsigned int NumTimeSteps;
+    scenario(const std::string& name, unsigned int num_gridpoints,
+             real endtime);
 
-    unsigned int NumGridPoints;
+    void add_record(std::shared_ptr<record> rec);
 
-    real TimeStepSize;
+    unsigned int get_num_timesteps() const;
 
-    real GridPointSize;
+    void set_num_timesteps(unsigned int value);
 
-    real SimEndTime;
+    unsigned int get_num_gridpoints() const;
 
-    std::vector<Record> Records;
+    void set_num_gridpoints(unsigned int value);
 
-    /* TODO: add sources vector */
-    //std::vector<ISource *> Sources;
+    real get_timestep_size() const;
 
+    void set_timestep_size(real value);
+
+    real get_gridpoint_size() const;
+
+    void set_gridpoint_size(real value);
+
+    real get_endtime() const;
+
+    void set_endtime(real value);
 
 };
 

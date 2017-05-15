@@ -19,47 +19,55 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_H
-#define MBSOLVE_SOLVER_H
+#ifndef MBSOLVE_RECORD_H
+#define MBSOLVE_RECORD_H
 
-#include <map>
-#include <memory>
 #include <string>
-#include <vector>
-#include <device.hpp>
-#include <scenario.hpp>
-#include <solver_int.hpp>
 #include <types.hpp>
 
 namespace mbsolve {
 
+enum record_type { electric, magnetic, density };
+
 /**
- * This class provides the interface to create an instance of a solver
- * implementation. Each implementation is a subclass of \ref solver_int and
- * is created internally.
+ * Represents a request to store certain simulation results (optionally at a
+ * given index or given interval).
  * \ingroup MBSOLVE_LIB
  */
-class solver
+class record
 {
 private:
-    std::shared_ptr<solver_int> m_solver;
+    std::string m_name;
+
+    record_type m_type;
+
+    unsigned int m_col;
+    unsigned int m_row;
+
+    real m_position;
+
+    real m_interval;
 
 public:
-    solver(const std::string& name, std::shared_ptr<const device> dev,
-	   std::shared_ptr<scenario> scen);
+    record(const std::string& name, real interval = 0.0,
+           real position = -1.0) :
+        m_name(name), m_interval(interval), m_position(position)
+    {
 
-    ~solver();
+        /* TODO: parse name to type and indices */
+    }
 
-    std::string get_name() const;
+    const std::string& get_name() const { return m_name; }
 
-    const scenario& get_scenario() const { return m_solver->get_scenario(); }
+    const record_type get_type() const { return m_type; }
 
-    const device& get_device() const { return m_solver->get_device(); }
+    const unsigned int get_col() const { return m_col; }
 
-    void run() const;
+    const unsigned int get_row() const { return m_row; }
 
-    const std::vector<std::shared_ptr<result> >& get_results() const;
+    const real get_position() const { return m_position; }
 
+    const real get_interval() const { return m_interval; }
 };
 
 }

@@ -38,7 +38,8 @@ namespace mbsolve {
 class solver_generic : public solver_int
 {
 public:
-    solver_generic(std::shared_ptr<const device> dev, const Scenario& scen);
+    solver_generic(std::shared_ptr<const device> dev,
+                   std::shared_ptr<scenario> scen);
 
     ~solver_generic();
 

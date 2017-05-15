@@ -4,11 +4,12 @@ project(mbsolve-lib)
 include_directories(include/)
 
 add_library(mbsolve-lib SHARED
-  #  src/writer.cpp
   src/device.cpp
   src/material.cpp
+  src/scenario.cpp
   src/solver.cpp
-  src/Quantity.cpp)
+  #src/writer.cpp
+  )
 set_property(TARGET mbsolve-lib PROPERTY CXX_STANDARD 11)
 
 target_include_directories(mbsolve-lib PUBLIC include/)
