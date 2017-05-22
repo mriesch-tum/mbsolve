@@ -69,7 +69,7 @@ solver::~solver()
 {
 }
 
-std::string
+const std::string&
 solver::get_name() const
 {
     return m_solver->get_name();

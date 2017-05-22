@@ -19,23 +19,22 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef WRITERMATLAB_H
-#define WRITERMATLAB_H
-
-#include <writer.hpp>
+#include <algorithm>
+#include <result.hpp>
 
 namespace mbsolve {
 
-class WriterMATLAB : public IWriter
-{
-public:
-    std::string getExtension() const;
+std::vector<complex>
+result::get_data_complex() const {
+    std::vector<complex> res;
 
-    void write(const std::string& file, const std::vector<Result *>& results,
-	       const Device& device, const Scenario& scenario) const;
+    res.reserve(m_rows * m_cols);
 
-};
-
+    std::transform(m_real.begin(), m_real.end(), m_imag.begin(),
+                   std::back_inserter(res), [](double r, double i) {
+                       return std::complex<double>(r, i);
+                   });
 }
 
-#endif
+
+}

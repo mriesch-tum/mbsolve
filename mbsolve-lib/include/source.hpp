@@ -77,6 +77,7 @@ public:
         return val;
     }
 
+    /* TODO: specify dm entry/field etc? */
 
     /* TODO: add position. how?
 	   virtual const Quantity& position
@@ -85,7 +86,7 @@ public:
     /* TODO: for thevenin: add internal resistance */
 };
 
-class sine_source : source
+class sine_source : public source
 {
 private:
 
@@ -102,7 +103,7 @@ public:
 
 };
 
-class sech_pulse : source
+class sech_pulse : public source
 {
 private:
 

@@ -88,6 +88,13 @@ private:
 
     std::vector<std::shared_ptr<region> > m_regions;
 
+    /* TODO: boundary conditions for fields */
+    /* choices: periodic (ring cavity), PML, PMC (Fabry-Perot cavity) ... */
+
+    /* TODO: boundary conditions for density matrix ? */
+    /* choices: injection current. rather put it in scenario? as source? */
+    /* choices: periodic */
+
 public:
 
     device(const std::string& name);

@@ -35,6 +35,18 @@ scenario::add_record(std::shared_ptr<record> rec)
     m_records.push_back(rec);
 }
 
+void
+scenario::add_source(std::shared_ptr<source> src)
+{
+    m_sources.push_back(src);
+}
+
+const std::string&
+scenario::get_name() const
+{
+    return m_name;
+}
+
 unsigned int
 scenario::get_num_timesteps() const
 {

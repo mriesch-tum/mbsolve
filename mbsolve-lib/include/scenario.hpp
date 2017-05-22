@@ -54,12 +54,23 @@ private:
 
     std::vector<std::shared_ptr<source> > m_sources;
 
+    /* TODO: initial conditions fields */
+    /* choice: random, zero */
+
+    /* TODO: initial conditions density matrix */
+    /* choice: equilibrium (all in lowest level), random population */
+    /* off-diagonal elements always zero? */
+
 public:
 
     scenario(const std::string& name, unsigned int num_gridpoints,
              real endtime);
 
     void add_record(std::shared_ptr<record> rec);
+
+    void add_source(std::shared_ptr<source> src);
+
+    const std::string& get_name() const;
 
     unsigned int get_num_timesteps() const;
 

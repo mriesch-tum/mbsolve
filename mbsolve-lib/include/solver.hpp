@@ -50,7 +50,7 @@ public:
 
     ~solver();
 
-    std::string get_name() const;
+    const std::string& get_name() const;
 
     const scenario& get_scenario() const { return m_solver->get_scenario(); }
 

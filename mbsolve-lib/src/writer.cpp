@@ -23,40 +23,58 @@
 
 namespace mbsolve {
 
-std::map<std::string, IWriterFactory *> Writer::m_factories;
+std::map<std::string, writer_factory_int *>
+writer_int::m_factories;
+
+writer_int::writer_int()
+{
+}
+
+writer_int::~writer_int()
+{
+}
 
 void
-Writer::registerFactory(const std::string& name, IWriterFactory *factory)
+writer_int::register_factory(const std::string& name,
+                             writer_factory_int *factory)
 {
     if (m_factories[name]) {
-        throw std::invalid_argument("Writer already registered.");
+	throw std::invalid_argument("Writer already registered.");
     }
     m_factories[name] = factory;
 }
 
-Writer::Writer(const std::string& name)
+writer_factory_int *
+writer_int::find_factory(const std::string& name)
 {
-    std::map<std::string, IWriterFactory *>::iterator it;
-    it = m_factories.find(name);
+    auto it = m_factories.find(name);
     if (it == m_factories.end()) {
         throw std::invalid_argument("Unknown writer " + name);
     }
-    m_writer = it->second->createInstance();
+    return it->second;
 }
 
-Writer::~Writer()
+writer::writer(const std::string& name)
 {
-    delete m_writer;
+    /* create writer */
+    writer_factory_int *factory = writer_int::find_factory(name);
+    m_writer = factory->create_instance();
+}
+
+writer::~writer()
+{
 }
 
 void
-Writer::write(const std::string& file, const std::vector<Result *>& results,
-	      const Device& device, const Scenario& scenario) const
+writer::write(const std::string& file,
+              const std::vector<std::shared_ptr<result> >& results,
+              std::shared_ptr<const device> dev,
+              std::shared_ptr<const scenario> scen) const
 {
-    std::string def = device.get_name() + "-" + scenario.Name + "." +
-        m_writer->getExtension();
+    std::string def = dev->get_name() + "-" + scen->get_name() + "." +
+        m_writer->get_extension();
 
-    m_writer->write(file.empty() ? def : file, results, device, scenario);
+    m_writer->write(file.empty() ? def : file, results, dev, scen);
 }
 
 }

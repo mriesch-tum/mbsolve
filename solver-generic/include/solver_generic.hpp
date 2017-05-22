@@ -43,7 +43,7 @@ public:
 
     ~solver_generic();
 
-    std::string get_name() const;
+    const std::string& get_name() const;
 
     void run() const;
 };

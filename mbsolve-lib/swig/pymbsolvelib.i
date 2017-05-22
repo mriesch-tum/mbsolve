@@ -8,6 +8,9 @@
 %include "std_map.i"
 %include "std_shared_ptr.i"
 
+%shared_ptr(mbsolve::record)
+%template (vector_double) std::vector<double>;
+
 %include "../include/types.hpp"
 %include "../include/material.hpp"
 %include "../include/device.hpp"

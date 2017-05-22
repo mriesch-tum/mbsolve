@@ -35,7 +35,7 @@ solver_generic::~solver_generic()
 {
 }
 
-std::string
+const std::string&
 solver_generic::get_name() const
 {
     return factory.get_name();

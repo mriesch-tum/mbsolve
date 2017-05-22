@@ -19,34 +19,41 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_WRITER_H
-#define MBSOLVE_WRITER_H
+#ifndef WRITER_MATLAB_H
+#define WRITER_MATLAB_H
 
-#include <string>
-#include <vector>
-#include <device.hpp>
-#include <scenario.hpp>
-#include <types.hpp>
-#include <writer_int.hpp>
+#include <writer.hpp>
 
 namespace mbsolve {
 
-class writer
+/**
+ * \defgroup MBSOLVE_WRITER_MATLAB writer-matlab
+ * Writer for MATLAB format.
+ */
+
+/**
+ * Writer class for MATLAB format.
+ * \ingroup MBSOLVE_WRITER_MATLAB
+ */
+class writer_matlab : public writer_int
 {
 private:
-    std::shared_ptr<writer_int> m_writer;
+    std::string m_ext;
 
 public:
-    writer(const std::string& name);
+    writer_matlab();
 
-    ~writer();
+    ~writer_matlab();
+
+    const std::string& get_name() const;
 
     void write(const std::string& file,
                const std::vector<std::shared_ptr<result> >& results,
                std::shared_ptr<const device> dev,
                std::shared_ptr<const scenario> scen) const;
-};
 
+    const std::string& get_extension() const;
+};
 
 }
 

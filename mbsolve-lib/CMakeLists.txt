@@ -6,9 +6,10 @@ include_directories(include/)
 add_library(mbsolve-lib SHARED
   src/device.cpp
   src/material.cpp
+  src/result.cpp
   src/scenario.cpp
   src/solver.cpp
-  #src/writer.cpp
+  src/writer.cpp
   )
 set_property(TARGET mbsolve-lib PROPERTY CXX_STANDARD 11)
 

@@ -80,7 +80,7 @@ public:
 
     const device& get_device() const { return *m_device; }
 
-    virtual std::string get_name() const = 0;
+    virtual const std::string& get_name() const = 0;
 
     virtual void run() const = 0;
 
@@ -98,7 +98,7 @@ public:
 
 /*
  * Solver factory template. Every solver implementation T has to provide
- * a \ref solver_factory<T> to create an instance of the solver class
+ * a \ref solver_factory<T> to create an instance of the solver class.
  * \ingroup MBSOLVE_LIB
  */
 template<typename T>
