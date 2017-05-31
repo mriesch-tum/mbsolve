@@ -19,38 +19,58 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <solver_2lvl_pc.hpp>
+#include <cmath>
+#include <omp.h>
+#include <solver_openmp_2lvl_pc.hpp>
 
-#include <boost/foreach.hpp>
+namespace mbsolve {
 
-namespace mbsolve{
-
-static SolverFactory<SolverOMP_2lvl_pc> factory("openmp-2lvl-pc");
+static solver_factory<solver_openmp_2lvl_pc> factory("openmp-2lvl-pc");
 
 struct sim_constants gsc[MaxRegions];
 unsigned int num_grid_points;
 unsigned int num_time_steps;
 real time_step_size;
 
-SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
-				     const Scenario& scenario) :
-    ISolver(device, scenario)
+solver_openmp_2lvl_pc::solver_openmp_2lvl_pc(std::shared_ptr<const device> dev,
+                                             std::shared_ptr<scenario> scen) :
+    solver_int(dev, scen)
 {
-    /* total device length */
-    Quantity length = device.XDim();
+    /* determine simulation settings */
+    if (scen->get_num_gridpoints() > 0) {
+        /* courant number */
+        /* TODO: simulation parameter? */
+        real C = 0.5;
 
-    /* minimum relative permittivity */
-    Quantity minRelPermittivity = device.MinRelPermittivity();
+        /* speed of light (use smallest value of relative permittivities) */
+        real velocity = 1.0/sqrt(MU0 * EPS0 * dev->get_minimum_permittivity());
 
-    /* determine grid point and time step size */
-    real C = 0.5; /* courant number */
-    real velocity_inv = sqrt(MU0() * EPS0() * minRelPermittivity());
-    m_scenario.GridPointSize = length()/(m_scenario.NumGridPoints - 1);
+        /* get number of grid points */
+        unsigned int n_x = scen->get_num_gridpoints();
 
-    real timestep  = C * m_scenario.GridPointSize * velocity_inv;
-    m_scenario.NumTimeSteps = ceil(m_scenario.SimEndTime/timestep) + 1;
-    m_scenario.TimeStepSize = m_scenario.SimEndTime /
-	(m_scenario.NumTimeSteps - 1);
+        /* grid point size */
+        real d_x = dev->get_length()/(n_x - 1);
+        scen->set_gridpoint_size(d_x);
+
+        /* time step size */
+        real d_t = C * d_x/velocity;
+
+        /* number of time steps */
+        unsigned int n_t = ceil(scen->get_endtime()/d_t) + 1;
+        scen->set_num_timesteps(n_t);
+
+        /* re-adjust time step size in order to fit number of time steps */
+        d_t = scen->get_endtime()/(n_t - 1);
+        scen->set_timestep_size(d_t);
+
+    } else {
+        throw std::invalid_argument("Invalid scenario.");
+    }
+
+    /* set up materials */
+
+#if 0
+
 
     /* determine border indices and initialize region settings */
     if (device.Regions.size() > MaxRegions) {
@@ -204,10 +224,12 @@ SolverOMP_2lvl_pc::SolverOMP_2lvl_pc(const Device& device,
 	    // throw exc
 	}
     }
+#endif
 }
 
-SolverOMP_2lvl_pc::~SolverOMP_2lvl_pc()
+solver_openmp_2lvl_pc::~solver_openmp_2lvl_pc()
 {
+#if 0
     /* delete copy lists */
     BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
 	delete entry;
@@ -225,17 +247,19 @@ SolverOMP_2lvl_pc::~SolverOMP_2lvl_pc()
     delete[] m_dm22;
 
     delete[] region_indices;
+#endif
 }
 
-std::string
-SolverOMP_2lvl_pc::getName() const
+const std::string&
+solver_openmp_2lvl_pc::get_name() const
 {
-    return factory.getName();
+    return factory.get_name();
 }
 
 void
-SolverOMP_2lvl_pc::run() const
+solver_openmp_2lvl_pc::run() const
 {
+#if 0
 #pragma offload target(mic) in(gsc, num_grid_points, num_time_steps) \
   in(time_step_size) \
   inout(m_e:length(m_scenario.NumGridPoints)) \
@@ -406,6 +430,8 @@ SolverOMP_2lvl_pc::run() const
 	      entry->getSrc() + entry->getCount(),
 	      entry->getDst(0));
   }
+#endif
 }
+
 
 }

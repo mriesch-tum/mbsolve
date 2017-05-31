@@ -19,37 +19,49 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef OPENMP_2LVL_PC_H
-#define OPENMP_2LVL_PC_H
+#ifndef MBSOLVE_SOLVER_OPENMP_2LVL_PC_H
+#define MBSOLVE_SOLVER_OPENMP_2LVL_PC_H
 
 #include <solver.hpp>
 
 namespace mbsolve {
 
-static const unsigned int MaxRegions = 8;
+/**
+ * \defgroup MBSOLVE_SOLVER_OPENMP solver-openmp
+ * Different solvers that use OpenMP for parallelization.
+ */
 
-struct sim_constants
+/**
+ *
+ * \ingroup MBSOLVE_SOLVER_OPENMP
+ */
+struct sim_constants_2lvl
 {
+    /* electromagnetic constants */
     real M_CE;
     real M_CH;
     real M_CP;
     real sigma;
 
+    /* quantum mechanical constants */
     real w12;
     real d12;
     real tau1;
     real gamma12;
 
+    /* required? */
     unsigned int idx_start;
     unsigned int idx_end;
 
+    /* simulation constants */
     real d_x_inv;
     real d_t;
 
+    /* initialization constants */
     real dm11_init;
     real dm22_init;
 };
-
+/*
 class CopyListEntry
 {
 protected:
@@ -122,14 +134,15 @@ public:
     }
     };*/
 
-class SolverOMP_2lvl_pc : public ISolver
+class solver_openmp_2lvl_pc : public solver_int
 {
 public:
-    SolverOMP_2lvl_pc(const Device& device, const Scenario& scenario);
+    solver_openmp_2lvl_pc(std::shared_ptr<const device> dev,
+                          std::shared_ptr<scenario> scen);
 
-    ~SolverOMP_2lvl_pc();
+    ~solver_openmp_2lvl_pc();
 
-    std::string getName() const;
+    const std::string& get_name() const;
 
     void run() const;
 
@@ -149,8 +162,8 @@ private:
 
     unsigned int *region_indices;
 
-    std::vector<CopyListEntry *> m_copyListBlack;
-    std::vector<CopyListEntry *> m_copyListRed;
+    //    std::vector<CopyListEntry *> m_copyListBlack;
+    //std::vector<CopyListEntry *> m_copyListRed;
 };
 
 }

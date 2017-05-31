@@ -30,7 +30,11 @@
  */
 
 %shared_ptr(mbsolve::device)
+%shared_ptr(mbsolve::qm_description)
+%shared_ptr(mbsolve::qm_desc_2lvl)
+%shared_ptr(mbsolve::material)
 %shared_ptr(mbsolve::record)
+%shared_ptr(mbsolve::region)
 %shared_ptr(mbsolve::result)
 %shared_ptr(mbsolve::scenario)
 %shared_ptr(mbsolve::sech_pulse)
