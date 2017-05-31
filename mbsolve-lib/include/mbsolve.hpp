@@ -42,7 +42,6 @@ The mbsolve project provides a framework for solving the Maxwell-Bloch (or Maxwe
 #include <solver.hpp>
 #include <source.hpp>
 #include <types.hpp>
-//#include <writer.hpp>
-
+#include <writer.hpp>
 
 #endif

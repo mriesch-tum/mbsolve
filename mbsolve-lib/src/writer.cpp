@@ -77,4 +77,10 @@ writer::write(const std::string& file,
     m_writer->write(file.empty() ? def : file, results, dev, scen);
 }
 
+const std::string&
+writer::get_extension() const
+{
+    return m_writer->get_extension();
+}
+
 }

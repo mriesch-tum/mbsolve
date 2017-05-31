@@ -35,10 +35,22 @@ scenario::add_record(std::shared_ptr<record> rec)
     m_records.push_back(rec);
 }
 
+const std::vector<std::shared_ptr<record> >&
+scenario::get_records() const
+{
+    return m_records;
+}
+
 void
 scenario::add_source(std::shared_ptr<source> src)
 {
     m_sources.push_back(src);
+}
+
+const std::vector<std::shared_ptr<source> >&
+scenario::get_sources() const
+{
+    return m_sources;
 }
 
 const std::string&

@@ -45,6 +45,8 @@ public:
                const std::vector<std::shared_ptr<result> >& results,
                std::shared_ptr<const device> dev,
                std::shared_ptr<const scenario> scen) const;
+
+    const std::string& get_extension() const;
 };
 
 

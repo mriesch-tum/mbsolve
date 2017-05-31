@@ -1,6 +1,6 @@
-%module pysolvergeneric
+%module pywritermatlab
 %{
-#include "../include/solver_generic.hpp"
+#include "../include/writer_matlab.hpp"
 
 using namespace mbsolve;
 %}
@@ -22,6 +22,7 @@ using namespace mbsolve;
   }
 }
 
-%shared_ptr(mbsolve::solver_generic)
+%shared_ptr(mbsolve::device)
+%shared_ptr(mbsolve::scenario)
 
-%include "../include/solver_generic.hpp"
+%include "../include/writer_matlab.hpp"

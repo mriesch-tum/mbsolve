@@ -68,7 +68,11 @@ public:
 
     void add_record(std::shared_ptr<record> rec);
 
+    const std::vector<std::shared_ptr<record> >& get_records() const;
+
     void add_source(std::shared_ptr<source> src);
+
+    const std::vector<std::shared_ptr<source> >& get_sources() const;
 
     const std::string& get_name() const;
 

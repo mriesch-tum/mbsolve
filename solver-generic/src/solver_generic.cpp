@@ -29,6 +29,16 @@ solver_generic::solver_generic(std::shared_ptr<const device> dev,
                                std::shared_ptr<scenario> scen) :
     solver_int(dev, scen)
 {
+
+    for (auto rec : scen->get_records()) {
+
+        unsigned int cols = 20;
+        unsigned int rows = 10;
+
+        auto res = std::make_shared<result>(rec->get_name(), cols, rows);
+
+        m_results.push_back(res);
+    }
 }
 
 solver_generic::~solver_generic()
@@ -44,7 +54,27 @@ solver_generic::get_name() const
 void
 solver_generic::run() const
 {
-    /* noop */
+    /* fill test results */
+
+    std::vector<real> rpart(20);
+    std::vector<real> ipart(20);
+
+    for (auto res : m_results) {
+        for (unsigned int row_ct = 0; row_ct < 10; row_ct++) {
+            for (auto& r : rpart) {
+                r = 10.0 * row_ct;
+            }
+
+            for (auto& i : ipart) {
+                i = 42.0;
+            }
+
+            std::copy(rpart.cbegin(), rpart.cend(),
+                      res->get_data_real(row_ct, 0));
+            std::copy(ipart.cbegin(), ipart.cend(),
+                      res->get_data_imag(row_ct, 0));
+        }
+    }
 }
 
 }
