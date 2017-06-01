@@ -118,7 +118,7 @@ int main(int argc, char **argv)
 	/* tic */
 	timer.start();
 
-	//mbsolve::Writer writer(writer_method);
+	mbsolve::writer writer(writer_method);
 	mbsolve::solver solver(solver_method, dev, scen);
 
 	/* toc */
@@ -151,8 +151,7 @@ int main(int argc, char **argv)
 	timer.start();
 
 	/* write results */
-	//writer.write(output_file, solver.getResults(), device,
-	//	     solver.getScenario());
+	writer.write(output_file, solver.get_results(), dev, scen);
 
 	/* toc */
 	timer.stop();

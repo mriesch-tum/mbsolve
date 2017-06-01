@@ -22,6 +22,7 @@
 #ifndef MBSOLVE_DEVICE_H
 #define MBSOLVE_DEVICE_H
 
+#include <set>
 #include <string>
 #include <memory>
 #include <vector>
@@ -60,6 +61,14 @@ public:
     }
 
     /**
+     * Get region name.
+     */
+    const std::string& get_name() const
+    {
+        return m_name;
+    }
+
+    /**
      * Get region length.
      */
     real get_length() const
@@ -69,6 +78,16 @@ public:
 
         return (m_x_end - m_x_start);
     }
+
+    /**
+     * Get region start position.
+     */
+    real get_start() const { return m_x_start; }
+
+    /**
+     * Get region end position.
+     */
+    real get_end() const { return m_x_end; }
 
     /**
      * Get material.
@@ -87,6 +106,8 @@ private:
     std::string m_name;
 
     std::vector<std::shared_ptr<region> > m_regions;
+
+    std::set<std::string> m_used_materials;
 
     /* TODO: boundary conditions for fields */
     /* choices: periodic (ring cavity), PML, PMC (Fabry-Perot cavity) ... */
@@ -107,6 +128,16 @@ public:
      * Add new region to device.
      */
     void add_region(std::shared_ptr<region> reg);
+
+    /**
+     * Get all regions of device.
+     */
+    const std::vector<std::shared_ptr<region> >& get_regions() const;
+
+    /**
+     * Get IDs of used materials.
+     */
+    const std::set<std::string>& get_used_materials() const;
 
     /**
      * Get device name.

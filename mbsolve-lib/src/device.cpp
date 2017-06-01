@@ -39,6 +39,19 @@ device::~device()
 void
 device::add_region(std::shared_ptr<region> reg) {
     m_regions.push_back(reg);
+    m_used_materials.insert(reg->get_material()->get_id());
+}
+
+const std::vector<std::shared_ptr<region> >&
+device:: get_regions() const
+{
+    return m_regions;
+}
+
+const std::set<std::string>&
+device::get_used_materials() const
+{
+    return m_used_materials;
 }
 
 real
