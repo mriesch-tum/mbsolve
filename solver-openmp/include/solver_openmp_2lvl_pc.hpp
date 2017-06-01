@@ -36,8 +36,9 @@ namespace mbsolve {
  *
  * \ingroup MBSOLVE_SOLVER_OPENMP
  */
-struct sim_constants_2lvl
+class sim_constants_2lvl
 {
+public:
     /* electromagnetic constants */
     real M_CE;
     real M_CH;
@@ -85,8 +86,6 @@ private:
      * or implement correctly
      */
 
-    inline void estimate_step(int i, real src) const;
-
     real *m_dm11;
     real *m_dm12r;
     real *m_dm12i;
@@ -99,7 +98,7 @@ private:
 
     unsigned int *m_mat_indices;
 
-    std::vector<struct sim_constants_2lvl> m_sim_consts;
+    std::vector<sim_constants_2lvl> m_sim_consts;
 
     std::vector<copy_list_entry> m_copy_list;
 };

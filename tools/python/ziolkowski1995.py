@@ -9,6 +9,7 @@ import pywritermatlab
 
 import numpy as np
 import math
+import time
 
 # vacuum
 mat_vac = mb.material("Vacuum")
@@ -33,15 +34,15 @@ sce.add_record(mb.record("e", 2e-15))
 
 # TODO: add source
 
-
-
 sol = mb.solver("openmp-2lvl-pc", dev, sce)
 
 print('Solver ' + sol.get_name() + ' started')
 
+tic = time.time()
 sol.run()
+toc = time.time()
 
-print('Solver ' + sol.get_name() + ' finished')
+print('Solver ' + sol.get_name() + ' finished in ' + str(toc - tic) + ' sec')
 
 wri = mb.writer("matlab")
 

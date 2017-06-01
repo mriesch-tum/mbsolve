@@ -19,8 +19,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <cmath>
 #include <iostream>
+#include <cmath>
 #include <omp.h>
 #include <solver_openmp_2lvl_pc.hpp>
 
@@ -41,7 +41,7 @@ real time_step_size;
 
 solver_openmp_2lvl_pc::solver_openmp_2lvl_pc(std::shared_ptr<const device> dev,
                                              std::shared_ptr<scenario> scen) :
-solver_int(dev, scen), m_sim_consts(dev->get_used_materials().size())
+solver_int(dev, scen)
 {
     /* TODO: scenario, device sanity check */
     /*
@@ -54,9 +54,6 @@ solver_int(dev, scen), m_sim_consts(dev->get_used_materials().size())
     if (dev->get_regions().size() == 0) {
         throw std::invalid_argument("No regions in device!");
     }
-
-    std::cout << "Reg3: " << dev->get_regions()[2]->get_name() << std::endl;
-
 
     /* determine simulation settings */
     if (scen->get_num_gridpoints() > 0) {
@@ -89,14 +86,11 @@ solver_int(dev, scen), m_sim_consts(dev->get_used_materials().size())
         throw std::invalid_argument("Invalid scenario.");
     }
 
-
-    std::cout << "Used materials: " << dev->get_used_materials().size() << std::endl;
-
     /* set up simulaton constants */
     unsigned int j = 0;
     std::map<std::string, unsigned int> id_to_idx;
-    for (auto mat_id : dev->get_used_materials()) {
-        struct sim_constants_2lvl sc;
+    for (const auto& mat_id : dev->get_used_materials()) {
+        sim_constants_2lvl sc;
 
         auto mat = material::get_from_library(mat_id);
 
@@ -131,7 +125,6 @@ solver_int(dev, scen), m_sim_consts(dev->get_used_materials().size())
             /* TODO: evaluate flexible initialization in scenario */
             sc.dm11_init = 0.0;
             sc.dm22_init = 1.0;
-
         } else {
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;
@@ -164,22 +157,19 @@ solver_int(dev, scen), m_sim_consts(dev->get_used_materials().size())
     m_mat_indices = new unsigned int[scen->get_num_gridpoints()];
 
     /* set up indices array and initialize data arrays */
-#pragma omp for schedule(static)
+#pragma omp parallel for schedule(static)
     for (unsigned int i = 0; i < scen->get_num_gridpoints(); i++) {
+        /* determine index of material */
         int idx = -1;
-
-
-
-        /* determine material of index */
         real x = i * scen->get_gridpoint_size();
-        for (auto reg : dev->get_regions()) {
+        for (const auto& reg : dev->get_regions()) {
             if ((x >= reg->get_start()) && (x <= reg->get_end())) {
                 idx = id_to_idx[reg->get_material()->get_id()];
                 break;
             }
         }
         /* TODO: assert/bug if idx == -1 */
-        if (idx < 0) {
+        if ((idx < 0) || (idx >= dev->get_used_materials().size())) {
             std::cout << "At index " << i << std::endl;
             throw std::invalid_argument("region not found");
         }
@@ -199,7 +189,7 @@ solver_int(dev, scen), m_sim_consts(dev->get_used_materials().size())
 
     /* set up results and transfer data structures */
     unsigned int scratch_size = 0;
-    for (auto rec : scen->get_records()) {
+    for (const auto& rec : scen->get_records()) {
         /* create copy list entry */
         copy_list_entry entry(rec, scen);
 
@@ -236,8 +226,6 @@ solver_int(dev, scen), m_sim_consts(dev->get_used_materials().size())
 
     /* allocate scratchpad result memory */
     m_result_scratch = new real[scratch_size];
-
-    std::cout << "Scratch size " << scratch_size << std::endl;
 
     /* add scratchpad addresses to copy list entries */
     unsigned int scratch_offset = 0;
@@ -384,7 +372,7 @@ solver_openmp_2lvl_pc::run() const
 #pragma omp for schedule(static)
                       for (int i = 0; i < m_scenario->get_num_gridpoints();
                            i++) {
-                          if ((i > cle.get_position()) &&
+                          if ((i >= cle.get_position()) &&
                               (i < cle.get_position() + cle.get_cols())) {
                               *cle.get_scratch_real(n, i) = *cle.get_real(i);
                               if (cle.is_complex()) {
