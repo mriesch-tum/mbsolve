@@ -186,22 +186,22 @@ public:
     /**
      * Get relative permittivity &epsilon;<sub>r</sub>
      */
-    const real get_rel_permittivity() const { return m_rel_permittivity; }
+    real get_rel_permittivity() const { return m_rel_permittivity; }
 
     /**
      * Get relative permeability &mu;<sub>r</sub>
      */
-    const real get_rel_permeability() const { return m_rel_permeability; }
+    real get_rel_permeability() const { return m_rel_permeability; }
 
     /**
      * Get losses &alpha;.
      */
-    const real get_losses() const { return m_losses; }
+    real get_losses() const { return m_losses; }
 
     /**
      * Get overlap factor &Gamma;.
      */
-    const real get_overlap_factor() const { return m_overlap_factor; }
+    real get_overlap_factor() const { return m_overlap_factor; }
 
     //    void add_to_library() const;
 

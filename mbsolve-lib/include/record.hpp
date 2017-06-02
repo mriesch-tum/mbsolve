@@ -59,15 +59,15 @@ public:
 
     const std::string& get_name() const { return m_name; }
 
-    const record_type get_type() const { return m_type; }
+    record_type get_type() const { return m_type; }
 
-    const unsigned int get_col() const { return m_col; }
+    unsigned int get_col() const { return m_col; }
 
-    const unsigned int get_row() const { return m_row; }
+    unsigned int get_row() const { return m_row; }
 
-    const real get_position() const { return m_position; }
+    real get_position() const { return m_position; }
 
-    const real get_interval() const { return m_interval; }
+    real get_interval() const { return m_interval; }
 };
 
 }

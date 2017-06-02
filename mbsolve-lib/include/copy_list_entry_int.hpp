@@ -52,7 +52,8 @@ private:
 public:
     copy_list_entry(std::shared_ptr<const record> rec,
                     std::shared_ptr<const scenario> scen) :
-        m_record(rec)
+        m_record(rec), m_scratch_real(NULL), m_scratch_imag(NULL),
+        m_real(NULL), m_imag(NULL)
     {
         m_rows = scen->get_endtime()/rec->get_interval();
         m_interval = ceil(1.0 * scen->get_num_timesteps()/m_rows);
