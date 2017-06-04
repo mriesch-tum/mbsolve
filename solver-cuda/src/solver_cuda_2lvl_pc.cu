@@ -1,13 +1,32 @@
-#include <boost/foreach.hpp>
+/*
+ * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ *
+ * Copyright (c) 2016, Computational Photonics Group, Technical University of
+ * Munich.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+ */
 
 #include <curand.h>
 #include <curand_kernel.h>
-#include <CUDACommon.hpp>
-#include <SolverCUDA2lvl.hpp>
+#include <cuda_common.hpp>
+#include <solver_cuda_2lvl_pc.hpp>
 
 namespace mbsolve {
 
-static SolverFactory<SolverCUDA2lvl> factory("cuda-2lvl");
+static solver_factory<solver_cuda_2lvl_pc> factory("cuda-2lvl-pc");
 
 /* CUDA memory and kernels */
 __device__ __constant__ struct sim_constants gsc[MaxRegions];
@@ -163,10 +182,11 @@ __global__ void makestep_e_dm(real *d, const real *gh, real *ge, real src,
 }
 
 /* host members */
-SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
-			       const Scenario& scenario) :
-    ISolver(device, scenario), comp_maxwell(0), copy(0)
+solver_cuda_2lvl_pc::solver_cuda_2lvl_pc(std::shared_ptr<const device> dev,
+                                         std::shared_ptr<scenario> scen) :
+solver_int(dev, scen), comp_maxwell(0), copy(0)
 {
+#if 0
     /* total device length */
     Quantity length = device.XDim();
 
@@ -323,10 +343,12 @@ SolverCUDA2lvl::SolverCUDA2lvl(const Device& device,
 
     /* sync */
     cudaDeviceSynchronize();
+#endif
 }
 
-SolverCUDA2lvl::~SolverCUDA2lvl()
+solver_cuda_2lvl_pc::~solver_cuda_2lvl_pc()
 {
+#if 0
     /* delete copy lists */
     BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
 	delete entry;
@@ -354,17 +376,19 @@ SolverCUDA2lvl::~SolverCUDA2lvl()
 
     /* reset device */
     cudaDeviceReset();
+#endif
 }
 
-std::string
-SolverCUDA2lvl::getName() const
+const std::string&
+solver_cuda_2lvl_pc::get_name() const
 {
-    return factory.getName();
+    return factory.get_name();
 }
 
 void
-SolverCUDA2lvl::run() const
+solver_cuda_2lvl_pc::run() const
 {
+#if 0
     unsigned int threads = 128;
     unsigned int blocks = m_scenario.NumGridPoints/threads;
     /* TODO handle roundoff errors in thread/block partition */
@@ -400,6 +424,7 @@ SolverCUDA2lvl::run() const
 	    }
 	}
     }
+#endif
 }
 
 }
