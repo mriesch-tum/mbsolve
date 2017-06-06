@@ -111,9 +111,14 @@ int main(int argc, char **argv)
         //131072;
         //262144;
 
-        scen->add_record(std::make_shared<mbsolve::record>("d11", 2e-15));
-        scen->add_record(std::make_shared<mbsolve::record>("d22", 2e-15));
-        scen->add_record(std::make_shared<mbsolve::record>("e", 2e-15));
+        auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
+            ("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
+             10, 2e14);
+        scen->add_source(sech_pulse);
+
+        scen->add_record(std::make_shared<mbsolve::record>("d11", 2.5e-15));
+        scen->add_record(std::make_shared<mbsolve::record>("d22", 2.5e-15));
+        scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
 
 	/* tic */
 	timer.start();

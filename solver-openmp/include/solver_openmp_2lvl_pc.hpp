@@ -51,10 +51,6 @@ public:
     real tau1;
     real gamma12;
 
-    /* required? */
-    unsigned int idx_start;
-    unsigned int idx_end;
-
     /* simulation constants */
     real d_x_inv;
     real d_t;
@@ -62,6 +58,14 @@ public:
     /* initialization constants */
     real dm11_init;
     real dm22_init;
+};
+
+class sim_source
+{
+public:
+    source::type type;
+    unsigned int x_idx;
+    unsigned int data_base_idx;
 };
 
 /**
@@ -96,9 +100,13 @@ private:
 
     real *m_result_scratch;
 
+    real *m_source_data;
+
     unsigned int *m_mat_indices;
 
     std::vector<sim_constants_2lvl> m_sim_consts;
+
+    std::vector<sim_source> m_sim_sources;
 
     std::vector<copy_list_entry> m_copy_list;
 };

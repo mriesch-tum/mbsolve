@@ -31,3 +31,9 @@ figure;
 plot(x, e(:, t));
 ylabel('E-Field');
 xlim([0, XDim]);
+
+x_idx = size(e, 1);
+figure;
+plot(linspace(0, SimEndTime, size(e, 2)), e(x_idx, :));
+ylabel('E-Field');
+xlabel('Time');

@@ -20,8 +20,8 @@ mb.material.add_to_library(mat_abs)
 
 # Freeman 2013 active region
 # varies gain recovery time T1
-T1 = 15e-12
-qm = mb.qm_desc_2lvl(3.7e20, 2 * math.pi * 2.45e12, 6.2e-9, T1, 2.35e-12)
+T1 = 20e-12
+qm = mb.qm_desc_2lvl(3.7e20, 2 * math.pi * 2.45e12, 6.2e-9, 1/T1, 1/2.35e-12)
 # background rel permittivity 12.9
 # overlap factor 1
 # waveguide loss 3/cm -> 300/m
@@ -30,8 +30,8 @@ mb.material.add_to_library(mat_ar)
 
 # Freeman setup
 # varies cavity length (1.5mm/3mm)
-L_abs = 3e-3
-L = 3e-3
+L_abs = 0.25e-3
+L = 1.5e-3
 dev = mb.device("Freeman")
 dev.add_region(mb.region("Vacuum left", mat_abs, 0, L_abs))
 dev.add_region(mb.region("Active region", mat_ar, L_abs, L_abs + L))
@@ -42,11 +42,20 @@ dev.add_region(mb.region("Vacuum right", mat_abs, L_abs + L, 2 * L_abs + L))
 # rather set d_x directly
 # courant number?
 sce = mb.scenario("basic", 16384, 230e-12)
-sce.add_record(mb.record("d11", 2e-12))
-sce.add_record(mb.record("d22", 2e-12))
-sce.add_record(mb.record("e", 2e-12))
+#sce.add_record(mb.record("d11", 2e-12))
+#sce.add_record(mb.record("d22", 2e-12))
+sce.add_record(mb.record("e", 1e-13, 0.001745))
 
-# TODO: add source
+#TODO check whether position > device length
+
+# add source
+sce.add_source(mb.single_cycle_pulse("seed-pulse", L_abs,
+                                     mb.source.soft_source, 1e5,
+                                     2.45e12, 1/(0.35e-12/2.634), 1e-12))
+# TODO: add phase to carrier sine wave ?
+
+# initialization: perfect inversion
+sce.set_dm_init_type(mb.scenario.upper_full)
 
 sol = mb.solver("openmp-2lvl-pc", dev, sce)
 

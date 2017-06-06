@@ -21,7 +21,7 @@ mat_ar = mb.material("AR_Ziolkowski", qm)
 mb.material.add_to_library(mat_ar)
 
 # Ziolkowski setup
-dev = mb.device("Ziolkowski")
+dev = mb.device("ziolkowski")
 dev.add_region(mb.region("Vacuum left", mat_vac, 0, 7.5e-6))
 dev.add_region(mb.region("Active region", mat_ar, 7.5e-6, 142.5e-6))
 dev.add_region(mb.region("Vacuum right", mat_vac, 142.5e-6, 150e-6))
@@ -32,7 +32,9 @@ sce.add_record(mb.record("d11", 2e-15))
 sce.add_record(mb.record("d22", 2e-15))
 sce.add_record(mb.record("e", 2e-15))
 
-# TODO: add source
+# add source
+sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 4.2186e9/2,
+                             2e14, 10, 2e14))
 
 sol = mb.solver("openmp-2lvl-pc", dev, sce)
 
@@ -57,6 +59,4 @@ results = sol.get_results()
 
 #print(d11)
 
-
-
-#wri.write(outfile, sol.get_results(), dev, sce)
+wri.write(outfile, sol.get_results(), dev, sce)

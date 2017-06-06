@@ -37,6 +37,9 @@ namespace mbsolve {
  */
 class scenario
 {
+public:
+    enum dm_init_type { random, lower_full, upper_full };
+
 private:
     std::string m_name;
 
@@ -60,6 +63,7 @@ private:
     /* TODO: initial conditions density matrix */
     /* choice: equilibrium (all in lowest level), random population */
     /* off-diagonal elements always zero? */
+    dm_init_type m_dm_init_type;
 
 public:
 
@@ -95,6 +99,10 @@ public:
     real get_endtime() const;
 
     void set_endtime(real value);
+
+    dm_init_type get_dm_init_type() const;
+
+    void set_dm_init_type(dm_init_type type);
 
 };
 

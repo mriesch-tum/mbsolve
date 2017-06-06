@@ -25,7 +25,8 @@ namespace mbsolve {
 
 scenario::scenario(const std::string& name, unsigned int num_gridpoints,
                    real endtime) :
-    m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime)
+    m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
+    m_dm_init_type(dm_init_type::lower_full)
 {
 }
 
@@ -117,6 +118,18 @@ void
 scenario::set_endtime(real value)
 {
     m_endtime = value;
+}
+
+scenario::dm_init_type
+scenario::get_dm_init_type() const
+{
+    return m_dm_init_type;
+}
+
+void
+scenario::set_dm_init_type(scenario::dm_init_type type)
+{
+    m_dm_init_type = type;
 }
 
 }

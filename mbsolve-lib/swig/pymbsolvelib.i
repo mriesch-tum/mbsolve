@@ -39,6 +39,7 @@
 %shared_ptr(mbsolve::scenario)
 %shared_ptr(mbsolve::sech_pulse)
 %shared_ptr(mbsolve::sine_source)
+%shared_ptr(mbsolve::single_cycle_pulse)
 %shared_ptr(mbsolve::solver)
 %shared_ptr(mbsolve::source)
 %shared_ptr(mbsolve::writer)

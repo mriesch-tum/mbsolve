@@ -122,9 +122,15 @@ solver_int(dev, scen)
             sc.tau1 = qm->get_scattering_rate();
             sc.gamma12 = qm->get_dephasing_rate();
 
-            /* TODO: evaluate flexible initialization in scenario */
-            sc.dm11_init = 0.0;
-            sc.dm22_init = 1.0;
+            if (scen->get_dm_init_type() == scenario::lower_full) {
+                sc.dm11_init = 0.0;
+                sc.dm22_init = 1.0;
+            } else if (scen->get_dm_init_type() == scenario::upper_full) {
+                sc.dm11_init = 1.0;
+                sc.dm22_init = 0.0;
+            } else {
+
+            }
         } else {
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;
@@ -230,6 +236,9 @@ solver_int(dev, scen)
     /* add scratchpad addresses to copy list entries */
     unsigned int scratch_offset = 0;
     for (auto& cle : m_copy_list) {
+
+        std::cout << cle.get_position() << std::endl;
+
         cle.set_scratch_real(&m_result_scratch[scratch_offset]);
         scratch_offset += cle.get_size();
 
@@ -239,6 +248,27 @@ solver_int(dev, scen)
             scratch_offset += cle.get_size();
         }
     }
+
+    /* create source data */
+    m_source_data = new real[scen->get_num_timesteps() *
+                             scen->get_sources().size()];
+    unsigned int base_idx = 0;
+    for (const auto& src : scen->get_sources()) {
+        sim_source s;
+        s.type = src->get_type();
+        s.x_idx = src->get_position()/scen->get_gridpoint_size();
+        s.data_base_idx = base_idx;
+        m_sim_sources.push_back(s);
+
+        /* calculate source values */
+        for (unsigned int j = 0; j < scen->get_num_timesteps(); j++) {
+            m_source_data[base_idx + j] =
+                src->get_value(j * scen->get_timestep_size());
+        }
+
+        base_idx += scen->get_num_timesteps();
+    }
+
 }
 
 solver_openmp_2lvl_pc::~solver_openmp_2lvl_pc()
@@ -251,6 +281,7 @@ solver_openmp_2lvl_pc::~solver_openmp_2lvl_pc()
     delete[] m_dm22;
     delete[] m_mat_indices;
     delete[] m_result_scratch;
+    delete[] m_source_data;
 }
 
 const std::string&
@@ -278,20 +309,6 @@ solver_openmp_2lvl_pc::run() const
     {
           /* main loop */
           for (int n = 0; n < m_scenario->get_num_timesteps(); n++) {
-              /* calculate source value */
-              /* TODO optimize divisions? */
-              /* TODO move to source? */
-              real f_0 = 2e14;
-              real t = n * m_scenario->get_timestep_size();
-              real T_p = 20/f_0;
-              real gamma = 2 * t/T_p - 1;
-              real E_0 = 4.2186e9;
-              real src = E_0 * 1/std::cosh(10 * gamma)
-                  * sin(2 * M_PI * f_0 * t);
-              //src = src/2; // pi pulse
-              /* TODO:  private(src) ? */
-              /* TODO: masteronly? */
-
               /* update dm and e in parallel */
               //#pragma omp for simd schedule(static)
 #pragma omp for schedule(static)
@@ -311,12 +328,13 @@ solver_openmp_2lvl_pc::run() const
                       real rho22  = 0.5 * (m_dm22[i] + rho22_e);
                       real rho12r = 0.5 * (m_dm12r[i] + rho12r_e);
                       real rho12i = 0.5 * (m_dm12i[i] + rho12i_e);
-                      real OmRabi = 0.5 * m_sim_consts[mat_idx].d12
-                          * (m_e[i] + field_e);
+                      real e = 0.5 * (m_e[i] + field_e);
+                      real OmRabi = m_sim_consts[mat_idx].d12 * e;
 
                       rho11_e = m_dm11[i] + m_sim_consts[mat_idx].d_t *
                           (- 2.0 * OmRabi * rho12i
-                           - m_sim_consts[mat_idx].tau1 * rho11);
+                           //              - m_sim_consts[mat_idx].tau1 * rho11);
+                           + m_sim_consts[mat_idx].tau1 * rho22);
 
                       rho12i_e = m_dm12i[i] + m_sim_consts[mat_idx].d_t *
                           (- m_sim_consts[mat_idx].w12 * rho12r
@@ -329,9 +347,11 @@ solver_openmp_2lvl_pc::run() const
 
                       rho22_e = m_dm22[i] + m_sim_consts[mat_idx].d_t *
                           (+ 2.0 * OmRabi * rho12i
-                           + m_sim_consts[mat_idx].tau1 * rho11);
+                           - m_sim_consts[mat_idx].tau1 * rho22);
+                      //+ m_sim_consts[mat_idx].tau1 * rho11);
 
-                      real j = 0;
+                      real j = m_sim_consts[mat_idx].sigma * e;
+
                       real p_t = m_sim_consts[mat_idx].M_CP
                           * m_sim_consts[mat_idx].d12 *
                           (m_sim_consts[mat_idx].w12 * rho12i -
@@ -340,12 +360,6 @@ solver_openmp_2lvl_pc::run() const
                       field_e = m_e[i] + m_sim_consts[mat_idx].M_CE *
                           (-j - p_t + (m_h[i + 1] - m_h[i])
                            * m_sim_consts[mat_idx].d_x_inv);
-
-                      if (i == 0) {
-                          /* TODO rework soft source for pred-corr scheme */
-                          //m_e_est[i] += src; /* soft source */
-                          field_e = src; /* hard source */
-                      }
                   }
 
                   /* final update step */
@@ -355,6 +369,17 @@ solver_openmp_2lvl_pc::run() const
                   m_dm22[i] = rho22_e;
 
                   m_e[i] = field_e;
+              }
+
+              /* apply sources */
+              for (const auto& src : m_sim_sources) {
+                  /* TODO: support other source types than hard sources */
+                  if (src.type == source::type::hard_source) {
+                      m_e[src.x_idx] = m_source_data[src.data_base_idx + n];
+                  } else if (src.type == source::type::soft_source) {
+                      m_e[src.x_idx] += m_source_data[src.data_base_idx + n];
+                  } else {
+                  }
               }
 
               /* update h in parallel */
