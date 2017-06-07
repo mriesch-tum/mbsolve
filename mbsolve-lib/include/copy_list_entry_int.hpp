@@ -46,8 +46,11 @@ private:
 
     unsigned int m_rows;
     unsigned int m_cols;
-    unsigned int m_interval;
+    unsigned int m_interval_idx;
     unsigned int m_position;
+
+    real m_timestep;
+    real m_interval;
 
 public:
     copy_list_entry(std::shared_ptr<const record> rec,
@@ -55,8 +58,13 @@ public:
         m_record(rec), m_scratch_real(NULL), m_scratch_imag(NULL),
         m_real(NULL), m_imag(NULL)
     {
-        m_rows = scen->get_endtime()/rec->get_interval();
-        m_interval = ceil(1.0 * scen->get_num_timesteps()/m_rows);
+        m_timestep = scen->get_timestep_size();
+
+        m_rows = ceil(scen->get_endtime()/rec->get_interval()) + 1;
+        m_interval = scen->get_endtime()/(m_rows - 1);
+
+        m_interval_idx =
+            floor(1.0 * (scen->get_num_timesteps() - 1)/(m_rows - 1));
 
         if (rec->get_position() < 0.0) {
             /* copy complete grid */
@@ -72,8 +80,12 @@ public:
         m_result = std::make_shared<result>(rec->get_name(), m_cols, m_rows);
     }
 
-    bool hasto_record(unsigned int timestep) const {
-        return (timestep % m_interval) == 0;
+    bool hasto_record(unsigned int iteration) const {
+        real t_now = iteration * m_timestep;
+        real t_next = t_now + m_timestep;
+        real t_sample = floor(iteration / m_interval_idx) * m_interval;
+
+        return ((t_now <= t_sample) && (t_next >= t_sample));
     }
 
     bool is_complex() const {
@@ -96,22 +108,22 @@ public:
 
     std::vector<real>::iterator
     get_result_real(unsigned int timestep, unsigned int gridpoint = 0) const {
-        return m_result->get_data_real(timestep/m_interval, gridpoint);
+        return m_result->get_data_real(timestep/m_interval_idx, gridpoint);
     }
 
     std::vector<real>::iterator
     get_result_imag(unsigned int timestep, unsigned int gridpoint = 0) const {
-        return m_result->get_data_imag(timestep/m_interval, gridpoint);
+        return m_result->get_data_imag(timestep/m_interval_idx, gridpoint);
     }
 
     real *
     get_scratch_real(unsigned int timestep, unsigned int gridpoint = 0) const {
-        return m_scratch_real + (timestep/m_interval) * m_cols + gridpoint;
+        return m_scratch_real + (timestep/m_interval_idx) * m_cols + gridpoint;
     }
 
     real *
     get_scratch_imag(unsigned int timestep, unsigned int gridpoint = 0) const {
-        return m_scratch_imag + (timestep/m_interval) * m_cols + gridpoint;
+        return m_scratch_imag + (timestep/m_interval_idx) * m_cols + gridpoint;
     }
 
     real *

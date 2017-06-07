@@ -397,11 +397,12 @@ solver_openmp_2lvl_pc::run() const
 #pragma omp for schedule(static)
                       for (int i = 0; i < m_scenario->get_num_gridpoints();
                            i++) {
-                          if ((i >= cle.get_position()) &&
-                              (i < cle.get_position() + cle.get_cols())) {
-                              *cle.get_scratch_real(n, i) = *cle.get_real(i);
+                          unsigned int pos = cle.get_position();
+                          if ((i >= pos) && (i < pos + cle.get_cols())) {
+                              *cle.get_scratch_real(n, i - pos) =
+                                  *cle.get_real(i);
                               if (cle.is_complex()) {
-                                  *cle.get_scratch_imag(n, i) =
+                                  *cle.get_scratch_imag(n, i - pos) =
                                       *cle.get_imag(i);
                               }
                           }
