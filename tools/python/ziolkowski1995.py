@@ -16,21 +16,21 @@ mat_vac = mb.material("Vacuum")
 mb.material.add_to_library(mat_vac)
 
 # Ziolkowski active region material
-qm = mb.qm_desc_2lvl(1e24, 2 * math.pi * 2e14, 6.24e-11, 0.5e10, 1.0e10)
+qm = mb.qm_desc_2lvl(1e24, 2 * math.pi * 2e14, 6.24e-11, 1.0e10, 1.0e10)
 mat_ar = mb.material("AR_Ziolkowski", qm)
 mb.material.add_to_library(mat_ar)
 
 # Ziolkowski setup
-dev = mb.device("ziolkowski")
+dev = mb.device("Ziolkowski")
 dev.add_region(mb.region("Vacuum left", mat_vac, 0, 7.5e-6))
 dev.add_region(mb.region("Active region", mat_ar, 7.5e-6, 142.5e-6))
 dev.add_region(mb.region("Vacuum right", mat_vac, 142.5e-6, 150e-6))
 
 # scenario
-sce = mb.scenario("basic", 32768, 200e-15)
-sce.add_record(mb.record("d11", 2e-15))
-sce.add_record(mb.record("d22", 2e-15))
-sce.add_record(mb.record("e", 2e-15))
+sce = mb.scenario("Basic", 32768, 200e-15)
+sce.add_record(mb.record("d11", 2.5e-15))
+sce.add_record(mb.record("d22", 2.5e-15))
+sce.add_record(mb.record("e", 2.5e-15))
 
 # add source
 sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 4.2186e9/2,
