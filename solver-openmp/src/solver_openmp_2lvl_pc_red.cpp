@@ -1,422 +1,418 @@
-#include <solver_2lvl_pc_red.hpp>
-#include <iostream>
-#include <boost/foreach.hpp>
+/*
+ * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ *
+ * Copyright (c) 2016, Computational Photonics Group, Technical University of
+ * Munich.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software Foundation,
+ * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+ */
+
+#include <solver_openmp_2lvl_pc_red.hpp>
 
 namespace mbsolve{
 
-static SolverFactory<SolverOMP_2lvl_pc_red> factory("openmp-2lvl-pc-red");
+static solver_factory<solver_openmp_2lvl_pc_red> factory("openmp-2lvl-pc-red");
 
+/** TODO necessary??
 extern struct sim_constants gsc[MaxRegions];
 extern unsigned int num_grid_points;
 extern unsigned int num_time_steps;
 extern real time_step_size;
+*/
 
 /* redundant calculation overlap */
 //const unsigned int OL = 100;
 unsigned int OL;
 
-SolverOMP_2lvl_pc_red::SolverOMP_2lvl_pc_red(const Device& device,
-					     const Scenario& scenario) :
-    ISolver(device, scenario)
+solver_openmp_2lvl_pc_red::solver_openmp_2lvl_pc_red
+(std::shared_ptr<const device> dev, std::shared_ptr<scenario> scen) :
+solver_int(dev, scen)
 {
-    /* total device length */
-    Quantity length = device.XDim();
+    /* TODO: scenario, device sanity check */
 
-    /* minimum relative permittivity */
-    Quantity minRelPermittivity = device.MinRelPermittivity();
-
-    /* determine grid point and time step size */
-    real C = 0.5; /* courant number */
-    real velocity_inv = sqrt(MU0() * EPS0() * minRelPermittivity());
-    m_scenario.GridPointSize = length()/(m_scenario.NumGridPoints - 1);
-
-
-    /* WTF? confused mult and div? */
-    real timestep  = C * m_scenario.GridPointSize * velocity_inv;
-    m_scenario.NumTimeSteps = ceil(m_scenario.SimEndTime/timestep) + 1;
-    m_scenario.TimeStepSize = m_scenario.SimEndTime /
-	(m_scenario.NumTimeSteps - 1);
-
-    /* determine border indices and initialize region settings */
-    if (device.Regions.size() > MaxRegions) {
-	throw std::invalid_argument("Too many regions requested");
-    }
-
-    unsigned int i = 0;
-    BOOST_FOREACH(Region reg, device.Regions) {
-	if (i > 0) {
-	    gsc[i - 1].idx_end = round(reg.X0()/m_scenario.GridPointSize) - 1;
-	}
-	gsc[i].idx_start = round(reg.X0()/m_scenario.GridPointSize);
-	gsc[i].M_CE = m_scenario.TimeStepSize/(EPS0() * reg.RelPermittivity());
-	gsc[i].M_CH = m_scenario.TimeStepSize/(MU0() *
-					      m_scenario.GridPointSize);
-	/* TODO: overlap factor? */
-	gsc[i].M_CP = -2.0 * reg.DopingDensity * HBAR();
-	gsc[i].sigma = 2.0 * sqrt(EPS0 * reg.RelPermittivity/MU0) * reg.Losses;
-
-	gsc[i].w12 = (reg.TransitionFrequencies.size() < 1) ? 0.0 :
-	    reg.TransitionFrequencies[0]();
-	/* TODO rename to rabi freqs or something */
-	gsc[i].d12 = (reg.DipoleMoments.size() < 1) ? 0.0 :
-	    reg.DipoleMoments[0]() * E0()/HBAR();
-	gsc[i].tau1 = (reg.ScatteringRates.size() < 1) ? 0.0 :
-	    reg.ScatteringRates[0]();
-	gsc[i].gamma12 = (reg.DephasingRates.size() < 1) ? 0.0 :
-	    reg.DephasingRates[0]();
-
-	gsc[i].d_x_inv = 1.0/m_scenario.GridPointSize;
-	gsc[i].d_t = m_scenario.TimeStepSize;
-
-	if (reg.DopingDensity() < 1.0) {
-	    gsc[i].dm11_init = 0.0;
-	    gsc[i].dm22_init = 0.0;
-	} else {
-	    gsc[i].dm11_init = 0.0;
-	    gsc[i].dm22_init = 1.0;
-	}
-
-	i++;
-    }
-    if (i > 0) {
-	gsc[i - 1].idx_end = m_scenario.NumGridPoints - 1;
-    }
-
-    num_grid_points = m_scenario.NumGridPoints;
-    num_time_steps = m_scenario.NumTimeSteps;
-    time_step_size = m_scenario.TimeStepSize;
+    /* TODO: solver params
+     * courant number
+     * overlap
+     */
 
     OL = 1;
 
+    /* determine simulation settings */
+    init_fdtd_simulation(dev, scen, 0.5);
+
+    /* set up simulaton constants */
+    std::map<std::string, unsigned int> id_to_idx;
+    m_sim_consts = init_sim_constants(dev, scen, id_to_idx);
+
+#if 0
+    num_grid_points = m_scenario.NumGridPoints;
+    num_time_steps = m_scenario.NumTimeSteps;
+    time_step_size = m_scenario.TimeStepSize;
+#endif
+
+    /* set up indices array and initialize data arrays */
     unsigned int P = omp_get_max_threads();
-    unsigned int chunk = m_scenario.NumGridPoints/P;
+    unsigned int chunk = scen->get_num_gridpoints()/P;
 
     std::cout << "Number of threads: " << P << std::endl;
-    m_dm11 = new real*[P];
+    m_inv = new real*[P];
     m_dm12r = new real*[P];
     m_dm12i = new real*[P];
-    m_dm22 = new real*[P];
     m_e = new real*[P];
     m_h = new real*[P];
-    region_indices = new unsigned int*[P];
+    m_mat_indices = new unsigned int*[P];
 
-#pragma offload target(mic) in(num_grid_points, chunk, P, OL) \
-    inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
+    //#pragma offload target(mic) in(num_grid_points, chunk, P, OL)     \
+    //inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
+    //{
+    for (int tid = 0; tid < P; tid++) {
+        unsigned int size = chunk + 2 * OL;
+
+        if (tid == P - 1) {
+            //size += num_grid_points % P;
+            size += scen->get_num_gridpoints() % P;
+        }
+
+        /* allocation */
+        m_inv[tid] = new real[size];
+        m_dm12r[tid] = new real[size];
+        m_dm12i[tid] = new real[size];
+
+        m_h[tid] = new real[size];
+        m_e[tid] = new real[size];
+
+        m_mat_indices[tid] = new unsigned int[size];
+    }
+
+    /* initialize memory in parallel */
+#pragma omp parallel
     {
-        for (int tid = 0; tid < P; tid++) {
-            unsigned int size = chunk + 2 * OL;
+        unsigned int tid = omp_get_thread_num();
+        //unsigned int chunk_base = num_grid_points/P;
+        unsigned int chunk_base = scen->get_num_gridpoints()/P;
+        unsigned int chunk = chunk_base;
 
-            if (tid == P - 1) {
-                size += num_grid_points % P;
+        if (tid == P - 1) {
+            //chunk += num_grid_points % P;
+            chunk += scen->get_num_gridpoints() % P;
+        }
+
+        for (int i = 0; i < chunk + 2 * OL; i++) {
+            unsigned int mat_idx = 0;
+            unsigned int global_idx = tid * chunk_base + (i - OL);
+            real x = global_idx * scen->get_gridpoint_size();
+
+            for (const auto& reg : dev->get_regions()) {
+                if ((x >= reg->get_start()) && (x <= reg->get_end())) {
+                    mat_idx = id_to_idx[reg->get_material()->get_id()];
+                    break;
+                }
             }
+            m_inv[tid][i] = m_sim_consts[mat_idx].inversion_init;
+            m_mat_indices[tid][i] = mat_idx;
+            m_dm12r[tid][i] = 0.0;
+            m_dm12i[tid][i] = 0.0;
+            m_e[tid][i] = 0.0;
+            m_h[tid][i] = 0.0;
+        }
+#pragma omp barrier
+    }
+    //}
 
-            /* allocation */
-            m_dm11[tid] = new real[size];
-            m_dm12r[tid] = new real[size];
-            m_dm12i[tid] = new real[size];
-            m_dm22[tid] = new real[size];
+    /* set up results and transfer data structures */
+    unsigned int scratch_size = 0;
+    for (const auto& rec : scen->get_records()) {
+        /* create copy list entry */
+        copy_list_entry entry(rec, scen);
 
-            m_h[tid] = new real[size];
-            m_e[tid] = new real[size];
+        /* add result to solver */
+        m_results.push_back(entry.get_result());
 
-            region_indices[tid] = new unsigned int[size];
+        /* calculate scratch size */
+        scratch_size += entry.get_size();
+
+        /* TODO: make more generic? */
+        /* TODO: move to parser in record class */
+        /* add source address to copy list entry */
+        if (rec->get_name() == "inv12") {
+            entry.set_real(m_inv);
+        } else if (rec->get_name() == "d12") {
+            entry.set_real(m_dm12r);
+            entry.set_imag(m_dm12i);
+
+            /* take imaginary part into account */
+            scratch_size += entry.get_size();
+        } else if (rec->get_name() == "e") {
+            entry.set_real(m_e);
+        } else if (rec->get_name() == "h") {
+            /* TODO: numGridPoints + 1 ? */
+            entry.set_real(m_h);
+        } else {
+            throw std::invalid_argument("Requested result is not available!");
+        }
+
+        m_copy_list.push_back(entry);
+    }
+
+    /* allocate scratchpad result memory */
+    m_result_scratch = new real[scratch_size];
+
+    /* add scratchpad addresses to copy list entries */
+    unsigned int scratch_offset = 0;
+    for (auto& cle : m_copy_list) {
+
+        std::cout << cle.get_position() << std::endl;
+
+        cle.set_scratch_real(&m_result_scratch[scratch_offset]);
+        scratch_offset += cle.get_size();
+
+        if (cle.get_record()->get_name() == "d12") {
+            /* complex result */
+            cle.set_scratch_imag(&m_result_scratch[scratch_offset]);
+            scratch_offset += cle.get_size();
         }
     }
 
-    std::cout << "m_dm11 " << m_dm11 << std::endl;
-    std::cout << "m_dm22 " << m_dm22 << std::endl;
-    std::cout << "m_e " << m_e << std::endl;
+    /* create source data */
+    m_source_data = new real[scen->get_num_timesteps() *
+                             scen->get_sources().size()];
+    unsigned int base_idx = 0;
+    for (const auto& src : scen->get_sources()) {
+        sim_source s;
+        s.type = src->get_type();
+        s.x_idx = src->get_position()/scen->get_gridpoint_size();
+        s.data_base_idx = base_idx;
+        m_sim_sources.push_back(s);
 
-    /* set up results transfer data structures */
-    BOOST_FOREACH(Record rec, m_scenario.Records) {
-	unsigned int row_ct = m_scenario.SimEndTime/rec.Interval;
-	unsigned int interval = ceil(1.0 * m_scenario.NumTimeSteps/row_ct);
-	unsigned int position_idx;
-	unsigned int col_ct;
+        /* calculate source values */
+        for (unsigned int j = 0; j < scen->get_num_timesteps(); j++) {
+            m_source_data[base_idx + j] =
+                src->get_value(j * scen->get_timestep_size());
+        }
 
-	if (rec.Position() < 0.0) {
-	    /* copy complete grid */
-	    position_idx = 0;
-	    col_ct = m_scenario.NumGridPoints;
-	} else {
-	    position_idx = round(rec.Position()/m_scenario.GridPointSize);
-	    col_ct = 1;
-	}
-
-	/* allocate result memory */
-	Result *res = new Result(rec.Name, col_ct, row_ct);
-	m_results.push_back(res);
-
-	/* create copy list entry */
-	CopyListEntry *entry;
-	if (rec.Type == EField) {
-	    entry = new CLEField_red(m_e, res, col_ct, position_idx,
-				 interval);
-	    m_copyList.push_back(entry);
-	} else if (rec.Type == HField) {
-	    /* TODO: numGridPoints + 1 */
-	    entry = new CLEField_red(m_h, res, col_ct, position_idx,
-				 interval);
-	    m_copyList.push_back(entry);
-	} else if (rec.Type == Density) {
-	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
-		if (rec.I == rec.J) {
-		    /* main diagonal entry */
-		    if (rec.I == 1) {
-			entry = new CLEField_red(m_dm11, res, col_ct, position_idx,
-					     interval);
-		    } else {
-			entry = new CLEField_red(m_dm22, res, col_ct, position_idx,
-					     interval);
-		    }
-		    m_copyList.push_back(entry);
-		} else {
-		    /* off-diagonal entry */
-		    /* TODO */
-		    /* if complex */
-		    /* create two list entries */
-		    /* create two Results, or one complex Result */
-
-		    /* real part: GetSrcDensity(&dm, rec.I, rec.J); */
-		    /* imag part: GetSrcDensity(&dm, rec.J, rec.I); */
-		}
-	    } else {
-	    // throw exc
-	    }
-	} else {
-	    // throw exc
-	}
+        base_idx += scen->get_num_timesteps();
     }
 }
 
-SolverOMP_2lvl_pc_red::~SolverOMP_2lvl_pc_red()
+solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
 {
-    /* delete copy lists */
-    BOOST_FOREACH(CopyListEntry *entry, m_copyList) {
-	delete entry;
-    }
-
     unsigned int P = omp_get_max_threads();
 
-#pragma offload target(mic) in(P) \
-    inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
-    {
-        for (int tid = 0; tid < P; tid++) {
-            delete[] m_h[tid];
-            delete[] m_e[tid];
+    //#pragma offload target(mic) in(P)                                 \
+    //inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
+    //{
+    for (int tid = 0; tid < P; tid++) {
+        delete[] m_h[tid];
+        delete[] m_e[tid];
 
-            delete[] m_dm11[tid];
-            delete[] m_dm12r[tid];
-            delete[] m_dm12i[tid];
-            delete[] m_dm22[tid];
+        delete[] m_inv[tid];
+        delete[] m_dm12r[tid];
+        delete[] m_dm12i[tid];
 
-            delete[] region_indices[tid];
-        }
+        delete[] m_mat_indices[tid];
     }
 
-    delete[] m_dm11;
+    delete[] m_h;
+    delete[] m_e;
+    delete[] m_inv;
     delete[] m_dm12r;
     delete[] m_dm12i;
-    delete[] m_dm22;
-
-    delete[] m_e;
-    delete[] m_h;
-    delete[] region_indices;
-
+    delete[] m_mat_indices;
+    delete[] m_result_scratch;
+    delete[] m_source_data;
 }
 
-std::string
-SolverOMP_2lvl_pc_red::getName() const
+const std::string&
+solver_openmp_2lvl_pc_red::get_name() const
 {
-    return factory.getName();
+    return factory.get_name();
 }
 
 void
-SolverOMP_2lvl_pc_red::run() const
+solver_openmp_2lvl_pc_red::run() const
 {
     unsigned int P = omp_get_max_threads();
-#pragma offload target(mic) in(gsc, num_grid_points, num_time_steps)    \
-    in(time_step_size, P)                                               \
-    inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
+    //#pragma offload target(mic) in(gsc, num_grid_points, num_time_steps) \
+    //in(time_step_size, P)                                             \
+    //inout(m_e,m_h,m_dm11,m_dm12i,m_dm12r,m_dm22,region_indices:length(P))
     {
 #pragma omp parallel
         {
-            struct sim_constants sc[MaxRegions];
-
-            for (unsigned int j = 0; j < MaxRegions; j++) {
-                sc[j] = gsc[j];
-            }
-
             unsigned int tid = omp_get_thread_num();
-            unsigned int chunk_base = num_grid_points/P;
+            unsigned int chunk_base = m_scenario->get_num_gridpoints()/P;
             unsigned int chunk = chunk_base;
 
             if (tid == P - 1) {
-                chunk += num_grid_points % P;
+                //chunk += num_grid_points % P;
+                chunk += m_scenario->get_num_gridpoints() % P;
             }
-
-            /* initialization */
-            for (int i = 0; i < chunk + 2 * OL; i++) {
-                unsigned int region = 0;
-                int global_idx = tid * chunk_base + (i - OL);
-
-                if ((global_idx >= 0) && (global_idx < num_grid_points)) {
-                    for (unsigned int j = 0; j < MaxRegions; j++) {
-                        if (global_idx <= sc[j].idx_end) {
-                            region = j;
-                            break;
-                        }
-                    }
-                    m_dm11[tid][i] = sc[region].dm11_init;
-                    m_dm22[tid][i] = sc[region].dm22_init;
-                    region_indices[tid][i] = region;
-                } else {
-                    region_indices[tid][i] = 0;
-                }
-
-                m_dm12r[tid][i] = 0.0;
-                m_dm12i[tid][i] = 0.0;
-                m_e[tid][i] = 0.0;
-                m_h[tid][i] = 0.0;
-            }
-#pragma omp barrier
 
             /* main loop */
-            for (unsigned int n = 0; n < num_time_steps/OL; n++) {
-
+            //for (unsigned int n = 0; n < num_time_steps/OL; n++) {
+            for (unsigned int n = 0; n < m_scenario->get_num_timesteps()/OL;
+                 n++) {
                 /* exchange data */
                 if (tid > 0) {
 #pragma ivdep
-                    for (int i = 0; i < OL; i++) {
-                        m_dm11[tid][i] = m_dm11[tid - 1][chunk + i];
+                    for (unsigned int i = 0; i < OL; i++) {
+                        m_inv[tid][i] = m_inv[tid - 1][chunk + i];
                         m_dm12r[tid][i] = m_dm12r[tid - 1][chunk + i];
                         m_dm12i[tid][i] = m_dm12i[tid - 1][chunk + i];
-                        m_dm22[tid][i] = m_dm22[tid - 1][chunk + i];
-
                         m_e[tid][i] = m_e[tid - 1][chunk + i];
                         m_h[tid][i] = m_h[tid - 1][chunk + i];
-                        }
                     }
+                }
 
-                    if (tid < P - 1) {
+                if (tid < P - 1) {
 #pragma ivdep
-                        for (int i = 0; i < OL; i++) {
-                            m_dm11[tid][OL + chunk + i] = m_dm11[tid + 1][OL + i];
-                            m_dm12r[tid][OL + chunk + i] = m_dm12r[tid + 1][OL + i];
-                            m_dm12i[tid][OL + chunk + i] = m_dm12i[tid + 1][OL + i];
-                            m_dm22[tid][OL + chunk + i] = m_dm22[tid + 1][OL + i];
-
-                            m_e[tid][OL + chunk + i] = m_e[tid + 1][OL + i];
-                            m_h[tid][OL + chunk + i] = m_h[tid + 1][OL + i];
-                        }
+                    for (unsigned int i = 0; i < OL; i++) {
+                        m_inv[tid][OL + chunk + i] = m_inv[tid + 1][OL + i];
+                        m_dm12r[tid][OL + chunk + i] = m_dm12r[tid + 1][OL + i];
+                        m_dm12i[tid][OL + chunk + i] = m_dm12i[tid + 1][OL + i];
+                        m_e[tid][OL + chunk + i] = m_e[tid + 1][OL + i];
+                        m_h[tid][OL + chunk + i] = m_h[tid + 1][OL + i];
                     }
+                }
 
-                    /* sync after communication */
+                /* sync after communication */
 #pragma omp barrier
 
-                    /* sub-loop */
-                    for (unsigned int m = 0; m < OL; m++) {
-                        /* calculate source value */
-                        real f_0 = 2e14;
-                        real t = (n * OL + m) * time_step_size;
-                        real T_p = 20/f_0;
-                        real gamma = 2 * t/T_p - 1;
-                        real E_0 = 4.2186e9; /* 2pi pulse */
-                        real src = E_0 * 1/std::cosh(10 * gamma) *
-                            std::sin(2 * M_PI * f_0 * t);
+                /* sub-loop */
+                for (unsigned int m = 0; m < OL; m++) {
 
-                        /* update dm and e */
+                    /* update dm and e */
 #pragma simd
-                        for (int i = m; i < chunk + 2 * OL - m - 1; i++) {
-                            int region = region_indices[tid][i];
+                    for (int i = m; i < chunk + 2 * OL - m - 1; i++) {
+                        int mat_idx = m_mat_indices[tid][i];
 
-                            real rho11_e = m_dm11[tid][i];
-                            real rho12r_e = m_dm12r[tid][i];
-                            real rho12i_e = m_dm12i[tid][i];
-                            real rho22_e = m_dm22[tid][i];
-                            real e_e = m_e[tid][i];
+                        real inv_e = m_inv[tid][i];
+                        real rho12r_e = m_dm12r[tid][i];
+                        real rho12i_e = m_dm12i[tid][i];
+                        real field_e = m_e[tid][i];
 
-                            for (int pc_step = 0; pc_step < 4; pc_step++) {
-                                /* execute prediction - correction steps */
+                        for (int pc_step = 0; pc_step < 4; pc_step++) {
+                            /* execute prediction - correction steps */
 
-                                real rho11  = 0.5 * (m_dm11[tid][i] + rho11_e);
-                                real rho22  = 0.5 * (m_dm22[tid][i] + rho22_e);
-                                real rho12r = 0.5 * (m_dm12r[tid][i] + rho12r_e);
-                                real rho12i = 0.5 * (m_dm12i[tid][i] + rho12i_e);
-                                real OmRabi = 0.5 * sc[region].d12 *
-                                    (m_e[tid][i] + e_e);
+                            real inv  = 0.5 * (m_inv[tid][i] + inv_e);
+                            real rho12r = 0.5 * (m_dm12r[tid][i] + rho12r_e);
+                            real rho12i = 0.5 * (m_dm12i[tid][i] + rho12i_e);
+                            real e = 0.5 * (m_e[tid][i] + field_e);
+                            real OmRabi = 0.5 * m_sim_consts[mat_idx].d12 * e;
 
-                                rho11_e = m_dm11[tid][i] + sc[region].d_t *
-                                    (- 2.0 * OmRabi * rho12i -
-                                     sc[region].tau1 * rho11);
+                            inv_e = m_inv[tid][i] + m_sim_consts[mat_idx].d_t *
+                                (- 2.0 * OmRabi * rho12i
+                                 - m_sim_consts[mat_idx].tau1 * inv);
 
-                                rho12i_e = m_dm12i[tid][i] + sc[region].d_t *
-                                    (- sc[region].w12 * rho12r
-                                     + OmRabi * (rho11 - rho22)
-                                     - sc[region].gamma12 * rho12i);
+                            rho12i_e = m_dm12i[tid][i]
+                                + m_sim_consts[mat_idx].d_t *
+                                (- m_sim_consts[mat_idx].w12 * rho12r
+                                 + OmRabi * inv
+                                 - m_sim_consts[mat_idx].gamma12 * rho12i);
 
-                                rho12r_e = m_dm12r[tid][i] + sc[region].d_t *
-                                    (+ sc[region].w12 * rho12i
-                                     - sc[region].gamma12 * rho12r);
+                            rho12r_e = m_dm12r[tid][i]
+                                + m_sim_consts[mat_idx].d_t *
+                                (+ m_sim_consts[mat_idx].w12 * rho12i
+                                 - m_sim_consts[mat_idx].gamma12 * rho12r);
 
-                                rho22_e = m_dm22[tid][i] + sc[region].d_t *
-                                    (+ 2.0 * OmRabi * rho12i
-                                     + sc[region].tau1 * rho11);
+                            real j = m_sim_consts[mat_idx].sigma * e;
 
-                                real j = 0;
-                                real p_t = sc[region].M_CP * sc[region].d12 *
-                                    (sc[region].w12 * rho12i -
-                                     sc[region].gamma12 * rho12r);
+                            real p_t = m_sim_consts[mat_idx].M_CP
+                                * m_sim_consts[mat_idx].d12 *
+                                (m_sim_consts[mat_idx].w12 * rho12i -
+                                 m_sim_consts[mat_idx].gamma12 * rho12r);
 
-                                e_e = m_e[tid][i] + sc[region].M_CE *
-                                    (-j - p_t + (m_h[tid][i + 1] - m_h[tid][i]) *
-                                     sc[region].d_x_inv);
-                            }
-
-                            /* final update step */
-                            m_dm11[tid][i] = rho11_e;
-                            m_dm12i[tid][i] = rho12i_e;
-                            m_dm12r[tid][i] = rho12r_e;
-                            m_dm22[tid][i] = rho22_e;
-                            m_e[tid][i] = e_e;
-
-                            /* TODO fix boundary condition */
-                            if (tid * chunk_base + (i - OL) == 0) {
-                                m_e[tid][i] = src; /* hard source */
-                            }
+                            field_e = m_e[tid][i]
+                                + m_sim_consts[mat_idx].M_CE *
+                                (-j - p_t + (m_h[tid][i + 1] - m_h[tid][i]) *
+                                 m_sim_consts[mat_idx].d_x_inv);
                         }
 
-                        /* update h */
-#pragma ivdep
-                        for (int i = m + 1; i < chunk + 2 * OL - m - 1; i++) {
-                            int region = region_indices[tid][i];
+                        /* final update step */
+                        m_inv[tid][i] = inv_e;
+                        m_dm12i[tid][i] = rho12i_e;
+                        m_dm12r[tid][i] = rho12r_e;
+                        m_e[tid][i] = field_e;
 
-                            m_h[tid][i] += sc[region].M_CH *
-                                (m_e[tid][i] - m_e[tid][i - 1]);
-                        }
-
-                        /* apply boundary condition */
-                        if (tid == 0) {
-                            m_h[tid][OL] = 0;
-                        }
-
-#if 0
-                        /* copy result data */
-                        BOOST_FOREACH(CopyListEntry *entry, m_copyList) {
-                            if (entry->record(n * OL + m)) {
-                                std::copy(entry->getSrc(tid) + OL,
-                                          entry->getSrc(tid) + OL + chunk,
-                                          entry->getDst(n * OL + m)
-                                          + tid * chunk_base);
+                        /* apply sources */
+                        for (const auto& src : m_sim_sources) {
+                            if (tid * chunk_base + (i - OL) == src.x_idx) {
+                                if (src.type == source::type::hard_source) {
+                                    m_e[tid][i] =
+                                        m_source_data[src.data_base_idx
+                                                      + (n * OL + m)];
+                                } else if (src.type ==
+                                           source::type::soft_source) {
+                                    m_e[tid][i] +=
+                                        m_source_data[src.data_base_idx
+                                                      + (n * OL + m)];
+                                } else {
+                                }
                             }
                         }
-#endif
                     }
 
+                    /* update h */
+#pragma ivdep
+                    for (int i = m + 1; i < chunk + 2 * OL - m - 1; i++) {
+                        int mat_idx = m_mat_indices[tid][i];
+
+                        m_h[tid][i] += m_sim_consts[mat_idx].M_CH *
+                            (m_e[tid][i] - m_e[tid][i - 1]);
+                    }
+
+                    /* apply boundary condition */
+                    if (tid == 0) {
+                        m_h[tid][OL] = 0;
+                    }
+
+                    /* save results to scratchpad in parallel */
+                    for (const auto& cle : m_copy_list) {
+                        if (cle.hasto_record(n * OL + m)) {
+                            for (int i = OL; i < chunk + OL; i++) {
+                                unsigned int pos = cle.get_position();
+                                unsigned int idx = tid * chunk_base + (i - OL);
+                                if ((idx >= pos) &&
+                                    (idx < pos + cle.get_cols())) {
+                                    *cle.get_scratch_real(n * OL + m,
+                                                          i - pos) =
+                                        *cle.get_real(i, tid);
+                                    if (cle.is_complex()) {
+                                        *cle.get_scratch_imag(n * OL + m,
+                                                              i - pos) =
+                                            *cle.get_imag(i, tid);
+                                    }
+                                }
+                            }
+                        }
+                    }
                     /* sync after computation */
 #pragma omp barrier
+                }
             }
         }
-            }
+    }
+
+    /* bulk copy results into result classes */
+    for (const auto& cle : m_copy_list) {
+        std::copy(cle.get_scratch_real(0, 0), cle.get_scratch_real(0, 0) +
+                  cle.get_size(), cle.get_result_real(0, 0));
+        if (cle.is_complex()) {
+            std::copy(cle.get_scratch_imag(0, 0), cle.get_scratch_imag(0, 0) +
+                      cle.get_size(), cle.get_result_imag(0, 0));
         }
-                       }
+    }
+}
+
+}

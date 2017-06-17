@@ -10,6 +10,7 @@ add_library(mbsolve-lib SHARED
   src/scenario.cpp
   src/solver.cpp
   src/writer.cpp
+  src/internal/common_fdtd_2lvl.cpp
   )
 set_property(TARGET mbsolve-lib PROPERTY CXX_STANDARD 11)
 

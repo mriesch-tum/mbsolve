@@ -9,8 +9,9 @@ project(solver-openmp)
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 
 add_library(solver-openmp SHARED src/solver_openmp_2lvl_pc.cpp
+  src/solver_openmp_2lvl_pc_red.cpp
 )
-#  src/solver_openmp_2lvl_pc_red.cpp)
+
 set_property(TARGET solver-openmp PROPERTY CXX_STANDARD 11)
 
 #target_compile_options(solver-openmp PRIVATE "-xCORE-AVX2")

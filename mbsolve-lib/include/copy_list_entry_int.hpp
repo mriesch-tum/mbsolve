@@ -43,6 +43,10 @@ private:
     real *m_scratch_imag;
     real *m_real;
     real *m_imag;
+    real **m_real_threaded;
+    real **m_imag_threaded;
+
+    bool m_use_threaded;
 
     unsigned int m_rows;
     unsigned int m_cols;
@@ -56,7 +60,7 @@ public:
     copy_list_entry(std::shared_ptr<const record> rec,
                     std::shared_ptr<const scenario> scen) :
         m_record(rec), m_scratch_real(NULL), m_scratch_imag(NULL),
-        m_real(NULL), m_imag(NULL)
+        m_real(NULL), m_imag(NULL), m_use_threaded(false)
     {
         m_timestep = scen->get_timestep_size();
 
@@ -127,18 +131,42 @@ public:
     }
 
     real *
-    get_real(unsigned int gridpoint = 0) const {
-        return m_real + gridpoint;
+    get_real(unsigned int gridpoint = 0, unsigned int thread_id = 0) const {
+        if (m_use_threaded) {
+            return m_real_threaded[thread_id] + gridpoint;
+        } else {
+            return m_real + gridpoint;
+        }
     }
 
     real *
-    get_imag(unsigned int gridpoint = 0) const {
-        return m_imag + gridpoint;
+    get_imag(unsigned int gridpoint = 0, unsigned int thread_id = 0) const {
+        if (m_use_threaded) {
+            return m_imag_threaded[thread_id] + gridpoint;
+        } else {
+            return m_imag + gridpoint;
+        }
     }
 
-    void set_real(real *real_data) { m_real = real_data; }
+    void set_real(real **real_data) {
+        m_real_threaded = real_data;
+        m_use_threaded = true;
+    }
 
-    void set_imag(real *imag_data) { m_imag = imag_data; }
+    void set_real(real *real_data) {
+        m_real = real_data;
+        m_use_threaded = false;
+    }
+
+    void set_imag(real **imag_data) {
+        m_imag_threaded = imag_data;
+        m_use_threaded = true;
+    }
+
+    void set_imag(real *imag_data) {
+        m_imag = imag_data;
+        m_use_threaded = false;
+    }
 
     void set_scratch_real(real *real_data) { m_scratch_real = real_data; }
 

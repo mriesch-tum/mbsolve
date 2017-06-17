@@ -24,6 +24,7 @@
 
 #include <copy_list_entry_int.hpp>
 #include <solver.hpp>
+#include <internal/common_fdtd_2lvl.hpp>
 
 namespace mbsolve {
 
@@ -31,42 +32,6 @@ namespace mbsolve {
  * \defgroup MBSOLVE_SOLVER_OPENMP solver-openmp
  * Different solvers that use OpenMP for parallelization.
  */
-
-/**
- *
- * \ingroup MBSOLVE_SOLVER_OPENMP
- */
-class sim_constants_2lvl
-{
-public:
-    /* electromagnetic constants */
-    real M_CE;
-    real M_CH;
-    real M_CP;
-    real sigma;
-
-    /* quantum mechanical constants */
-    real w12;
-    real d12;
-    real tau1;
-    real gamma12;
-    real equi_inv;
-
-    /* simulation constants */
-    real d_x_inv;
-    real d_t;
-
-    /* initialization constants */
-    real inversion_init;
-};
-
-class sim_source
-{
-public:
-    source::type type;
-    unsigned int x_idx;
-    unsigned int data_base_idx;
-};
 
 /**
  * OpenMP solver for 2-lvl systems using the predictor corrector approach.
