@@ -86,17 +86,22 @@ private:
     /* dephasing rate */
     real m_dephasing;
 
+    /* equilibrium population inversion */
+    real m_equi_inv;
+
 public:
     explicit qm_desc_2lvl(real carrier_density = 0.0,
                           real transition_freq = 0.0,
                           real dipole_moment = 0.0,
                           real scattering_rate = 0.0,
-                          real dephasing_rate = 0.0) :
+                          real dephasing_rate = 0.0,
+                          real equilibrium_inversion = -1.0) :
         qm_description(carrier_density),
         m_trans_freq(transition_freq),
         m_dipole_mom(dipole_moment),
         m_scattering(scattering_rate),
-        m_dephasing(dephasing_rate)
+        m_dephasing(dephasing_rate),
+        m_equi_inv(equilibrium_inversion)
     {
     }
 
@@ -123,6 +128,11 @@ public:
      * Get dephasing rate.
      */
     real get_dephasing_rate() const { return m_dephasing; }
+
+    /**
+     * Get equilibrium population inversion.
+     */
+    real get_equilibrium_inversion() const { return m_equi_inv; }
 };
 
 /**

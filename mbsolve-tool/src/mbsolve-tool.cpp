@@ -116,8 +116,7 @@ int main(int argc, char **argv)
              10, 2e14);
         scen->add_source(sech_pulse);
 
-        scen->add_record(std::make_shared<mbsolve::record>("d11", 2.5e-15));
-        scen->add_record(std::make_shared<mbsolve::record>("d22", 2.5e-15));
+        scen->add_record(std::make_shared<mbsolve::record>("inv12", 2.5e-15));
         scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
 
 	/* tic */

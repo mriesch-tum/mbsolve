@@ -71,7 +71,7 @@ writer::write(const std::string& file,
               std::shared_ptr<const device> dev,
               std::shared_ptr<const scenario> scen) const
 {
-    std::string def = dev->get_name() + "-" + scen->get_name() + "." +
+    std::string def = dev->get_name() + "_" + scen->get_name() + "." +
         m_writer->get_extension();
 
     m_writer->write(file.empty() ? def : file, results, dev, scen);

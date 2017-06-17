@@ -36,7 +36,7 @@ print(loss)
 # Freeman 2013 active region
 # varies gain recovery time T1
 T1 = 20e-12
-qm = mb.qm_desc_2lvl(3.7e20, 2 * math.pi * 2.45e12, 6.2e-9, 1/T1, 1/2.35e-12)
+qm = mb.qm_desc_2lvl(3.7e20, 2 * math.pi * 2.45e12, 6.2e-9, 1/T1, 1/2.35e-12, 1.0)
 # background rel permittivity 12.9
 # overlap factor 1
 mat_ar = mb.material("AR_Freeman", qm, 12.9, 1, loss)
@@ -54,8 +54,7 @@ dev.add_region(mb.region("Vacuum right", mat_abs, L_abs + L, 2 * L_abs + L))
 # rather set d_x directly
 # courant number?
 sce = mb.scenario("Basic", 16384, 230e-12)
-sce.add_record(mb.record("d11", 2e-12))
-sce.add_record(mb.record("d22", 2e-12))
+sce.add_record(mb.record("inv12", 2e-12))
 sce.add_record(mb.record("e", 1e-13, L_abs + L))
 
 #TODO check whether position > device length

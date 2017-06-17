@@ -121,13 +121,13 @@ solver_int(dev, scen)
             sc.d12 = qm->get_dipole_moment() * E0/HBAR;
             sc.tau1 = qm->get_scattering_rate();
             sc.gamma12 = qm->get_dephasing_rate();
+            sc.equi_inv = qm->get_equilibrium_inversion();
+
 
             if (scen->get_dm_init_type() == scenario::lower_full) {
-                sc.dm11_init = 0.0;
-                sc.dm22_init = 1.0;
+                sc.inversion_init = -1.0;
             } else if (scen->get_dm_init_type() == scenario::upper_full) {
-                sc.dm11_init = 1.0;
-                sc.dm22_init = 0.0;
+                sc.inversion_init = 1.0;
             } else {
 
             }
@@ -138,10 +138,8 @@ solver_int(dev, scen)
             sc.d12 = 0.0;
             sc.tau1 = 0.0;
             sc.gamma12 = 0.0;
-
-            /* initialization */
-            sc.dm11_init = 0.0;
-            sc.dm22_init = 0.0;
+            sc.equi_inv = 0.0;
+            sc.inversion_init = 0.0;
         }
 
         /* simulation settings */
@@ -154,10 +152,9 @@ solver_int(dev, scen)
     }
 
     /* allocate data arrays */
-    m_dm11 = new real[scen->get_num_gridpoints()];
+    m_inv = new real[scen->get_num_gridpoints()];
     m_dm12r = new real[scen->get_num_gridpoints()];
     m_dm12i = new real[scen->get_num_gridpoints()];
-    m_dm22 = new real[scen->get_num_gridpoints()];
     m_h = new real[scen->get_num_gridpoints() + 1];
     m_e = new real[scen->get_num_gridpoints()];
     m_mat_indices = new unsigned int[scen->get_num_gridpoints()];
@@ -182,8 +179,7 @@ solver_int(dev, scen)
         m_mat_indices[i] = idx;
 
         /* TODO: evaluate flexible initialization in scenario */
-        m_dm11[i] = m_sim_consts[idx].dm11_init;
-        m_dm22[i] = m_sim_consts[idx].dm22_init;
+        m_inv[i] = m_sim_consts[idx].inversion_init;
         m_dm12r[i] = 0.0;
         m_dm12i[i] = 0.0;
         m_e[i] = 0.0;
@@ -208,10 +204,8 @@ solver_int(dev, scen)
         /* TODO: make more generic? */
         /* TODO: move to parser in record class */
         /* add source address to copy list entry */
-        if (rec->get_name() == "d11") {
-            entry.set_real(m_dm11);
-        } else if (rec->get_name() == "d22") {
-            entry.set_real(m_dm22);
+        if (rec->get_name() == "inv12") {
+            entry.set_real(m_inv);
         } else if (rec->get_name() == "d12") {
             entry.set_real(m_dm12r);
             entry.set_imag(m_dm12i);
@@ -275,10 +269,9 @@ solver_openmp_2lvl_pc::~solver_openmp_2lvl_pc()
 {
     delete[] m_h;
     delete[] m_e;
-    delete[] m_dm11;
+    delete[] m_inv;
     delete[] m_dm12r;
     delete[] m_dm12i;
-    delete[] m_dm22;
     delete[] m_mat_indices;
     delete[] m_result_scratch;
     delete[] m_source_data;
@@ -315,40 +308,33 @@ solver_openmp_2lvl_pc::run() const
               for (int i = 0; i < m_scenario->get_num_gridpoints(); i++) {
                   unsigned int mat_idx = m_mat_indices[i];
 
-                  real rho11_e = m_dm11[i];
+                  real inv_e = m_inv[i];
                   real rho12r_e = m_dm12r[i];
                   real rho12i_e = m_dm12i[i];
-                  real rho22_e = m_dm22[i];
                   real field_e = m_e[i];
 
                   for (int pc_step = 0; pc_step < 4; pc_step++) {
                       /* execute prediction - correction steps */
 
-                      real rho11  = 0.5 * (m_dm11[i] + rho11_e);
-                      real rho22  = 0.5 * (m_dm22[i] + rho22_e);
+                      real inv  = 0.5 * (m_inv[i] + inv_e);
                       real rho12r = 0.5 * (m_dm12r[i] + rho12r_e);
                       real rho12i = 0.5 * (m_dm12i[i] + rho12i_e);
                       real e = 0.5 * (m_e[i] + field_e);
                       real OmRabi = m_sim_consts[mat_idx].d12 * e;
 
-                      rho11_e = m_dm11[i] + m_sim_consts[mat_idx].d_t *
-                          (- 2.0 * OmRabi * rho12i
-                           //              - m_sim_consts[mat_idx].tau1 * rho11);
-                           + m_sim_consts[mat_idx].tau1 * rho22);
+                      inv_e = m_inv[i] + m_sim_consts[mat_idx].d_t *
+                          (- 4.0 * OmRabi * rho12i
+                           - m_sim_consts[mat_idx].tau1 *
+                           (inv - m_sim_consts[mat_idx].equi_inv));
 
                       rho12i_e = m_dm12i[i] + m_sim_consts[mat_idx].d_t *
                           (- m_sim_consts[mat_idx].w12 * rho12r
-                           + OmRabi * (rho11 - rho22)
+                           + OmRabi * inv
                            - m_sim_consts[mat_idx].gamma12 * rho12i);
 
                       rho12r_e = m_dm12r[i] + m_sim_consts[mat_idx].d_t *
                           (+ m_sim_consts[mat_idx].w12 * rho12i
                            - m_sim_consts[mat_idx].gamma12 * rho12r);
-
-                      rho22_e = m_dm22[i] + m_sim_consts[mat_idx].d_t *
-                          (+ 2.0 * OmRabi * rho12i
-                           - m_sim_consts[mat_idx].tau1 * rho22);
-                      //+ m_sim_consts[mat_idx].tau1 * rho11);
 
                       real j = m_sim_consts[mat_idx].sigma * e;
 
@@ -363,10 +349,9 @@ solver_openmp_2lvl_pc::run() const
                   }
 
                   /* final update step */
-                  m_dm11[i] = rho11_e;
+                  m_inv[i] = inv_e;
                   m_dm12i[i] = rho12i_e;
                   m_dm12r[i] = rho12r_e;
-                  m_dm22[i] = rho22_e;
 
                   m_e[i] = field_e;
               }

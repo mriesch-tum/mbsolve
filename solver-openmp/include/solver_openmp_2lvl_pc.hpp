@@ -50,14 +50,14 @@ public:
     real d12;
     real tau1;
     real gamma12;
+    real equi_inv;
 
     /* simulation constants */
     real d_x_inv;
     real d_t;
 
     /* initialization constants */
-    real dm11_init;
-    real dm22_init;
+    real inversion_init;
 };
 
 class sim_source
@@ -90,10 +90,9 @@ private:
      * or implement correctly
      */
 
-    real *m_dm11;
+    real *m_inv;
     real *m_dm12r;
     real *m_dm12i;
-    real *m_dm22;
 
     real *m_h;
     real *m_e;
