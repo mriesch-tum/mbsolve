@@ -309,10 +309,10 @@ solver_openmp_2lvl_pc_red::run() const
                             real rho12r = 0.5 * (m_dm12r[tid][i] + rho12r_e);
                             real rho12i = 0.5 * (m_dm12i[tid][i] + rho12i_e);
                             real e = 0.5 * (m_e[tid][i] + field_e);
-                            real OmRabi = 0.5 * m_sim_consts[mat_idx].d12 * e;
+                            real OmRabi = m_sim_consts[mat_idx].d12 * e;
 
                             inv_e = m_inv[tid][i] + m_sim_consts[mat_idx].d_t *
-                                (- 2.0 * OmRabi * rho12i
+                                (- 4.0 * OmRabi * rho12i
                                  - m_sim_consts[mat_idx].tau1 * inv);
 
                             rho12i_e = m_dm12i[tid][i]
@@ -386,11 +386,11 @@ solver_openmp_2lvl_pc_red::run() const
                                 if ((idx >= pos) &&
                                     (idx < pos + cle.get_cols())) {
                                     *cle.get_scratch_real(n * OL + m,
-                                                          i - pos) =
+                                                          idx - pos) =
                                         *cle.get_real(i, tid);
                                     if (cle.is_complex()) {
                                         *cle.get_scratch_imag(n * OL + m,
-                                                              i - pos) =
+                                                              idx - pos) =
                                             *cle.get_imag(i, tid);
                                     }
                                 }
