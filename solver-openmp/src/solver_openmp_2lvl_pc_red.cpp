@@ -397,9 +397,9 @@ solver_openmp_2lvl_pc_red::run() const
                             }
                         }
                     }
-                    /* sync after computation */
-#pragma omp barrier
                 }
+                /* sync after computation */
+#pragma omp barrier
             }
         }
     }
