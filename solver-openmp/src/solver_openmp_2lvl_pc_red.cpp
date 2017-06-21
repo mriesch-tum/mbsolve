@@ -47,7 +47,7 @@ solver_int(dev, scen)
      * overlap
      */
 
-    OL = 1;
+    OL = 100;
 
     /* determine simulation settings */
     init_fdtd_simulation(dev, scen, 0.5);
@@ -344,21 +344,19 @@ solver_openmp_2lvl_pc_red::run() const
                         m_dm12i[tid][i] = rho12i_e;
                         m_dm12r[tid][i] = rho12r_e;
                         m_e[tid][i] = field_e;
+                    }
 
-                        /* apply sources */
-                        for (const auto& src : m_sim_sources) {
-                            if (tid * chunk_base + (i - OL) == src.x_idx) {
-                                if (src.type == source::type::hard_source) {
-                                    m_e[tid][i] =
-                                        m_source_data[src.data_base_idx
-                                                      + (n * OL + m)];
-                                } else if (src.type ==
-                                           source::type::soft_source) {
-                                    m_e[tid][i] +=
-                                        m_source_data[src.data_base_idx
-                                                      + (n * OL + m)];
-                                } else {
-                                }
+                    /* apply sources */
+                    for (const auto& src : m_sim_sources) {
+                        int at = src.x_idx - tid * chunk_base + OL;
+                        if ((at > 0) && (at < chunk + 2 * OL)) {
+                            if (src.type == source::type::hard_source) {
+                                m_e[tid][at] = m_source_data[src.data_base_idx
+                                                             + (n * OL + m)];
+                            } else if (src.type == source::type::soft_source) {
+                                m_e[tid][at] += m_source_data[src.data_base_idx
+                                                              + (n * OL + m)];
+                            } else {
                             }
                         }
                     }
