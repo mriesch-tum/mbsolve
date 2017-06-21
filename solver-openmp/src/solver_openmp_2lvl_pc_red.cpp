@@ -313,7 +313,8 @@ solver_openmp_2lvl_pc_red::run() const
 
                             inv_e = m_inv[tid][i] + m_sim_consts[mat_idx].d_t *
                                 (- 4.0 * OmRabi * rho12i
-                                 - m_sim_consts[mat_idx].tau1 * inv);
+                                 - m_sim_consts[mat_idx].tau1 *
+                                 (inv - m_sim_consts[mat_idx].equi_inv));
 
                             rho12i_e = m_dm12i[tid][i]
                                 + m_sim_consts[mat_idx].d_t *
