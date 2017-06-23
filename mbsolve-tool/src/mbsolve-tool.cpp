@@ -106,10 +106,9 @@ int main(int argc, char **argv)
         /* Ziolkowski basic scenario */
         auto scen = std::make_shared<mbsolve::scenario>
             ("Basic", 32768, 200e-15);
-        //32768;
-        //65536;
-        //131072;
-        //262144;
+            //("Basic", 65536, 200e-15);
+            //("Basic", 131072, 200e-15);
+            //("Basic", 262144, 200e-15);
 
         auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
             ("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
