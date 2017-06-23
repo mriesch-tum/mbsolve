@@ -14,7 +14,24 @@ add_library(solver-openmp SHARED src/solver_openmp_2lvl_pc.cpp
 
 set_property(TARGET solver-openmp PROPERTY CXX_STANDARD 11)
 
-#target_compile_options(solver-openmp PRIVATE "-xCORE-AVX2")
+if(ARCH STREQUAL "AVX2")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_compile_options(solver-openmp PRIVATE "-mavx2")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    target_compile_options(solver-openmp PRIVATE "-xAVX2")
+  else()
+  endif()
+elseif(ARCH STREQUAL "PHI")
+  target_compile_definitions(solver-openmp PRIVATE XEON_PHI_OFFLOAD=1)
+else()
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    target_compile_options(solver-openmp PRIVATE "-march=native")
+  elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
+    target_compile_options(solver-openmp PRIVATE "-xHost")
+  else()
+  endif()
+endif()
+
 target_compile_options(solver-openmp PRIVATE ${OpenMP_CXX_FLAGS})
 
 target_include_directories(solver-openmp PUBLIC include/)

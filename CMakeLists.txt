@@ -9,14 +9,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 # CXX_STANDARD is required
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-# compiler options
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -mavx2")
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Intel")
-  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
-  set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -DNDEBUG -g")
-endif()
+# specify architecture
+set(ARCH "HOST" CACHE STRING "specify architecture")
+set_property(CACHE ARCH PROPERTY STRINGS "HOST" "PHI" "AVX2")
 
+# specify components
 option(WITH_MATLAB "with(out) MATLAB writer" ON)
 option(WITH_CUDA "with(out) CUDA solver" ON)
 option(WITH_OPENMP "with(out) OPENMP solver" ON)
