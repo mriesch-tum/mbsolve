@@ -27,6 +27,12 @@
 
 namespace mbsolve {
 
+#ifdef XEON_PHI_OFFLOAD
+#define __mb_on_device __attribute__((target(mic)))
+#else
+#define __mb_on_device
+#endif
+
 class copy_list_entry_dev
 {
 
@@ -47,8 +53,7 @@ public:
     record::type m_type;
 
 
-    __attribute__((target(mic))) bool
-    hasto_record(unsigned int iteration) const {
+    __mb_on_device bool hasto_record(unsigned int iteration) const {
         real t_now = iteration * m_timestep;
         real t_next = t_now + m_timestep;
         real t_sample = floor(iteration / m_interval_idx) * m_interval;
@@ -63,15 +68,15 @@ public:
     unsigned int get_interval() const { return m_interval; }
 
 
-    __attribute__((target(mic))) record::type get_type() const {
+    __mb_on_device record::type get_type() const {
         return m_type;
     }
 
-    __attribute__((target(mic))) unsigned int get_position() const {
+    __mb_on_device unsigned int get_position() const {
         return m_position_idx;
     }
 
-    __attribute__((target(mic))) unsigned int get_cols() const {
+    __mb_on_device unsigned int get_cols() const {
         return m_cols;
     }
     /*
@@ -84,7 +89,7 @@ public:
             //}
             }*/
 
-    __attribute__((target(mic))) unsigned int
+    __mb_on_device unsigned int
     get_scratch_real_offset(unsigned int timestep,
                             unsigned int gridpoint = 0) const {
         return m_scratch_offset + (timestep/m_interval_idx) * m_cols

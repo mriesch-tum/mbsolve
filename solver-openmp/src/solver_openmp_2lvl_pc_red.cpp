@@ -19,13 +19,12 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
+#include <common_openmp.hpp>
 #include <solver_openmp_2lvl_pc_red.hpp>
 
 namespace mbsolve{
 
 static solver_factory<solver_openmp_2lvl_pc_red> factory("openmp-2lvl-pc-red");
-
-#define ALIGN 64
 
 /* redundant calculation overlap */
 #ifdef XEON_PHI_OFFLOAD
@@ -238,20 +237,28 @@ solver_openmp_2lvl_pc_red::run() const
             /* allocation */
             unsigned int size = chunk + 2 * OL;
 
-            real *t_inv = (real *) _mm_malloc(size * sizeof(real), ALIGN);
-            real *t_dm12r = (real *) _mm_malloc(size * sizeof(real), ALIGN);
-            real *t_dm12i = (real *) _mm_malloc(size * sizeof(real), ALIGN);
-            real *t_h = (real *) _mm_malloc(size * sizeof(real), ALIGN);
-            real *t_e = (real *) _mm_malloc(size * sizeof(real), ALIGN);
+            real *t_inv = (real *) mb_aligned_alloc(size * sizeof(real));
+            real *t_dm12r = (real *) mb_aligned_alloc(size * sizeof(real));
+            real *t_dm12i = (real *) mb_aligned_alloc(size * sizeof(real));
+            real *t_h = (real *) mb_aligned_alloc(size * sizeof(real));
+            real *t_e = (real *) mb_aligned_alloc(size * sizeof(real));
             unsigned int *t_mat_indices = (unsigned int *)
-                _mm_malloc(size * sizeof(real), ALIGN);
+                mb_aligned_alloc(size * sizeof(unsigned int));
 
+            __mb_assume_aligned(t_inv);
+            __mb_assume_aligned(t_dm12r);
+            __mb_assume_aligned(t_dm12i);
+            __mb_assume_aligned(t_e);
+            __mb_assume_aligned(t_h);
+            __mb_assume_aligned(t_mat_indices);
+            /*
             __assume_aligned(t_inv, ALIGN);
             __assume_aligned(t_dm12r, ALIGN);
             __assume_aligned(t_dm12i, ALIGN);
             __assume_aligned(t_e, ALIGN);
             __assume_aligned(t_h, ALIGN);
             __assume_aligned(t_mat_indices, ALIGN);
+            */
 
             m_inv[tid] = t_inv;
             m_dm12r[tid] = t_dm12r;
@@ -328,9 +335,10 @@ solver_openmp_2lvl_pc_red::run() const
                 /* sub-loop */
                 for (unsigned int m = 0; m < OL; m++) {
                     /* update dm and e */
-                    // for (int i = m; i < chunk + 2 * OL - m - 1; i++) {
-#pragma omp simd
-                    for (int i = 0; i < chunk + 2 * OL - 1; i++) {
+                    //
+#pragma omp simd aligned(t_inv, t_dm12r, t_dm12i, t_e, t_mat_indices : ALIGN)
+                    for (int i = m; i < chunk + 2 * OL - m - 1; i++) {
+                        // for (int i = 0; i < chunk + 2 * OL - 1; i++) {
                         int mat_idx = t_mat_indices[i];
 
                         real inv_e = t_inv[i];
@@ -404,9 +412,10 @@ solver_openmp_2lvl_pc_red::run() const
                     }
 
                     /* update h */
-                    // for (int i = m + 1; i < chunk + 2 * OL - m - 1; i++) {
-#pragma omp simd
-                    for (int i = 1; i < chunk + 2 * OL - 1; i++) {
+                    //
+#pragma omp simd aligned(t_e, t_mat_indices : ALIGN)
+                    for (int i = m + 1; i < chunk + 2 * OL - m - 1; i++) {
+                        //for (int i = 1; i < chunk + 2 * OL - 1; i++) {
                         int mat_idx = t_mat_indices[i];
 
                         t_h[i] += l_sim_consts[mat_idx].M_CH *
@@ -467,12 +476,12 @@ solver_openmp_2lvl_pc_red::run() const
 #pragma omp barrier
             } /* end main foor loop */
 
-            _mm_free(t_h);
-            _mm_free(t_e);
-            _mm_free(t_inv);
-            _mm_free(t_dm12r);
-            _mm_free(t_dm12i);
-            _mm_free(t_mat_indices);
+            mb_aligned_free(t_h);
+            mb_aligned_free(t_e);
+            mb_aligned_free(t_inv);
+            mb_aligned_free(t_dm12r);
+            mb_aligned_free(t_dm12i);
+            mb_aligned_free(t_mat_indices);
         } /* end openmp region */
 #ifdef XEON_PHI_OFFLOAD
     } /* end offload region */
