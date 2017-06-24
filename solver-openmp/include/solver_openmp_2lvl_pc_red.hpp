@@ -50,15 +50,18 @@ private:
     real **m_inv;
     real **m_dm12r;
     real **m_dm12i;
-
     real **m_h;
     real **m_e;
 
     real *m_result_scratch;
 
+    unsigned int m_scratch_size;
+
     real *m_source_data;
 
     unsigned int **m_mat_indices;
+
+    unsigned int *l_mat_indices;
 
     std::vector<sim_constants_2lvl> m_sim_consts;
 

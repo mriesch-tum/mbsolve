@@ -27,8 +27,6 @@
 
 namespace mbsolve {
 
-enum record_type { electric, magnetic, density };
-
 /**
  * Represents a request to store certain simulation results (optionally at a
  * given index or given interval).
@@ -36,10 +34,13 @@ enum record_type { electric, magnetic, density };
  */
 class record
 {
+public:
+    enum type { electric, magnetic, density, inversion };
+
 private:
     std::string m_name;
 
-    record_type m_type;
+    type m_type;
 
     unsigned int m_col;
     unsigned int m_row;
@@ -59,7 +60,7 @@ public:
 
     const std::string& get_name() const { return m_name; }
 
-    record_type get_type() const { return m_type; }
+    type get_type() const { return m_type; }
 
     unsigned int get_col() const { return m_col; }
 
