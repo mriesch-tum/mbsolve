@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # specify architecture
 set(ARCH "HOST" CACHE STRING "specify architecture")
-set_property(CACHE ARCH PROPERTY STRINGS "HOST" "PHI" "AVX2")
+set_property(CACHE ARCH PROPERTY STRINGS "HOST" "PHI" "AVX2" "SSE3")
 
 # specify components
 option(WITH_MATLAB "with(out) MATLAB writer" ON)
