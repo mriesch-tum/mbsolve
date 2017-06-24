@@ -17,5 +17,4 @@
 
 module load boost/1.61_icc
 
-mbsolve/tools/loadleveler/run_sim.sh openmp-2lvl-pc-red 5 1 40
-
+mbsolve/tools/loadleveler/run_sim.sh openmp-2lvl-pc-red 1 40 40
