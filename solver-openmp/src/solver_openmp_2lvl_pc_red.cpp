@@ -310,22 +310,22 @@ solver_openmp_2lvl_pc_red::run() const
                 if (tid > 0) {
 #pragma ivdep
                     for (unsigned int i = 0; i < OL; i++) {
-                        t_inv[i] = p_inv[chunk + i];
-                        t_dm12r[i] = p_dm12r[chunk + i];
-                        t_dm12i[i] = p_dm12i[chunk + i];
-                        t_e[i] = p_e[chunk + i];
-                        t_h[i] = p_h[chunk + i];
+                        t_inv[i] = p_inv[chunk_base + i];
+                        t_dm12r[i] = p_dm12r[chunk_base + i];
+                        t_dm12i[i] = p_dm12i[chunk_base + i];
+                        t_e[i] = p_e[chunk_base + i];
+                        t_h[i] = p_h[chunk_base + i];
                     }
                 }
 
                 if (tid < P - 1) {
 #pragma ivdep
                     for (unsigned int i = 0; i < OL; i++) {
-                        t_inv[OL + chunk + i] = n_inv[OL + i];
-                        t_dm12r[OL + chunk + i] = n_dm12r[OL + i];
-                        t_dm12i[OL + chunk + i] = n_dm12i[OL + i];
-                        t_e[OL + chunk + i] = n_e[OL + i];
-                        t_h[OL + chunk + i] = n_h[OL + i];
+                        t_inv[OL + chunk_base + i] = n_inv[OL + i];
+                        t_dm12r[OL + chunk_base + i] = n_dm12r[OL + i];
+                        t_dm12i[OL + chunk_base + i] = n_dm12i[OL + i];
+                        t_e[OL + chunk_base + i] = n_e[OL + i];
+                        t_h[OL + chunk_base + i] = n_h[OL + i];
                     }
                 }
 
@@ -427,7 +427,7 @@ solver_openmp_2lvl_pc_red::run() const
                         t_h[OL] = 0;
                     }
                     if (tid == P - 1) {
-                        t_h[OL + chunk - 1] = 0;
+                        t_h[OL + chunk] = 0;
                     }
 
                     /* save results to scratchpad in parallel */
@@ -452,7 +452,7 @@ solver_openmp_2lvl_pc_red::run() const
 #pragma omp simd
                             for (int i = OL; i < chunk + OL; i++) {
                                 int idx = base_idx + i;
-                                if ((idx >= pos) && (idx + i < pos + cols)) {
+                                if ((idx >= pos) && (idx < pos + cols)) {
                                     m_result_scratch[off_r + i] = src_real[i];
                                 }
                             }
