@@ -23,7 +23,7 @@ option(WITH_CPPTOOL "with(out) C++ tool" ON)
 
 # Python interface
 if(WITH_PYTHON)
-  find_package(SWIG)
+  find_package(SWIG 2.0)
   find_package(PythonLibs)
   if(SWIG_FOUND AND PythonLibs_FOUND)
     include(${SWIG_USE_FILE})
