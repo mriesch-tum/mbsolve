@@ -4,10 +4,14 @@ project(solver-openmp)
 string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
+find_package(Eigen3 REQUIRED)
+
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_library(solver-openmp SHARED src/solver_openmp_2lvl_pc.cpp
   src/solver_openmp_2lvl_pc_red.cpp
+  src/solver_openmp_2lvl_os.cpp
 )
 
 set_property(TARGET solver-openmp PROPERTY CXX_STANDARD 11)
