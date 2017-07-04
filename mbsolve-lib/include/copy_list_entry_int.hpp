@@ -25,13 +25,13 @@
 #include <memory>
 #include <mbsolve.hpp>
 
-namespace mbsolve {
-
 #ifdef XEON_PHI_OFFLOAD
 #define __mb_on_device __attribute__((target(mic)))
 #else
 #define __mb_on_device
 #endif
+
+namespace mbsolve {
 
 class copy_list_entry_dev
 {

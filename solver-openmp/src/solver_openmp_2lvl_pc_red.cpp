@@ -154,6 +154,11 @@ solver_int(dev, scen)
         base_idx += scen->get_num_timesteps();
     }
 
+    unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
+    unsigned int chunk_base = m_scenario->get_num_gridpoints()/P;
+    unsigned int chunk_rem = m_scenario->get_num_gridpoints() % P;
+    unsigned int num_timesteps = m_scenario->get_num_timesteps();
+
 #ifndef XEON_PHI_OFFLOAD
     l_copy_list = m_copy_list.data();
     l_sim_consts = m_sim_consts.data();
@@ -179,11 +184,6 @@ solver_int(dev, scen)
         l_copy_list[i] = m_copy_list[i].m_dev;
     }
 
-    unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
-    unsigned int chunk_base = m_scenario->get_num_gridpoints()/P;
-    unsigned int chunk_rem = m_scenario->get_num_gridpoints() % P;
-    unsigned int num_timesteps = m_scenario->get_num_timesteps();
-
 #pragma offload target(mic:0) in(P)                                     \
     in(num_sources, num_copy, chunk_base, chunk_rem)                    \
     in(l_mat_indices:length(num_gridpoints) __mb_phi_create)            \
@@ -194,7 +194,7 @@ solver_int(dev, scen)
     inout(m_e,m_h,m_inv,m_dm12i,m_dm12r:length(P) __mb_phi_create)      \
     inout(m_mat_indices:length(P) __mb_phi_create)
     {
-
+#endif
         for (unsigned int tid = 0; tid < P; tid++) {
             unsigned int chunk = chunk_base;
 
@@ -283,9 +283,9 @@ solver_int(dev, scen)
             }
 #pragma omp barrier
         }
+#ifdef XEON_PHI_OFFLOAD
     }
 #endif
-
 }
 
 solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
@@ -296,6 +296,7 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
     unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
     unsigned int num_timesteps = m_scenario->get_num_timesteps();
 
+#ifdef XEON_PHI_OFFLOAD
 #pragma offload target(mic:0) in(P)                                     \
     in(num_sources, num_copy)                                           \
     in(l_mat_indices:length(num_gridpoints) __mb_phi_delete)            \
@@ -305,6 +306,7 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
     in(l_sim_consts:length(m_sim_consts.size()) __mb_phi_delete)        \
     in(m_e,m_h,m_inv,m_dm12i,m_dm12r,m_mat_indices:length(P) __mb_phi_delete)
     {
+#endif
 #pragma omp parallel
         {
             unsigned int tid = omp_get_thread_num();
@@ -316,7 +318,9 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
             mb_aligned_free(m_dm12i[tid]);
             mb_aligned_free(m_mat_indices[tid]);
         }
+#ifdef XEON_PHI_OFFLOAD
     }
+#endif
 
     delete[] l_mat_indices;
     delete[] m_result_scratch;

@@ -61,6 +61,13 @@ private:
 
     unsigned int **m_mat_indices;
 
+#ifdef XEON_PHI_OFFLOAD
+    copy_list_entry_dev *l_copy_list;
+#else
+    copy_list_entry *l_copy_list;
+#endif
+    sim_source *l_sim_sources;
+    sim_constants_2lvl *l_sim_consts;
     unsigned int *l_mat_indices;
 
     std::vector<sim_constants_2lvl> m_sim_consts;

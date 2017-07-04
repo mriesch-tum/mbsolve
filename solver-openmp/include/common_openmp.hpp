@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include <stdlib.h>
 
 #ifndef MBSOLVE_SOLVER_OPENMP_COMMON
@@ -10,13 +11,18 @@
 #define __mb_phi_delete alloc_if(0) free_if(1)
 
 #ifdef XEON_PHI_OFFLOAD
+#define __mb_on_device __attribute__((target(mic)))
+#else
+#define __mb_on_device
+#endif
 
-__attribute__((target(mic))) inline void *mb_aligned_alloc(unsigned int size)
+#ifdef __INTEL_COMPILER
+__mb_on_device inline void *mb_aligned_alloc(unsigned int size)
 {
     return _mm_malloc(size, ALIGN);
 }
 
-__attribute__((target(mic))) inline void mb_aligned_free(void *ptr)
+__mb_on_device inline void mb_aligned_free(void *ptr)
 {
     _mm_free(ptr);
 }
@@ -27,15 +33,24 @@ __attribute__((target(mic))) inline void mb_aligned_free(void *ptr)
 
 inline void *mb_aligned_alloc(unsigned int size)
 {
-    return _mm_malloc(size, ALIGN);
+    void *addr;
+    int ret;
+
+    ret = posix_memalign(&addr, ALIGN, size);
+
+    if (ret != 0) {
+        throw std::invalid_argument("posix_memalign failed.");
+    }
+
+    return addr;
 }
 
 inline void mb_aligned_free(void *ptr)
 {
-    _mm_free(ptr);
+    free(ptr);
 }
 
-#define __mb_assume_aligned(ptr) __assume_aligned((ptr), ALIGN)
+#define __mb_assume_aligned(ptr) __builtin_assume_aligned(ptr, ALIGN)
 
 #endif
 
