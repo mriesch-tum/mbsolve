@@ -4,11 +4,11 @@ project(solver-cuda)
 # TODO: it seems the FindCUDA module does not automatically include the header
 # directory. As a fix it is provided manually.
 #include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
-#include_directories(../mbsolve-lib/include/ include/)
-include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
+include_directories(../mbsolve-lib/include/ include/)
+#include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 
 # TODO: arch as build option?
-list(APPEND CUDA_NVCC_FLAGS -arch=sm_35 --compiler-flags)
+list(APPEND CUDA_NVCC_FLAGS -arch=sm_35; --std=c++11; -Xcompiler -fPIC)
 #list(APPEND CUDA_NVCC_FLAGS -rdc=true)
 set(CUDA_SEPARABLE_COMPILATION ON)
 

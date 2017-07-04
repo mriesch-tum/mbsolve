@@ -23,7 +23,11 @@
 #define MBSOLVE_COPY_LIST_ENTRY_INT_H
 
 #include <memory>
-#include <mbsolve.hpp>
+//#include <mbsolve.hpp>
+#include <record.hpp>
+#include <result.hpp>
+#include <scenario.hpp>
+#include <types.hpp>
 
 #ifdef XEON_PHI_OFFLOAD
 #define __mb_on_device __attribute__((target(mic)))

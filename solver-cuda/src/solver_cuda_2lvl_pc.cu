@@ -28,6 +28,7 @@ namespace mbsolve {
 
 static solver_factory<solver_cuda_2lvl_pc> factory("cuda-2lvl-pc");
 
+#if 0
 /* CUDA memory and kernels */
 __device__ __constant__ struct sim_constants gsc[MaxRegions];
 
@@ -180,6 +181,7 @@ __global__ void makestep_e_dm(real *d, const real *gh, real *ge, real src,
     d[gsize * 2 + gidx] = dm12r_e;
     d[gsize * 3 + gidx] = dm22_e;
 }
+#endif
 
 /* host members */
 solver_cuda_2lvl_pc::solver_cuda_2lvl_pc(std::shared_ptr<const device> dev,

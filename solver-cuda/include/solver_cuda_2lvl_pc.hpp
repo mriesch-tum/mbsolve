@@ -24,7 +24,7 @@
 
 #include <cuda.h>
 #include <copy_list_entry_int.hpp>
-#include <solver.hpp>
+#include <solver_int.hpp>
 
 //#include <CUDADensityMatrix.hpp>
 
