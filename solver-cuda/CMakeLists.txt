@@ -15,11 +15,9 @@ set(CUDA_SEPARABLE_COMPILATION ON)
 cuda_add_library(solver-cuda SHARED
   # src/CUDADensityMatrix.cu include/CUDADensityMatrix.hpp
   src/solver_cuda_2lvl_pc.cu include/solver_cuda_2lvl_pc.hpp
-#  src/solver_cuda_2lvl_pc_red.cu include/solver_cuda_2lvl_pc_red.hpp
-  include/cuda_common.hpp)
+  src/solver_cuda_2lvl_pc_red.cu include/solver_cuda_2lvl_pc_red.hpp
+  src/common_cuda.cu include/common_cuda.hpp)
 
-# TODO: how to ensure c++11 properly?
-# TODO: use newer cuda version?? could also solve arch issue above
 set_property(TARGET solver-cuda PROPERTY CXX_STANDARD 11)
 
 target_include_directories(solver-cuda PUBLIC include/)

@@ -19,29 +19,18 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_CUDA_COMMON_H
-#define MBSOLVE_SOLVER_CUDA_COMMON_H
-
-#include <stdexcept>
-#include <string>
-#include <cuda.h>
+#include <common_cuda.hpp>
 
 namespace mbsolve {
 
-const unsigned int MB_CUDA_MAX_CLE = 32;
+/* material properties in constant GPU memory */
+__device__ __constant__
+sim_constants_2lvl l_sim_consts[MB_CUDA_MAX_MATERIALS];
 
-const unsigned int MB_CUDA_MAX_MATERIALS = 32;
+/* source properties in constant GPU memory */
+__device__ __constant__ sim_source l_sim_sources[MB_CUDA_MAX_SOURCES];
 
-const unsigned int MB_CUDA_MAX_SOURCES = 32;
-
-static inline void chk_err(cudaError_t code)
-{
-    if (code != cudaSuccess) {
-	throw std::runtime_error(std::string("CUDA: ") +
-				 cudaGetErrorString(code));
-    }
-}
+/* copy list in constant GPU memory */
+__device__ __constant__ copy_list_entry_dev l_copy_list[MB_CUDA_MAX_CLE];
 
 }
-
-#endif

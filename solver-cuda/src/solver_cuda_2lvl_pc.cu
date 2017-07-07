@@ -21,21 +21,12 @@
 
 #include <curand.h>
 #include <curand_kernel.h>
-#include <cuda_common.hpp>
+#include <common_cuda.hpp>
 #include <solver_cuda_2lvl_pc.hpp>
 
 namespace mbsolve {
 
 static solver_factory<solver_cuda_2lvl_pc> factory("cuda-2lvl-pc");
-
-/* material properties in constant GPU memory */
-__device__ __constant__ sim_constants_2lvl l_sim_consts[MB_CUDA_MAX_MATERIALS];
-
-/* source properties in constant GPU memory */
-__device__ __constant__ sim_source l_sim_sources[MB_CUDA_MAX_SOURCES];
-
-/* copy list in constant GPU memory */
-__device__ __constant__ copy_list_entry_dev l_copy_list[MB_CUDA_MAX_CLE];
 
 /* initialize memory kernel */
 __global__ void init_memory(real *d, real *e, real *h, unsigned int *indices)

@@ -19,53 +19,44 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_CUDA_2LVL_PC_RED_H
-#define MBSOLVE_SOLVER_CUDA_2LVL_PC_RED_H
+#ifndef MBSOLVE_SOLVER_CUDA_COMMON_H
+#define MBSOLVE_SOLVER_CUDA_COMMON_H
 
+#include <stdexcept>
+#include <string>
 #include <cuda.h>
 #include <internal/common_fdtd_2lvl.hpp>
 #include <copy_list_entry_int.hpp>
-#include <solver_int.hpp>
 
 namespace mbsolve {
 
-class solver_cuda_2lvl_pc_red : public solver_int
+const unsigned int MB_CUDA_MAX_CLE = 32;
+
+const unsigned int MB_CUDA_MAX_MATERIALS = 32;
+
+const unsigned int MB_CUDA_MAX_SOURCES = 32;
+
+/* TODO split into different headers for different level types? */
+extern __device__ __constant__
+sim_constants_2lvl l_sim_consts[MB_CUDA_MAX_MATERIALS];
+
+extern __device__ __constant__
+sim_source l_sim_sources[MB_CUDA_MAX_SOURCES];
+
+/* copy list in constant GPU memory */
+extern __device__ __constant__
+copy_list_entry_dev l_copy_list[MB_CUDA_MAX_CLE];
+
+extern __global__ void
+init_memory(real *d, real *e, real *h, unsigned int *indices);
+
+static inline void chk_err(cudaError_t code)
 {
-public:
-    solver_cuda_2lvl_pc_red(std::shared_ptr<const device> dev,
-                            std::shared_ptr<scenario> scen);
-
-    ~solver_cuda_2lvl_pc_red();
-
-    const std::string& get_name() const;
-
-    void run() const;
-
-private:
-    /* data buffers on GPU (double buffering technique) */
-    real *m_h1;
-    real *m_e1;
-    real *m_d1;
-
-    real *m_h2;
-    real *m_e2;
-    real *m_d2;
-
-    /* material indices on GPU */
-    unsigned int *m_mat_indices;
-
-    /* data for sources on GPU */
-    real *m_source_data;
-
-    /* result scratchpad memory on GPU */
-    unsigned int m_scratch_size;
-    real *m_result_scratch;
-
-    /* scenario data on CPU */
-    std::vector<sim_constants_2lvl> m_sim_consts;
-    std::vector<sim_source> m_sim_sources;
-    std::vector<copy_list_entry> m_copy_list;
-};
+    if (code != cudaSuccess) {
+	throw std::runtime_error(std::string("CUDA: ") +
+				 cudaGetErrorString(code));
+    }
+}
 
 }
 

@@ -45,7 +45,7 @@ endif(WITH_MATLAB)
 
 # CUDA support?
 if(WITH_CUDA)
-  find_package(CUDA)
+  find_package(CUDA 5.0)
   if(CUDA_FOUND)
     set(MBSOLVE_CUDA TRUE)
     add_subdirectory(solver-cuda)
