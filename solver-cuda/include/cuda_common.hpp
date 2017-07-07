@@ -28,6 +28,12 @@
 
 namespace mbsolve {
 
+const unsigned int MB_CUDA_MAX_CLE = 32;
+
+const unsigned int MB_CUDA_MAX_MATERIALS = 32;
+
+const unsigned int MB_CUDA_MAX_SOURCES = 32;
+
 static inline void chk_err(cudaError_t code)
 {
     if (code != cudaSuccess) {

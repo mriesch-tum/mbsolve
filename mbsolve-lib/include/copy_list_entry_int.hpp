@@ -29,10 +29,16 @@
 #include <scenario.hpp>
 #include <types.hpp>
 
+/* TODO: needs improvement */
 #ifdef XEON_PHI_OFFLOAD
 #define __mb_on_device __attribute__((target(mic)))
 #else
+#ifdef __CUDACC__
+#define __mb_on_device __host__ __device__
+#include <math.h>
+#else
 #define __mb_on_device
+#endif
 #endif
 
 namespace mbsolve {
@@ -60,7 +66,7 @@ public:
     __mb_on_device bool hasto_record(unsigned int iteration) const {
         real t_now = iteration * m_timestep;
         real t_next = t_now + m_timestep;
-        real t_sample = floor(iteration / m_interval_idx) * m_interval;
+        real t_sample = floor(1.0 * iteration / m_interval_idx) * m_interval;
 
         return ((t_now <= t_sample) && (t_next >= t_sample));
     }

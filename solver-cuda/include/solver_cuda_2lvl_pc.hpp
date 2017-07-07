@@ -23,38 +23,11 @@
 #define MBSOLVE_SOLVER_CUDA_2LVL_PC_H
 
 #include <cuda.h>
+#include <internal/common_fdtd_2lvl.hpp>
 #include <copy_list_entry_int.hpp>
 #include <solver_int.hpp>
 
-//#include <CUDADensityMatrix.hpp>
-
 namespace mbsolve {
-
-/* TODO: make general? */
-static const unsigned int MAX_MATERIALS = 8;
-
-/* TODO: class with constructor(Device, Scenario) on CUDA ? */
-struct sim_constants
-{
-    real M_CE;
-    real M_CH;
-    real M_CP;
-    real sigma;
-
-    real w12;
-    real d12;
-    real tau1;
-    real gamma12;
-
-    unsigned int idx_start;
-    unsigned int idx_end;
-
-    real d_x_inv;
-    real d_t;
-
-    real dm11_init;
-    real dm22_init;
-};
 
 class solver_cuda_2lvl_pc : public solver_int
 {
@@ -69,17 +42,24 @@ public:
     void run() const;
 
 private:
-    cudaStream_t comp_maxwell;
-    cudaStream_t copy;
-
+    /* data buffers on GPU */
     real *m_h;
     real *m_e;
     real *m_d;
 
+    /* material indices on GPU */
     unsigned int *m_mat_indices;
 
+    /* data for sources on GPU */
+    real *m_source_data;
 
+    /* result scratchpad memory on GPU */
+    unsigned int m_scratch_size;
+    real *m_result_scratch;
 
+    /* scenario data on CPU */
+    std::vector<sim_constants_2lvl> m_sim_consts;
+    std::vector<sim_source> m_sim_sources;
     std::vector<copy_list_entry> m_copy_list;
 };
 

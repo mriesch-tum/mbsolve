@@ -76,6 +76,8 @@ public:
         return m_imag.begin() + row * m_cols + col;
     }
 
+    real *get_data_real_raw() { return m_real.data(); }
+
     const std::vector<real>& get_data_real() const { return m_real; }
 
     const std::vector<real>& get_data_imag() const { return m_imag; }

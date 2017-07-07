@@ -28,29 +28,21 @@ namespace mbsolve {
 
 static solver_factory<solver_cuda_2lvl_pc> factory("cuda-2lvl-pc");
 
-#if 0
-/* CUDA memory and kernels */
-__device__ __constant__ struct sim_constants gsc[MaxRegions];
+/* material properties in constant GPU memory */
+__device__ __constant__ sim_constants_2lvl l_sim_consts[MB_CUDA_MAX_MATERIALS];
 
-/* TODO: hash function or something? */
-/* TODO: otherwise divergence within warp */
-__device__ __inline__ unsigned int get_region(unsigned int idx)
-{
-    for (unsigned int i = 0; i < MaxRegions; i++) {
-	if (idx <= gsc[i].idx_end) {
-	    return i;
-	}
-    }
-    return 0;
-}
+/* source properties in constant GPU memory */
+__device__ __constant__ sim_source l_sim_sources[MB_CUDA_MAX_SOURCES];
 
-/* TODO: initialize may be reused by other CUDA solvers, make general */
-/* TODO: region-wise? initialization */
+/* copy list in constant GPU memory */
+__device__ __constant__ copy_list_entry_dev l_copy_list[MB_CUDA_MAX_CLE];
+
+/* initialize memory kernel */
 __global__ void init_memory(real *d, real *e, real *h, unsigned int *indices)
 {
     unsigned int gsize = blockDim.x * gridDim.x;
     unsigned int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int region = get_region(gidx);
+    int mat_idx = indices[gidx];
 
     /* TODO: alternative initializations */
     curandState_t rand_state;
@@ -65,19 +57,16 @@ __global__ void init_memory(real *d, real *e, real *h, unsigned int *indices)
     e[gidx] = 0.0;
     //   e[gidx] = curand_uniform(&rand_state) * 1e-15;
 
-    d[gsize * 0 + gidx] = gsc[region].dm11_init;
+    d[gsize * 0 + gidx] = l_sim_consts[mat_idx].inversion_init;
     d[gsize * 1 + gidx] = 0.0;
     d[gsize * 2 + gidx] = 0.0;
-    d[gsize * 3 + gidx] = gsc[region].dm22_init;
-
-    indices[gidx] = region;
 }
 
 __global__ void makestep_h(const real *ge, real *gh, unsigned int *indices)
 {
     int idx = threadIdx.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
-    int region = indices[gidx];
+    int mat_idx = indices[gidx];
 
     extern __shared__ real e[];
 
@@ -95,290 +84,308 @@ __global__ void makestep_h(const real *ge, real *gh, unsigned int *indices)
     /* gh_ghz[N_x] = 0; */
 
     if (gidx != 0) {
-	gh[gidx] += gsc[region].M_CH * (e[idx + 1] - e[idx]);
+	gh[gidx] += l_sim_consts[mat_idx].M_CH * (e[idx + 1] - e[idx]);
     }
 }
 
-__global__ void makestep_e_dm(real *d, const real *gh, real *ge, real src,
-			      unsigned int *indices)
+
+__global__ void makestep_e_dm(real *d, const real *gh, real *ge,
+			      unsigned int *indices, real *scratch, real *sd,
+                              unsigned int source_ct, unsigned int copy_ct,
+                              unsigned int n)
 {
     int gsize = blockDim.x * gridDim.x;
     int size = blockDim.x;
     int gidx = blockDim.x * blockIdx.x + threadIdx.x;
     int idx = threadIdx.x;
-    int region = indices[gidx];
+    int mat_idx = indices[gidx];
 
     extern __shared__ real h[];
-    real *dm11 = &h[size + 1];
+    real *inv = &h[size + 1];
     real *dm12i = &h[2 * size + 1];
     real *dm12r = &h[3 * size + 1];
-    real *dm22 = &h[4 * size + 1];
     real *e = &h[5 * size + 1];
 
     h[idx] = gh[gidx];
     if (idx == blockDim.x - 1) {
 	h[idx + 1] = gh[gidx + 1];
     }
-    dm11[idx] = d[gsize * 0 + gidx];
+    inv[idx] = d[gsize * 0 + gidx];
     dm12i[idx] = d[gsize * 1 + gidx];
     dm12r[idx] = d[gsize * 2 + gidx];
-    dm22[idx] = d[gsize * 3 + gidx];
     e[idx] = ge[gidx];
 
     __syncthreads();
 
-    real dm11_e = dm11[idx];
+    real inv_e = inv[idx];
     real dm12i_e = dm12i[idx];
     real dm12r_e = dm12r[idx];
-    real dm22_e = dm22[idx];
     real e_e = e[idx];
 
     /* execute prediction - correction steps */
     for (int pc_step = 0; pc_step < 4; pc_step++) {
 
-	real rho11 = 0.5 * (dm11[idx] + dm11_e);
+	real inversion = 0.5 * (inv[idx] + inv_e);
 	real rho12i = 0.5 * (dm12i[idx] + dm12i_e);
 	real rho12r = 0.5 * (dm12r[idx] + dm12r_e);
-	real rho22 = 0.5 * (dm22[idx] + dm22_e);
-	real OmRabi = gsc[region].d12 * 0.5 * (e[idx] + e_e);
+        real field = 0.5 * (e[idx] + e_e);
+	real OmRabi = l_sim_consts[mat_idx].d12 * field;
 
 	/* dm11 */
-	dm11_e = dm11[idx] + gsc[region].d_t *
-	    (-2.0 * OmRabi * rho12i - gsc[region].tau1 * rho11);
+	inv_e = inv[idx] + l_sim_consts[mat_idx].d_t *
+	    (- 4.0 * OmRabi * rho12i
+             - l_sim_consts[mat_idx].tau1 *
+             (inversion - l_sim_consts[mat_idx].equi_inv));
 
 	/* imag dm12 */
-	dm12i_e = dm12i[idx] + gsc[region].d_t *
-	    (- gsc[region].w12 * rho12r + OmRabi * (rho11 - rho22)
-	     - gsc[region].gamma12 * rho12i);
+	dm12i_e = dm12i[idx] + l_sim_consts[mat_idx].d_t *
+	    (- l_sim_consts[mat_idx].w12 * rho12r
+             + OmRabi * inversion
+	     - l_sim_consts[mat_idx].gamma12 * rho12i);
 
 	/* real dm12 */
-	dm12r_e = dm12r[idx] + gsc[region].d_t *
-	    (gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r);
+	dm12r_e = dm12r[idx] + l_sim_consts[mat_idx].d_t *
+	    (+ l_sim_consts[mat_idx].w12 * rho12i
+             - l_sim_consts[mat_idx].gamma12 * rho12r);
 
-	/* dm22 */
-	dm22_e = dm22[idx] + gsc[region].d_t *
-	    (2.0 * OmRabi * rho12i + gsc[region].tau1 * rho11);
+	real j = l_sim_consts[mat_idx].sigma * field;
 
+	real p_t = l_sim_consts[mat_idx].M_CP * l_sim_consts[mat_idx].d12 *
+	    (+ l_sim_consts[mat_idx].w12 * rho12i
+             - l_sim_consts[mat_idx].gamma12 * rho12r);
 
-	real j = 0; /*TODO revise e *//* ge[gidx] * gsc[region].sigma;*/
+	e_e = e[idx] + l_sim_consts[mat_idx].M_CE *
+	    (-j - p_t + (h[idx + 1] - h[idx]) * l_sim_consts[mat_idx].d_x_inv);
+    }
 
-	real p_t = gsc[region].M_CP * gsc[region].d12 *
-	    (gsc[region].w12 * rho12i - gsc[region].gamma12 * rho12r);
-
-	e_e = e[idx] + gsc[region].M_CE *
-	    (-j - p_t + (h[idx + 1] - h[idx]) * gsc[region].d_x_inv);
-
-	if (gidx == 0) {
-	    /* soft source must be re-implemented, if required */
-	    //ge[gidx] += src; /* soft source */
-	    e_e = src; /* hard source */
+    /* apply sources */
+    for (unsigned int k = 0; k < source_ct; k++) {
+        int at = l_sim_sources[k].x_idx;
+	if (gidx == at) {
+            if (l_sim_sources[k].type == source::type::hard_source) {
+                e_e = sd[l_sim_sources[k].data_base_idx + n];
+            } else if (l_sim_sources[k].type == source::type::soft_source) {
+                e_e += sd[l_sim_sources[k].data_base_idx + n];
+            }
 	}
     }
 
     ge[gidx] = e_e;
-    d[gsize * 0 + gidx] = dm11_e;
+    d[gsize * 0 + gidx] = inv_e;
     d[gsize * 1 + gidx] = dm12i_e;
     d[gsize * 2 + gidx] = dm12r_e;
-    d[gsize * 3 + gidx] = dm22_e;
+
+    /* copy results into scratchpad memory */
+    for (unsigned int k = 0; k < copy_ct; k++) {
+        if (l_copy_list[k].hasto_record(n)) {
+            unsigned int pos = l_copy_list[k].get_position();
+            record::type t = l_copy_list[k].get_type();
+            real src_real;
+
+            if (t == record::type::electric) {
+                src_real = e_e;
+            } else if (t == record::type::inversion) {
+                src_real = inv_e;
+            } else {
+                /* TODO handle trouble, handle complex quantities */
+            }
+
+            if ((gidx >= pos) && (gidx < pos + l_copy_list[k].get_cols())) {
+                int off_r = l_copy_list[k].get_scratch_real_offset(n,
+                                                                   gidx - pos);
+                scratch[off_r] = src_real;
+            }
+        }
+    }
 }
-#endif
 
 /* host members */
 solver_cuda_2lvl_pc::solver_cuda_2lvl_pc(std::shared_ptr<const device> dev,
                                          std::shared_ptr<scenario> scen) :
-solver_int(dev, scen), comp_maxwell(0), copy(0)
+solver_int(dev, scen)
 {
-#if 0
-    /* total device length */
-    Quantity length = device.XDim();
+    /* determine simulation settings */
+    init_fdtd_simulation(dev, scen, 0.5);
 
-    /* minimum relative permittivity */
-    Quantity minRelPermittivity = device.MinRelPermittivity();
+    /* set up simulaton constants */
+    std::map<std::string, unsigned int> id_to_idx;
+    m_sim_consts = init_sim_constants(dev, scen, id_to_idx);
 
     /* TODO: sanity check scenario? */
-    if (m_scenario.NumGridPoints % 32 != 0) {
+
+    /* TODO: handle gridpoint number with %32 != 0 ? */
+    if (scen->get_num_gridpoints() % 32 != 0) {
 	throw std::invalid_argument("Number of grid points must be multiple"
 				    " of 32");
     }
 
-    /* determine grid point and time step size */
-    real C = 0.5; /* courant number */
-    real velocity = sqrt(MU0() * EPS0() * minRelPermittivity());
-    m_scenario.GridPointSize = length()/(m_scenario.NumGridPoints - 1);
-    real timestep  = C * m_scenario.GridPointSize * velocity;
-    m_scenario.NumTimeSteps = ceil(m_scenario.SimEndTime/timestep) + 1;
-    m_scenario.TimeStepSize = m_scenario.SimEndTime /
-	(m_scenario.NumTimeSteps - 1);
-
-
-    /* determine border indices and initialize region settings */
-    if (device.Regions.size() > MaxRegions) {
-	throw std::invalid_argument("Too many regions requested");
+    if (dev->get_regions().size() == 0) {
+        throw std::invalid_argument("No regions in device!");
     }
-    struct sim_constants sc[MaxRegions];
 
-    unsigned int i = 0;
-    BOOST_FOREACH(Region reg, device.Regions) {
-	if (i > 0) {
-	    sc[i - 1].idx_end = round(reg.X0()/m_scenario.GridPointSize) - 1;
-	}
-	sc[i].idx_start = round(reg.X0()/m_scenario.GridPointSize);
-	sc[i].M_CE = m_scenario.TimeStepSize/(EPS0() * reg.RelPermittivity());
-	sc[i].M_CH = m_scenario.TimeStepSize/(MU0() *
-					      m_scenario.GridPointSize);
-	/* TODO: overlap factor? */
-	sc[i].M_CP = -2.0 * reg.DopingDensity * HBAR();
-	sc[i].sigma = 2.0 * sqrt(EPS0 * reg.RelPermittivity/MU0) * reg.Losses;
-
-	sc[i].w12 = (reg.TransitionFrequencies.size() < 1) ? 0.0 :
-	    reg.TransitionFrequencies[0]();
-	/* TODO rename to rabi freqs or something */
-	sc[i].d12 = (reg.DipoleMoments.size() < 1) ? 0.0 :
-	    reg.DipoleMoments[0]() * E0()/HBAR();
-	sc[i].tau1 = (reg.ScatteringRates.size() < 1) ? 0.0 :
-	    reg.ScatteringRates[0]();
-	sc[i].gamma12 = (reg.DephasingRates.size() < 1) ? 0.0 :
-	    reg.DephasingRates[0]();
-
-	sc[i].d_x_inv = 1.0/m_scenario.GridPointSize;
-	sc[i].d_t = m_scenario.TimeStepSize;
-
-	if (reg.DopingDensity() < 1.0) {
-	    sc[i].dm11_init = 0.0;
-	    sc[i].dm22_init = 0.0;
-	} else {
-	    sc[i].dm11_init = 0.0;
-	    sc[i].dm22_init = 1.0;
-	}
-
-	i++;
+    if (m_sim_consts.size() >= MB_CUDA_MAX_MATERIALS) {
+        throw std::invalid_argument("Too many materials in device!");
     }
-    if (i > 0) {
-	sc[i - 1].idx_end = m_scenario.NumGridPoints - 1;
+
+    if (scen->get_sources().size() >= MB_CUDA_MAX_SOURCES) {
+        throw std::invalid_argument("Too many sources in scenario!");
+    }
+
+    if (scen->get_records().size() >= MB_CUDA_MAX_CLE) {
+        throw std::invalid_argument("Too many records requested in scenario!");
+    }
+
+    /* determine indices */
+    unsigned int *mat_indices = new unsigned int[scen->get_num_gridpoints()];
+    for (unsigned int i = 0; i < scen->get_num_gridpoints(); i++) {
+        /* determine index of material */
+        int idx = -1;
+        real x = i * scen->get_gridpoint_size();
+        for (const auto& reg : dev->get_regions()) {
+            if ((x >= reg->get_start()) && (x <= reg->get_end())) {
+                idx = id_to_idx[reg->get_material()->get_id()];
+                break;
+            }
+        }
+        /* TODO: assert/bug if idx == -1 */
+        if ((idx < 0) || (idx >= dev->get_used_materials().size())) {
+            throw std::invalid_argument("region not found");
+        }
+        mat_indices[i] = idx;
     }
 
     /* copy settings to CUDA constant memory */
-    chk_err(cudaMemcpyToSymbol(gsc, &sc, MaxRegions *
-			       sizeof(struct sim_constants)));
+    chk_err(cudaMemcpyToSymbol(l_sim_consts, m_sim_consts.data(),
+                               m_sim_consts.size() *
+                               sizeof(sim_constants_2lvl)));
 
-    /* initialize streams */
-    chk_err(cudaStreamCreate(&comp_maxwell));
-    chk_err(cudaStreamCreate(&copy));
+    /* allocate buffers on GPU */
+    chk_err(cudaMalloc(&m_e, sizeof(real) * scen->get_num_gridpoints()));
+    chk_err(cudaMalloc(&m_h, sizeof(real) * (scen->get_num_gridpoints() + 1)));
+    chk_err(cudaMalloc(&m_d, sizeof(real) * scen->get_num_gridpoints() * 3));
+    chk_err(cudaMalloc(&m_mat_indices, sizeof(unsigned int) *
+                       scen->get_num_gridpoints()));
 
-    /* allocate space */
-    chk_err(cudaMalloc(&m_e, sizeof(real) * m_scenario.NumGridPoints));
-    chk_err(cudaMalloc(&m_h, sizeof(real) * (m_scenario.NumGridPoints + 1)));
-    chk_err(cudaMalloc(&m_d, sizeof(real) * m_scenario.NumGridPoints * 4));
-    chk_err(cudaMalloc(&m_indices, sizeof(unsigned int) *
-		       m_scenario.NumGridPoints));
+    /* copy indices to GPU */
+    chk_err(cudaMemcpy(m_mat_indices, mat_indices, sizeof(unsigned int) *
+                       scen->get_num_gridpoints(), cudaMemcpyHostToDevice));
+
+    delete[] mat_indices;
 
     /* initialize memory */
+    /* TODO move to class member */
     unsigned int threads = 128;
-    unsigned int blocks = m_scenario.NumGridPoints/threads;
+    unsigned int blocks = scen->get_num_gridpoints()/threads;
 
-	    init_memory<<<blocks, threads>>>(m_d, m_e, m_h, m_indices);
+    init_memory<<<blocks, threads>>>(m_d, m_e, m_h, m_mat_indices);
 
-    /* set up results transfer data structures */
-    BOOST_FOREACH(Record rec, m_scenario.Records) {
-	unsigned int row_ct = m_scenario.SimEndTime/rec.Interval;
-	unsigned int interval = ceil(1.0 * m_scenario.NumTimeSteps/row_ct);
-	unsigned int position_idx;
-	unsigned int col_ct;
+    /* set up results and transfer data structures */
+    unsigned int scratch_size = 0;
+    for (const auto& rec : scen->get_records()) {
+        /* create copy list entry */
+        copy_list_entry entry(rec, scen);
 
-	if (rec.Position() < 0.0) {
-	    /* copy complete grid */
-	    position_idx = 0;
-	    col_ct = m_scenario.NumGridPoints;
-	} else {
-	    position_idx = round(rec.Position()/m_scenario.GridPointSize);
-	    col_ct = 1;
-	}
+        /* add result to solver */
+        m_results.push_back(entry.get_result());
 
-	/* allocate result memory */
-	Result *res = new Result(rec.Name, col_ct, row_ct);
-	m_results.push_back(res);
+        /* calculate scratch size */
+        scratch_size += entry.get_size();
 
-	/* create copy list entry */
-	CopyListEntry *entry;
-	if (rec.Type == EField) {
-	    entry = new CLEField(m_e, res, col_ct, position_idx,
-				 interval);
-	    m_copyListRed.push_back(entry);
-	} else if (rec.Type == HField) {
-	    /* TODO: numGridPoints + 1 */
-	    entry = new CLEField(m_h, res, col_ct, position_idx,
-				 interval);
-	    m_copyListBlack.push_back(entry);
-	} else if (rec.Type == Density) {
-	    if ((rec.I - 1 < 2) && (rec.J - 1 < 2)) {
-		if (rec.I == rec.J) {
-		    /* main diagonal entry */
-		    /*
-		    entry = new CLEDensity(m_dm, rec.I - 1, rec.J - 1, res,
-					   col_ct, position_idx,
-					   interval);*/
-		    //m_copyListBlack.push_back(entry);
-		    if (rec.I == 2) {
-			position_idx += m_scenario.NumGridPoints * 3;
-		    }
-		    entry = new CLEField(m_d, res, col_ct, position_idx,
-					 interval);
-		    m_copyListRed.push_back(entry);
+        /* TODO: make more generic? */
+        /* TODO: move to parser in record class */
+        /* add source address to copy list entry */
+        if (rec->get_name() == "inv12") {
+            entry.set_real(&m_d[0]);
+            entry.m_dev.m_type = record::type::inversion;
+        } else if (rec->get_name() == "d12") {
+           entry.set_imag(&m_d[scen->get_num_gridpoints() * 1]);
+           entry.set_real(&m_d[scen->get_num_gridpoints() * 2]);
 
-		} else {
-		    /* off-diagonal entry */
-		    /* TODO */
-		    /* if complex */
-		    /* create two list entries */
-		    /* create two Results, or one complex Result */
+            /* take imaginary part into account */
+            scratch_size += entry.get_size();
+        } else if (rec->get_name() == "e") {
+            entry.set_real(m_e);
+            entry.m_dev.m_type = record::type::electric;
+        } else if (rec->get_name() == "h") {
+            /* TODO: numGridPoints + 1 ? */
+            entry.set_real(m_h);
+        } else {
+            throw std::invalid_argument("Requested result is not available!");
+        }
 
-		    /* real part: GetSrcDensity(&dm, rec.I, rec.J); */
-		    /* imag part: GetSrcDensity(&dm, rec.J, rec.I); */
-		}
-	    } else {
-	    // throw exc
-	    }
-	} else {
-	    // throw exc
-	}
+        m_copy_list.push_back(entry);
     }
 
-    /* sync */
-    cudaDeviceSynchronize();
-#endif
+    /* allocate scratchpad result memory */
+    chk_err(cudaMalloc(&m_result_scratch, sizeof(real) * scratch_size));
+
+    /* add scratchpad addresses to copy list entries */
+    unsigned int scratch_offset = 0;
+    for (auto& cle : m_copy_list) {
+        cle.set_scratch_real(&m_result_scratch[scratch_offset], scratch_offset);
+        scratch_offset += cle.get_size();
+
+        if (cle.get_record()->get_name() == "d12") {
+            /* complex result */
+            cle.set_scratch_imag(&m_result_scratch[scratch_offset]);
+            scratch_offset += cle.get_size();
+        }
+    }
+
+    /* set up sources */
+    unsigned int source_data_size = scen->get_num_timesteps() *
+        scen->get_sources().size();
+    chk_err(cudaMalloc(&m_source_data, sizeof(real) * source_data_size));
+    real *source_data = new real[source_data_size];
+    unsigned int base_idx = 0;
+    for (const auto& src : scen->get_sources()) {
+        sim_source s;
+        s.type = src->get_type();
+        s.x_idx = src->get_position()/scen->get_gridpoint_size();
+        s.data_base_idx = base_idx;
+        m_sim_sources.push_back(s);
+
+        /* calculate source values */
+        for (unsigned int j = 0; j < scen->get_num_timesteps(); j++) {
+            source_data[base_idx + j] =
+                src->get_value(j * scen->get_timestep_size());
+        }
+
+        base_idx += scen->get_num_timesteps();
+    }
+
+    /* copy indices to GPU */
+    chk_err(cudaMemcpy(m_source_data, source_data, sizeof(unsigned int) *
+                       source_data_size, cudaMemcpyHostToDevice));
+    delete[] source_data;
+
+    /* copy source properties to GPU constant memory */
+    chk_err(cudaMemcpyToSymbol(l_sim_sources, m_sim_sources.data(),
+                               m_sim_sources.size() *
+                               sizeof(sim_source)));
+
+    /* copy copy list entries to GPU constant memory */
+    for (unsigned int i = 0; i < m_copy_list.size(); i++) {
+        chk_err(cudaMemcpyToSymbol(l_copy_list, &m_copy_list[i].m_dev,
+                                   sizeof(copy_list_entry_dev),
+                                   sizeof(copy_list_entry_dev) * i));
+
+    }
+
 }
 
 solver_cuda_2lvl_pc::~solver_cuda_2lvl_pc()
 {
-#if 0
-    /* delete copy lists */
-    BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
-	delete entry;
-    }
-    BOOST_FOREACH(CopyListEntry *entry, m_copyListBlack) {
-	delete entry;
-    }
-
-    /* sync */
-    cudaDeviceSynchronize();
-
     /* free CUDA memory */
     cudaFree(m_h);
     cudaFree(m_e);
     cudaFree(m_d);
-    cudaFree(m_indices);
-
-    /* clean up streams */
-    if (comp_maxwell) {
-	cudaStreamDestroy(comp_maxwell);
-    }
-    if (copy) {
-	cudaStreamDestroy(copy);
-    }
+    cudaFree(m_mat_indices);
+    cudaFree(m_result_scratch);
+    cudaFree(m_source_data);
 
     /* reset device */
     cudaDeviceReset();
-#endif
 }
 
 const std::string&
@@ -390,43 +397,42 @@ solver_cuda_2lvl_pc::get_name() const
 void
 solver_cuda_2lvl_pc::run() const
 {
-#if 0
     unsigned int threads = 128;
-    unsigned int blocks = m_scenario.NumGridPoints/threads;
+    unsigned int blocks = m_scenario->get_num_gridpoints()/threads;
     /* TODO handle roundoff errors in thread/block partition */
 
-    dim3 block_maxwell(blocks);
-
-    real f_0 = 2e14;
-    real T_p = 20/f_0;
-
-    real E_0 = 4.2186e9;
-    //E_0 /= 2; /* pi pulse */
-
     /* main loop */
-    for (unsigned int i = 0; i < m_scenario.NumTimeSteps; i++) {
-	/* calculate source value */
-	real t = i * m_scenario.TimeStepSize;
-	real gamma = 2 * t/T_p - 1;
-	real src = E_0 * 1/std::cosh(10 * gamma) * sin(2 * M_PI * f_0 * t);
+    for (unsigned int i = 0; i < m_scenario->get_num_timesteps(); i++) {
 
 	/* makestep e and density matrix */
-	makestep_e_dm<<<block_maxwell, threads,
-	    (6 * threads + 1) * sizeof(real)>>>(m_d, m_h, m_e, src, m_indices);
+	makestep_e_dm<<<blocks, threads,
+	    (6 * threads + 1) * sizeof(real)>>>(m_d, m_h, m_e, m_mat_indices,
+                                                m_result_scratch,
+                                                m_source_data,
+                                                m_sim_sources.size(),
+                                                m_copy_list.size(),
+                                                i);
 
 	/* makestep h */
-	makestep_h<<<block_maxwell, threads, (threads + 1) * sizeof(real)>>>
-	    (m_e, m_h, m_indices);
+	makestep_h<<<blocks, threads, (threads + 1) * sizeof(real)>>>
+	    (m_e, m_h, m_mat_indices);
 
-	/* gather e field and dm entries in copy stream */
-	BOOST_FOREACH(CopyListEntry *entry, m_copyListRed) {
-	    if (entry->record(i)) {
-		chk_err(cudaMemcpy(entry->getDst(i), entry->getSrc(),
-				   entry->getSize(), cudaMemcpyDeviceToHost));
-	    }
-	}
     }
-#endif
+
+    /* bulk copy results into result classes */
+    for (const auto& cle : m_copy_list) {
+        chk_err(cudaMemcpy(cle.get_result()->get_data_real_raw(),
+                           cle.get_scratch_real(0, 0),
+                           cle.get_size() * sizeof(real),
+                           cudaMemcpyDeviceToHost));
+        if (cle.is_complex()) {
+            /*
+            chk_err(cudaMemcpy(cle.get_result_imag(0, 0).data(),
+                               cle.get_scratch_imag(0, 0), cle.get_size(),
+                               cudaMemcpyDeviceToHost));
+            */
+        }
+    }
 }
 
 }
