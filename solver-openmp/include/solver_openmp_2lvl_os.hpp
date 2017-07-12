@@ -23,9 +23,9 @@
 #define MBSOLVE_SOLVER_OPENMP_2LVL_OS_H
 
 #include <Eigen/Core>
-#include <copy_list_entry_int.hpp>
 #include <solver.hpp>
 #include <internal/common_fdtd_2lvl.hpp>
+#include <internal/copy_list_entry.hpp>
 
 namespace mbsolve {
 
