@@ -28,7 +28,7 @@ static solver_factory<solver_openmp_2lvl_pc_red> factory("openmp-2lvl-pc-red");
 
 /* redundant calculation overlap */
 #ifdef XEON_PHI_OFFLOAD
-const unsigned int OL = 32;
+__mb_on_device const unsigned int OL = 32;
 #else
 const unsigned int OL = 128;
 #endif
@@ -62,7 +62,7 @@ solver_int(dev, scen)
     m_h = new real*[P];
     m_mat_indices = new unsigned int*[P];
 
-    l_mat_indices = new unsigned int[scen->get_num_gridpoints()];
+    unsigned int *l_mat_indices = new unsigned int[scen->get_num_gridpoints()];
 
     for (unsigned int i = 0; i < scen->get_num_gridpoints(); i++) {
         unsigned int mat_idx = 0;
@@ -121,9 +121,6 @@ solver_int(dev, scen)
     /* add scratchpad addresses to copy list entries */
     unsigned int scratch_offset = 0;
     for (auto& cle : m_copy_list) {
-
-        std::cout << cle.get_position() << std::endl;
-
         cle.set_scratch_real(&m_result_scratch[scratch_offset], scratch_offset);
         scratch_offset += cle.get_size();
 
@@ -186,7 +183,7 @@ solver_int(dev, scen)
 
 #pragma offload target(mic:0) in(P)                                     \
     in(num_sources, num_copy, chunk_base, chunk_rem)                    \
-    in(l_mat_indices:length(num_gridpoints) __mb_phi_create)            \
+    in(l_mat_indices:length(num_gridpoints))                            \
     in(l_copy_list:length(num_copy) __mb_phi_create)                    \
     in(m_source_data:length(num_timesteps * num_sources) __mb_phi_create) \
     in(l_sim_sources:length(num_sources) __mb_phi_create)               \
@@ -213,8 +210,6 @@ solver_int(dev, scen)
             m_e[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
             m_mat_indices[tid] = (unsigned int *)
                 mb_aligned_alloc(size * sizeof(unsigned int));
-
-
         }
 
 #pragma omp parallel
@@ -286,6 +281,8 @@ solver_int(dev, scen)
 #ifdef XEON_PHI_OFFLOAD
     }
 #endif
+
+    delete[] l_mat_indices;
 }
 
 solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
@@ -299,7 +296,6 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
 #ifdef XEON_PHI_OFFLOAD
 #pragma offload target(mic:0) in(P)                                     \
     in(num_sources, num_copy)                                           \
-    in(l_mat_indices:length(num_gridpoints) __mb_phi_delete)            \
     in(l_copy_list:length(num_copy) __mb_phi_delete)                    \
     in(m_source_data:length(num_timesteps * num_sources) __mb_phi_delete) \
     in(l_sim_sources:length(num_sources) __mb_phi_delete)               \
@@ -320,9 +316,12 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
         }
 #ifdef XEON_PHI_OFFLOAD
     }
+
+    delete[] l_copy_list;
+    delete[] l_sim_consts;
+    delete[] l_sim_sources;
 #endif
 
-    delete[] l_mat_indices;
     delete[] m_result_scratch;
     delete[] m_source_data;
 
@@ -355,7 +354,6 @@ solver_openmp_2lvl_pc_red::run() const
 #pragma offload target(mic:0) in(P)                                     \
     in(chunk_base, chunk_rem, num_gridpoints, num_timesteps)            \
     in(num_sources, num_copy)                                           \
-    in(l_mat_indices:length(num_gridpoints) __mb_phi_use)               \
     in(l_copy_list:length(num_copy) __mb_phi_use)                       \
     in(m_source_data:length(num_timesteps * num_sources) __mb_phi_use)  \
     in(l_sim_sources:length(num_sources) __mb_phi_use)                  \
@@ -598,10 +596,6 @@ solver_openmp_2lvl_pc_red::run() const
         } /* end openmp region */
 #ifdef XEON_PHI_OFFLOAD
     } /* end offload region */
-
-    delete[] l_copy_list;
-    delete[] l_sim_consts;
-    delete[] l_sim_sources;
 #endif
 
     /* bulk copy results into result classes */

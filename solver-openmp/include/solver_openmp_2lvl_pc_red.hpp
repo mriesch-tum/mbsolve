@@ -68,7 +68,6 @@ private:
 #endif
     sim_source *l_sim_sources;
     sim_constants_2lvl *l_sim_consts;
-    unsigned int *l_mat_indices;
 
     std::vector<sim_constants_2lvl> m_sim_consts;
 
