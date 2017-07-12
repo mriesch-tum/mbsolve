@@ -68,7 +68,7 @@ solver_int(dev, scen)
     unsigned int scratch_size = 0;
     for (const auto& rec : scen->get_records()) {
         /* create copy list entry */
-        copy_list_entry entry(rec, scen);
+        copy_list_entry entry(rec, scen, scratch_size);
 
         /* add result to solver */
         m_results.push_back(entry.get_result());
@@ -76,27 +76,15 @@ solver_int(dev, scen)
         /* calculate scratch size */
         scratch_size += entry.get_size();
 
-        /* TODO: make more generic? */
-        /* TODO: move to parser in record class */
-        /* add source address to copy list entry */
-        if (rec->get_name() == "inv12") {
-            entry.set_real(m_inv);
-            entry.m_dev.m_type = record::type::inversion;
-        } else if (rec->get_name() == "d12") {
-            entry.set_real(m_dm12r);
-            entry.set_imag(m_dm12i);
-
-            /* take imaginary part into account */
+        /* take imaginary part into account */
+        if (rec->is_complex()) {
             scratch_size += entry.get_size();
-        } else if (rec->get_name() == "e") {
-            entry.set_real(m_e);
-            entry.m_dev.m_type = record::type::electric;
-        } else if (rec->get_name() == "h") {
-            /* TODO: numGridPoints + 1 ? */
-            entry.set_real(m_h);
-        } else {
-            throw std::invalid_argument("Requested result is not available!");
         }
+
+        /* TODO check if result is available */
+        /*
+           throw std::invalid_argument("Requested result is not available!");
+        */
 
         m_copy_list.push_back(entry);
     }
@@ -104,20 +92,6 @@ solver_int(dev, scen)
     /* allocate scratchpad result memory */
     m_result_scratch = new real[scratch_size];
     m_scratch_size = scratch_size;
-
-    /* add scratchpad addresses to copy list entries */
-    unsigned int scratch_offset = 0;
-    for (auto& cle : m_copy_list) {
-
-        cle.set_scratch_real(&m_result_scratch[scratch_offset], scratch_offset);
-        scratch_offset += cle.get_size();
-
-        if (cle.get_record()->get_name() == "d12") {
-            /* complex result */
-            cle.set_scratch_imag(&m_result_scratch[scratch_offset]);
-            scratch_offset += cle.get_size();
-        }
-    }
 
     /* create source data */
     m_source_data = new real[scen->get_num_timesteps() *
@@ -183,7 +157,7 @@ solver_int(dev, scen)
     unsigned int num_copy = m_copy_list.size();
     l_copy_list = new copy_list_entry_dev[num_copy];
     for (int i = 0; i < m_copy_list.size(); i++) {
-        l_copy_list[i] = m_copy_list[i].m_dev;
+        l_copy_list[i] = m_copy_list[i].get_dev();
     }
 
 #pragma offload target(mic:0) in(num_sources, num_copy, num_gridpoints) \
@@ -363,8 +337,7 @@ solver_openmp_2lvl_pc::run() const
                         unsigned int pos = l_copy_list[k].get_position();
                         unsigned int cols = l_copy_list[k].get_cols();
                         record::type t = l_copy_list[k].get_type();
-                        int off_r = l_copy_list[k].get_scratch_real_offset
-                            (n, 0);
+                        int o_r = l_copy_list[k].get_offset_scratch_real(n, 0);
 
                         real *src_real;
                         if (t == record::type::electric) {
@@ -378,9 +351,15 @@ solver_openmp_2lvl_pc::run() const
                         //#pragma omp for simd schedule(static)
 #pragma omp for schedule(static)
                         for (int i = pos; i < pos + cols; i++) {
-                            m_result_scratch[off_r + i - pos] = src_real[i];
+                            m_result_scratch[o_r + i - pos] = src_real[i];
                         }
-                        /* TODO handle imag part */
+
+                        if (l_copy_list[k].is_complex()) {
+                            int o_i = l_copy_list[k].get_offset_scratch_imag
+                                (n, 0);
+
+                            /* TODO handle imag part */
+                        }
                     }
                 }
             }
@@ -391,11 +370,11 @@ solver_openmp_2lvl_pc::run() const
 
     /* bulk copy results into result classes */
     for (const auto& cle : m_copy_list) {
-        std::copy(cle.get_scratch_real(0, 0), cle.get_scratch_real(0, 0) +
-                  cle.get_size(), cle.get_result_real(0, 0));
+        real *dr = m_result_scratch + cle.get_offset_scratch_real(0, 0);
+        std::copy(dr, dr + cle.get_size(), cle.get_result_real(0, 0));
         if (cle.is_complex()) {
-            std::copy(cle.get_scratch_imag(0, 0), cle.get_scratch_imag(0, 0) +
-                      cle.get_size(), cle.get_result_imag(0, 0));
+            real *di = m_result_scratch + cle.get_offset_scratch_imag(0, 0);
+            std::copy(di, di + cle.get_size(), cle.get_result_imag(0, 0));
         }
     }
 }

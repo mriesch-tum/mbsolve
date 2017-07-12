@@ -22,9 +22,9 @@
 #ifndef MBSOLVE_SOLVER_OPENMP_2LVL_PC_H
 #define MBSOLVE_SOLVER_OPENMP_2LVL_PC_H
 
-#include <copy_list_entry_int.hpp>
 #include <solver.hpp>
 #include <internal/common_fdtd_2lvl.hpp>
+#include <internal/copy_list_entry.hpp>
 
 namespace mbsolve {
 

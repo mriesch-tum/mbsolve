@@ -162,7 +162,7 @@ makestep(real *d, real *gh, real *ge, real *d_new, real *gh_new, real *ge_new,
                 if ((gidx >= pos) && (idx >= OL) && (idx < OL + threads) &&
                     (gidx < pos + l_copy_list[k].get_cols())) {
                     int off_r =
-                        l_copy_list[k].get_scratch_real_offset(n * OL + i,
+                        l_copy_list[k].get_offset_scratch_real(n * OL + i,
                                                                gidx - pos);
                     scratch[off_r] = src_real;
                 }
@@ -267,7 +267,7 @@ solver_cuda_2lvl_pc_red::solver_cuda_2lvl_pc_red
     unsigned int scratch_size = 0;
     for (const auto& rec : scen->get_records()) {
         /* create copy list entry */
-        copy_list_entry entry(rec, scen);
+        copy_list_entry entry(rec, scen, scratch_size);
 
         /* add result to solver */
         m_results.push_back(entry.get_result());
@@ -275,46 +275,21 @@ solver_cuda_2lvl_pc_red::solver_cuda_2lvl_pc_red
         /* calculate scratch size */
         scratch_size += entry.get_size();
 
-        /* TODO: make more generic? */
-        /* TODO: move to parser in record class */
-        /* add source address to copy list entry */
-        if (rec->get_name() == "inv12") {
-            //entry.set_real(&m_d[0]);
-            entry.m_dev.m_type = record::type::inversion;
-        } else if (rec->get_name() == "d12") {
-            //entry.set_imag(&m_d[scen->get_num_gridpoints() * 1]);
-            //entry.set_real(&m_d[scen->get_num_gridpoints() * 2]);
-
-            /* take imaginary part into account */
+       /* take imaginary part into account */
+        if (rec->is_complex()) {
             scratch_size += entry.get_size();
-        } else if (rec->get_name() == "e") {
-            //entry.set_real(m_e);
-            entry.m_dev.m_type = record::type::electric;
-        } else if (rec->get_name() == "h") {
-            /* TODO: numGridPoints + 1 ? */
-            //entry.set_real(m_h);
-        } else {
-            throw std::invalid_argument("Requested result is not available!");
         }
+
+        /* TODO check if result is available */
+        /*
+           throw std::invalid_argument("Requested result is not available!");
+        */
 
         m_copy_list.push_back(entry);
     }
 
     /* allocate scratchpad result memory */
     chk_err(cudaMalloc(&m_result_scratch, sizeof(real) * scratch_size));
-
-    /* add scratchpad addresses to copy list entries */
-    unsigned int scratch_offset = 0;
-    for (auto& cle : m_copy_list) {
-        cle.set_scratch_real(&m_result_scratch[scratch_offset], scratch_offset);
-        scratch_offset += cle.get_size();
-
-        if (cle.get_record()->get_name() == "d12") {
-            /* complex result */
-            cle.set_scratch_imag(&m_result_scratch[scratch_offset]);
-            scratch_offset += cle.get_size();
-        }
-    }
 
     /* set up sources */
     unsigned int source_data_size = scen->get_num_timesteps() *
@@ -350,7 +325,7 @@ solver_cuda_2lvl_pc_red::solver_cuda_2lvl_pc_red
 
     /* copy copy list entries to GPU constant memory */
     for (unsigned int i = 0; i < m_copy_list.size(); i++) {
-        chk_err(cudaMemcpyToSymbol(l_copy_list, &m_copy_list[i].m_dev,
+        chk_err(cudaMemcpyToSymbol(l_copy_list, &m_copy_list[i].get_dev(),
                                    sizeof(copy_list_entry_dev),
                                    sizeof(copy_list_entry_dev) * i));
     }
@@ -405,7 +380,8 @@ solver_cuda_2lvl_pc_red::run() const
     /* bulk copy results into result classes */
     for (const auto& cle : m_copy_list) {
         chk_err(cudaMemcpy(cle.get_result()->get_data_real_raw(),
-                           cle.get_scratch_real(0, 0),
+                           m_result_scratch +
+                           cle.get_offset_scratch_real(0, 0),
                            cle.get_size() * sizeof(real),
                            cudaMemcpyDeviceToHost));
         if (cle.is_complex()) {

@@ -24,7 +24,7 @@
 
 #include <cuda.h>
 #include <internal/common_fdtd_2lvl.hpp>
-#include <copy_list_entry_int.hpp>
+#include <internal/copy_list_entry.hpp>
 #include <solver_int.hpp>
 
 namespace mbsolve {

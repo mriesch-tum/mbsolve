@@ -49,14 +49,10 @@ private:
 
     real m_interval;
 
-public:
-    record(const std::string& name, real interval = 0.0,
-           real position = -1.0) :
-        m_name(name), m_interval(interval), m_position(position)
-    {
+    bool m_is_complex;
 
-        /* TODO: parse name to type and indices */
-    }
+public:
+    record(const std::string& name, real interval = 0.0, real position = -1.0);
 
     const std::string& get_name() const { return m_name; }
 
@@ -69,6 +65,8 @@ public:
     real get_position() const { return m_position; }
 
     real get_interval() const { return m_interval; }
+
+    bool is_complex() const { return m_is_complex; }
 };
 
 }

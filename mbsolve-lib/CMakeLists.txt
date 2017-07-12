@@ -6,6 +6,7 @@ include_directories(include/)
 add_library(mbsolve-lib SHARED
   src/device.cpp
   src/material.cpp
+  src/record.cpp
   src/result.cpp
   src/scenario.cpp
   src/solver.cpp

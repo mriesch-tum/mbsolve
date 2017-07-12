@@ -19,45 +19,39 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_CUDA_COMMON_H
-#define MBSOLVE_SOLVER_CUDA_COMMON_H
-
 #include <stdexcept>
-#include <string>
-#include <cuda.h>
-#include <internal/common_fdtd_2lvl.hpp>
-#include <internal/copy_list_entry.hpp>
+#include <record.hpp>
 
 namespace mbsolve {
 
-const unsigned int MB_CUDA_MAX_CLE = 32;
-
-const unsigned int MB_CUDA_MAX_MATERIALS = 32;
-
-const unsigned int MB_CUDA_MAX_SOURCES = 32;
-
-/* TODO split into different headers for different level types? */
-extern __device__ __constant__
-sim_constants_2lvl l_sim_consts[MB_CUDA_MAX_MATERIALS];
-
-extern __device__ __constant__
-sim_source l_sim_sources[MB_CUDA_MAX_SOURCES];
-
-/* copy list in constant GPU memory */
-extern __device__ __constant__
-copy_list_entry_dev l_copy_list[MB_CUDA_MAX_CLE];
-
-extern __global__ void
-init_memory(real *d, real *e, real *h, unsigned int *indices);
-
-static inline void chk_err(cudaError_t code)
+record::record(const std::string& name, real interval, real position) :
+    m_name(name), m_interval(interval), m_position(position)
 {
-    if (code != cudaSuccess) {
-	throw std::runtime_error(std::string("CUDA: ") +
-				 cudaGetErrorString(code));
+    /* type of requested result? */
+    switch (m_name[0]) {
+    case 'e':
+        m_type = type::electric;
+        break;
+    case 'h':
+        m_type = type::magnetic;
+        break;
+    case 'd':
+        m_type = type::density;
+        break;
+    case 'i':
+        m_type = type::inversion;
+        break;
+    default:
+        throw std::invalid_argument("Unknown record type");
+        break;
     }
-}
+
+    /* TODO parse numbers to identify e.g. density matrix entries */
+
+
+    /* complex quantity? only off-diagonal density matrix entries */
+    m_is_complex = (m_type == type::density) && (m_row != m_col);
 
 }
 
-#endif
+}
