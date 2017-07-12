@@ -7,8 +7,8 @@ project(solver-cuda)
 include_directories(../mbsolve-lib/include/ include/)
 #include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 
-# TODO: arch as build option?
-list(APPEND CUDA_NVCC_FLAGS -arch=sm_35; --std=c++11; -Xcompiler -fPIC)
+# TODO: arch as build option?-arch=sm_35;
+list(APPEND CUDA_NVCC_FLAGS --std=c++11; -Xcompiler -fPIC)
 #list(APPEND CUDA_NVCC_FLAGS -rdc=true)
 set(CUDA_SEPARABLE_COMPILATION ON)
 
