@@ -321,7 +321,7 @@ solver_int(dev, scen)
     }
 
     /* copy indices to GPU */
-    chk_err(cudaMemcpy(m_source_data, source_data, sizeof(unsigned int) *
+    chk_err(cudaMemcpy(m_source_data, source_data, sizeof(real) *
                        source_data_size, cudaMemcpyHostToDevice));
     delete[] source_data;
 

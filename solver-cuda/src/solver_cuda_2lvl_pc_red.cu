@@ -314,7 +314,7 @@ solver_cuda_2lvl_pc_red::solver_cuda_2lvl_pc_red
     }
 
     /* copy indices to GPU */
-    chk_err(cudaMemcpy(m_source_data, source_data, sizeof(unsigned int) *
+    chk_err(cudaMemcpy(m_source_data, source_data, sizeof(real) *
                        source_data_size, cudaMemcpyHostToDevice));
     delete[] source_data;
 
