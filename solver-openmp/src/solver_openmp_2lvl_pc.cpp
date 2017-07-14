@@ -52,17 +52,21 @@ solver_int(dev, scen)
     /* determine simulation settings */
     init_fdtd_simulation(dev, scen, 0.5);
 
+    unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
+    unsigned int num_timesteps = m_scenario->get_num_timesteps();
+
     /* set up simulaton constants */
     std::map<std::string, unsigned int> id_to_idx;
     m_sim_consts = init_sim_constants(dev, scen, id_to_idx);
 
     /* allocate data arrays */
-    m_inv = new real[scen->get_num_gridpoints()];
-    m_dm12r = new real[scen->get_num_gridpoints()];
-    m_dm12i = new real[scen->get_num_gridpoints()];
-    m_h = new real[scen->get_num_gridpoints() + 1];
-    m_e = new real[scen->get_num_gridpoints()];
-    m_mat_indices = new unsigned int[scen->get_num_gridpoints()];
+    m_inv = (real *) mb_aligned_alloc(sizeof(real) * num_gridpoints);
+    m_dm12r = (real *) mb_aligned_alloc(sizeof(real) * num_gridpoints);
+    m_dm12i = (real *) mb_aligned_alloc(sizeof(real) * num_gridpoints);
+    m_h = (real *) mb_aligned_alloc(sizeof(real) * (num_gridpoints + 1));
+    m_e = (real *) mb_aligned_alloc(sizeof(real) * num_gridpoints);
+    m_mat_indices = (unsigned int *)
+        mb_aligned_alloc(sizeof(unsigned int) * num_gridpoints);
 
     /* set up results and transfer data structures */
     unsigned int scratch_size = 0;
@@ -90,7 +94,7 @@ solver_int(dev, scen)
     }
 
     /* allocate scratchpad result memory */
-    m_result_scratch = new real[scratch_size];
+    m_result_scratch = (real *) mb_aligned_alloc(sizeof(real) * scratch_size);
     m_scratch_size = scratch_size;
 
     /* create source data */
@@ -130,9 +134,6 @@ solver_int(dev, scen)
 
         l_mat_indices[i] = mat_idx;
     }
-
-    unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
-    unsigned int num_timesteps = m_scenario->get_num_timesteps();
 
     /* initialize arrays in parallel */
 #ifndef XEON_PHI_OFFLOAD
@@ -216,13 +217,14 @@ solver_openmp_2lvl_pc::~solver_openmp_2lvl_pc()
     delete[] l_sim_sources;
 #endif
 
-    delete[] m_h;
-    delete[] m_e;
-    delete[] m_inv;
-    delete[] m_dm12r;
-    delete[] m_dm12i;
-    delete[] m_mat_indices;
-    delete[] m_result_scratch;
+    mb_aligned_free(m_h);
+    mb_aligned_free(m_e);
+    mb_aligned_free(m_inv);
+    mb_aligned_free(m_dm12r);
+    mb_aligned_free(m_dm12i);
+    mb_aligned_free(m_mat_indices);
+    mb_aligned_free(m_result_scratch);
+
     delete[] m_source_data;
 }
 
@@ -254,6 +256,14 @@ solver_openmp_2lvl_pc::run() const
 #endif
 #pragma omp parallel
         {
+            __mb_assume_aligned(m_e);
+            __mb_assume_aligned(m_h);
+            __mb_assume_aligned(m_inv);
+            __mb_assume_aligned(m_dm12r);
+            __mb_assume_aligned(m_dm12i);
+            __mb_assume_aligned(m_mat_indices);
+            __mb_assume_aligned(m_result_scratch);
+
             /* main loop */
             for (int n = 0; n < num_timesteps; n++) {
                 /* update dm and e in parallel */
