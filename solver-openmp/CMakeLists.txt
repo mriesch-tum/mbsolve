@@ -9,10 +9,20 @@ find_package(Eigen3 REQUIRED)
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-add_library(solver-openmp SHARED src/solver_openmp_2lvl_pc.cpp
+# solvers that support Xeon Phi offloading
+set(SOLVER_OPENMP_SRCS
+  src/solver_openmp_2lvl_pc.cpp
   src/solver_openmp_2lvl_pc_red.cpp
-  src/solver_openmp_2lvl_os.cpp
 )
+
+# solvers without Xeon Phi support
+if(NOT ARCH STREQUAL "PHI")
+  list(APPEND SOLVER_OPENMP_SRCS
+    src/solver_openmp_2lvl_os.cpp
+  )
+endif()
+
+add_library(solver-openmp SHARED ${SOLVER_OPENMP_SRCS})
 
 set_property(TARGET solver-openmp PROPERTY CXX_STANDARD 11)
 
