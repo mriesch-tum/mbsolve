@@ -20,7 +20,7 @@ The project consists of the following components:
 
 - writer-matlab: Writes the results into the MATLAB file format.
 
-<img src="doc/svg/mbsolve_overview.svg" alt="mbsolve overview" width="500"/>
+<img src="doc/svg/mbsolve_overview.png" alt="mbsolve overview" width="500"/>
 
 All libraries feature a Python interface and can be used conveniently from Python scripts, Jupyter notebooks etc. See tools/python for examples.
 
