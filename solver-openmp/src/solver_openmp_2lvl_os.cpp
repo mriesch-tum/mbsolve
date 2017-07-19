@@ -259,10 +259,16 @@ solver_openmp_2lvl_os::run() const
                   }
               }
 
-              /* update dm in parallel */
+              /* update h and dm in parallel */
+              //#pragma omp for simd schedule(static)
 #pragma omp for schedule(static)
               for (int i = 0; i < m_scenario->get_num_gridpoints(); i++) {
                   unsigned int mat_idx = m_mat_indices[i];
+
+                  if (i > 0) {
+                      m_h[i] += m_sim_consts[mat_idx].M_CH *
+                          (m_e[i] - m_e[i - 1]);
+                  }
 
                   Eigen::Matrix3d prop_U1;
                   prop_U1 = (m_sim_consts[mat_idx].L_1E * m_e[i]).exp();
@@ -272,15 +278,7 @@ solver_openmp_2lvl_os::run() const
 
                   /* TODO initial/equilibrium value? */
                   /* ( - m_sim_consts[mat_idx].equi_inv)); */
-              }
 
-              /* update h in parallel */
-              //#pragma omp for simd schedule(static)
-#pragma omp for schedule(static)
-              for (int i = 1; i < m_scenario->get_num_gridpoints(); i++) {
-                  unsigned int mat_idx = m_mat_indices[i - 1];
-
-                  m_h[i] += m_sim_consts[mat_idx].M_CH * (m_e[i] - m_e[i - 1]);
               }
 
               /* apply boundary condition */
