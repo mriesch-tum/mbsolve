@@ -48,6 +48,7 @@ public:
     /* operator splitting */
     Eigen::Matrix3d prop_U02;
     Eigen::Matrix3d L_1E;
+    Eigen::Vector3d equi_corr;
 
     /* simulation constants */
     real d_x_inv;

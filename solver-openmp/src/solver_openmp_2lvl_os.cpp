@@ -86,6 +86,10 @@ solver_int(dev, scen)
         L_0(1, 0) = - materials[i].w12;
         m_sim_consts[i].prop_U02 = (L_0 * materials[i].d_t/2).exp();
 
+        Eigen::Vector3d equi_rho(0, 0, materials[i].equi_inv);
+        m_sim_consts[i].equi_corr = (Eigen::Matrix3d::Identity() -
+                                     m_sim_consts[i].prop_U02) * equi_rho;
+
         Eigen::Matrix3d U_1;
         U_1(1, 2) = + 1.0;
         U_1(2, 1) = - 4.0;
@@ -273,12 +277,20 @@ solver_openmp_2lvl_os::run() const
                   Eigen::Matrix3d prop_U1;
                   prop_U1 = (m_sim_consts[mat_idx].L_1E * m_e[i]).exp();
 
-                  m_d[i] = m_sim_consts[mat_idx].prop_U02 * prop_U1 *
-                      m_sim_consts[mat_idx].prop_U02 * m_d[i];
+                  Eigen::Vector3d temp = m_d[i];
 
-                  /* TODO initial/equilibrium value? */
-                  /* ( - m_sim_consts[mat_idx].equi_inv)); */
+                  /* first time-independent half-step */
+                  temp = m_sim_consts[mat_idx].prop_U02 * temp
+                      + m_sim_consts[mat_idx].equi_corr;
 
+                  /* time-dependent step */
+                  temp = prop_U1 * temp;
+
+                  /* second time-independent half-step */
+                  temp = m_sim_consts[mat_idx].prop_U02 * temp
+                      + m_sim_consts[mat_idx].equi_corr;
+
+                  m_d[i] = temp;
               }
 
               /* apply boundary condition */
