@@ -24,6 +24,7 @@
 #include <omp.h>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <solver_openmp_2lvl_os.hpp>
+#include <common_openmp.hpp>
 
 namespace mbsolve {
 
@@ -76,7 +77,6 @@ solver_int(dev, scen)
     /* prepare operator splitting */
     for (int i = 0; i < materials.size(); i++) {
 
-
         Eigen::Matrix3d L_0;
 
         L_0(0, 0) = - materials[i].gamma12;
@@ -109,11 +109,13 @@ solver_int(dev, scen)
     }
 
     /* allocate data arrays */
-    m_d = new Eigen::Vector3d[scen->get_num_gridpoints()];
-
-    m_h = new real[scen->get_num_gridpoints() + 1];
-    m_e = new real[scen->get_num_gridpoints()];
-    m_mat_indices = new unsigned int[scen->get_num_gridpoints()];
+    m_d = (Eigen::Vector3d *) mb_aligned_alloc(sizeof(Eigen::Vector3d) *
+                                               scen->get_num_gridpoints());
+    m_h = (real *) mb_aligned_alloc(sizeof(real) *
+                                    (scen->get_num_gridpoints() + 1));
+    m_e = (real *) mb_aligned_alloc(sizeof(real) * scen->get_num_gridpoints());
+    m_mat_indices = (unsigned int *)
+        mb_aligned_alloc(sizeof(unsigned int) * scen->get_num_gridpoints());
 
     /* set up indices array and initialize data arrays */
 #pragma omp parallel for schedule(static)
@@ -171,7 +173,7 @@ solver_int(dev, scen)
     }
 
     /* allocate scratchpad result memory */
-    m_result_scratch = new real[scratch_size];
+    m_result_scratch = (real *) mb_aligned_alloc(sizeof(real) * scratch_size);
 
     /* create source data */
     m_source_data = new real[scen->get_num_timesteps() *
@@ -196,11 +198,11 @@ solver_int(dev, scen)
 
 solver_openmp_2lvl_os::~solver_openmp_2lvl_os()
 {
-    delete[] m_h;
-    delete[] m_e;
-    delete[] m_d;
-    delete[] m_mat_indices;
-    delete[] m_result_scratch;
+    mb_aligned_free(m_h);
+    mb_aligned_free(m_e);
+    mb_aligned_free(m_d);
+    mb_aligned_free(m_mat_indices);
+    mb_aligned_free(m_result_scratch);
     delete[] m_source_data;
 }
 
@@ -282,6 +284,10 @@ solver_openmp_2lvl_os::run() const
 
                   m_h[i] += m_sim_consts[mat_idx].M_CH * (m_e[i] - m_e[i - 1]);
               }
+
+              /* apply boundary condition */
+              m_h[0] = 0;
+              m_h[m_scenario->get_num_gridpoints()] = 0;
 
               /* save results to scratchpad in parallel */
               for (const auto& cle : m_copy_list) {
