@@ -91,12 +91,10 @@ solver_int(dev, scen)
         U_1(2, 1) = - 4.0;
         m_sim_consts[i].L_1E = U_1 * materials[i].d_t * materials[i].d12;
 
-        /* adjust M_CP */
-        m_sim_consts[i].M_CP = materials[i].M_CP * 0.5;
-
         /* copy other constants */
         m_sim_consts[i].M_CE = materials[i].M_CE;
         m_sim_consts[i].M_CH = materials[i].M_CH;
+        m_sim_consts[i].M_CP = materials[i].M_CP;
         m_sim_consts[i].sigma = materials[i].sigma;
         m_sim_consts[i].w12 = materials[i].w12;
         m_sim_consts[i].d12 = materials[i].d12;
