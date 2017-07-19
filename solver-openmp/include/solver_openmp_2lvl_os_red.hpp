@@ -19,35 +19,30 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_OPENMP_2LVL_OS_H
-#define MBSOLVE_SOLVER_OPENMP_2LVL_OS_H
+#ifndef MBSOLVE_SOLVER_OPENMP_2LVL_OS_RED_H
+#define MBSOLVE_SOLVER_OPENMP_2LVL_OS_RED_H
 
-#include <Eigen/Core>
+#include <iostream>
+#include <omp.h>
 #include <solver.hpp>
 #include <internal/common_fdtd_2lvl.hpp>
 #include <internal/copy_list_entry.hpp>
 
 namespace mbsolve {
 
-/**
- * OpenMP solver for 2-lvl systems using the FDTD scheme and the operator
- * splitting approach.
- * \ingroup MBSOLVE_SOLVER_OPENMP
- */
-class solver_openmp_2lvl_os : public solver_int
+class solver_openmp_2lvl_os_red : public solver_int
 {
 public:
-    solver_openmp_2lvl_os(std::shared_ptr<const device> dev,
-                          std::shared_ptr<scenario> scen);
+    solver_openmp_2lvl_os_red(std::shared_ptr<const device> dev,
+                              std::shared_ptr<scenario> scen);
 
-    ~solver_openmp_2lvl_os();
+    ~solver_openmp_2lvl_os_red();
 
     const std::string& get_name() const;
 
     void run() const;
 
 private:
-
     /* TODO: rule of three. make copy constructor etc. private?
      * or implement correctly
      */
@@ -59,18 +54,27 @@ private:
      * m_d[i][1] ... imag part of rho12
      * m_d[i][2] ... population inversion rho11 - rho22
      */
-    Eigen::Vector3d *m_d;
+    Eigen::Vector3d **m_d;
 
-    real *m_h;
-    real *m_e;
+    real **m_h;
+    real **m_e;
 
     real *m_result_scratch;
 
+    unsigned int m_scratch_size;
+
     real *m_source_data;
 
-    unsigned int *m_mat_indices;
+    unsigned int **m_mat_indices;
 
-    //std::vector<sim_constants_2lvl> m_sim_consts;
+#ifdef XEON_PHI_OFFLOAD
+    copy_list_entry_dev *l_copy_list;
+#else
+    copy_list_entry *l_copy_list;
+#endif
+    sim_source *l_sim_sources;
+    sim_constants_2lvl_os *l_sim_consts;
+
     std::vector<sim_constants_2lvl_os> m_sim_consts;
 
     std::vector<sim_source> m_sim_sources;

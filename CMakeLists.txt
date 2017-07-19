@@ -21,6 +21,9 @@ option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
 option(WITH_PYTHON "with(out) Python interface" ON)
 option(WITH_CPPTOOL "with(out) C++ tool" ON)
 
+# Eigen library
+find_package(Eigen3 REQUIRED)
+
 # Python interface
 if(WITH_PYTHON)
   find_package(SWIG 2.0)

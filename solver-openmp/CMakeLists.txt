@@ -4,8 +4,6 @@ project(solver-openmp)
 string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
-find_package(Eigen3 REQUIRED)
-
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
@@ -19,6 +17,7 @@ set(SOLVER_OPENMP_SRCS
 if(NOT ARCH STREQUAL "PHI")
   list(APPEND SOLVER_OPENMP_SRCS
     src/solver_openmp_2lvl_os.cpp
+    src/solver_openmp_2lvl_os_red.cpp
   )
 endif()
 

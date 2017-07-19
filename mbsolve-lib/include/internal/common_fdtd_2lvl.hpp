@@ -23,6 +23,7 @@
 #define MBSOLVE_COMMON_FDTD_2LVL
 
 #include <memory>
+#include <Eigen/Core>
 #include <types.hpp>
 #include <device.hpp>
 #include <scenario.hpp>
@@ -60,6 +61,35 @@ public:
     real inversion_init;
 };
 
+class sim_constants_2lvl_os
+{
+public:
+    /* electromagnetic constants */
+    real M_CE;
+    real M_CH;
+    real M_CP;
+    real sigma;
+
+    /* quantum mechanical constants */
+    real w12;
+    real d12;
+    real tau1;
+    real gamma12;
+    real equi_inv;
+
+    /* operator splitting */
+    Eigen::Matrix3d prop_U02;
+    Eigen::Matrix3d L_1E;
+    Eigen::Vector3d equi_corr;
+
+    /* simulation constants */
+    real d_x_inv;
+    real d_t;
+
+    /* initialization constants */
+    real inversion_init;
+};
+
 /**
  * This class represents a source in concentrated form.
  * Use only internally to implement solvers.
@@ -87,4 +117,3 @@ init_sim_constants(std::shared_ptr<const device> dev,
 }
 
 #endif
-

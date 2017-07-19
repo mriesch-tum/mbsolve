@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 project(mbsolve-lib)
 
 include_directories(include/)
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_library(mbsolve-lib SHARED
   src/device.cpp
