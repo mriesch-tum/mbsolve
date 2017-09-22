@@ -25,6 +25,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <Eigen/Dense>
 #include <types.hpp>
 
 namespace mbsolve {
@@ -133,6 +134,69 @@ public:
      * Get equilibrium population inversion.
      */
     real get_equilibrium_inversion() const { return m_equi_inv; }
+};
+
+/**
+ * Quantum mechanical description of a 3-level system.
+ * \ingroup MBSOLVE_LIB
+ */
+class qm_desc_3lvl : public qm_description
+{
+private:
+    /* N x N Hamiltonian */
+    Eigen::Matrix<real, 3, 3> m_h;
+
+    /* N x N dipole moment operator */
+    Eigen::Matrix<real, 3, 3> m_u;
+
+    /* N^2 x N^2 Lindblad superoperator */
+    Eigen::Matrix<real, 9, 9> m_g;
+
+public:
+
+    explicit qm_desc_3lvl(real carrier_density,
+                          const Eigen::Matrix<real, 3, 3>& hamiltonian,
+                          const Eigen::Matrix<real, 3, 3>& dipole_op,
+                          const Eigen::Matrix<real, 9, 9>& lindblad_op) :
+        qm_description(carrier_density),
+        m_h(hamiltonian), m_u(dipole_op), m_g(lindblad_op) { }
+
+
+    const Eigen::Matrix<real, 3, 3>& get_hamiltonian() const { return m_h; }
+
+    const Eigen::Matrix<real, 3, 3>& get_dipole_op() const { return m_u; }
+
+    const Eigen::Matrix<real, 9, 9>& get_lindblad_op() const { return m_g; }
+};
+
+/**
+ * Quantum mechanical description of a N-level system.
+ * \ingroup MBSOLVE_LIB
+ */
+class qm_desc_nlvl : public qm_description
+{
+private:
+    /* N x N Hamiltonian */
+    /* TODO: matrix */
+
+    /* N x N dipole moment operator */
+    /* TODO: matrix */
+
+    /* N^2 x N^2 Lindblad superoperator */
+    /* TODO: matrix */
+
+
+public:
+    explicit qm_desc_nlvl(real carrier_density) :
+        qm_description(carrier_density) { }
+
+    /* TODO: either this way, or make this the base class */
+    /* TODO: base class for all descriptions or only the _Nlvl ones? */
+    /* TODO: level count as template argument? */
+    //qm_desc_nlvl(const qm_desc_2lvl& desc) { }
+
+
+
 };
 
 /**

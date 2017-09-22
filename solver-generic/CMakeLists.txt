@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 project(solver-generic)
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_library(solver-generic SHARED src/solver_generic.cpp)
 set_property(TARGET solver-generic PROPERTY CXX_STANDARD 11)

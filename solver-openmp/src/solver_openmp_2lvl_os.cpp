@@ -22,6 +22,8 @@
 #include <iostream>
 #include <cmath>
 #include <omp.h>
+#include <Eigen/Eigenvalues>
+#include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <solver_openmp_2lvl_os.hpp>
 #include <common_openmp.hpp>
@@ -90,15 +92,10 @@ solver_int(dev, scen)
         m_sim_consts[i].equi_corr = (Eigen::Matrix3d::Identity() -
                                      m_sim_consts[i].prop_U02) * equi_rho;
 
-        Eigen::Matrix3d U_1;
-        U_1(1, 2) = + 1.0;
-        U_1(2, 1) = - 4.0;
-        m_sim_consts[i].L_1E = U_1 * materials[i].d_t * materials[i].d12;
-
         /* copy other constants */
         m_sim_consts[i].M_CE = materials[i].M_CE;
         m_sim_consts[i].M_CH = materials[i].M_CH;
-        m_sim_consts[i].M_CP = materials[i].M_CP;
+        m_sim_consts[i].M_CP = 0.5 * materials[i].M_CP;
         m_sim_consts[i].sigma = materials[i].sigma;
         m_sim_consts[i].w12 = materials[i].w12;
         m_sim_consts[i].d12 = materials[i].d12;
@@ -274,8 +271,27 @@ solver_openmp_2lvl_os::run() const
                           (m_e[i] - m_e[i - 1]);
                   }
 
+                  real arg = 2.0 * m_sim_consts[mat_idx].d_t *
+                      m_sim_consts[mat_idx].d12 * m_e[i];
+                  real s = sin(arg);
+                  real c = cos(arg);
+
                   Eigen::Matrix3d prop_U1;
-                  prop_U1 = (m_sim_consts[mat_idx].L_1E * m_e[i]).exp();
+                  prop_U1(0, 0) = + 1.0;
+                  prop_U1(1, 1) = c;
+                  prop_U1(2, 2) = c;
+                  prop_U1(1, 2) = s;
+                  prop_U1(2, 1) = -s;
+
+                  //Eigen::SparseMatrix<double> gustav(4, 4);
+
+                  //Eigen::GeneralizedEigenSolver<Eigen::SparseMatrix<double> > ges;
+
+                  Eigen::EigenSolver<Eigen::MatrixXf> ges;
+                  Eigen::MatrixXf gustav = Eigen::MatrixXf::Random(4,4);
+                  ges.compute(gustav, true);
+                  //std::cout << "The (complex) numerators of the generalzied eigenvalues are: " << ges.alphas().transpose() << std::endl;
+
 
                   Eigen::Vector3d temp = m_d[i];
 

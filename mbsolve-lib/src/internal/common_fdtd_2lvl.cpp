@@ -22,7 +22,7 @@
 #include <stdexcept>
 #include <internal/common_fdtd_2lvl.hpp>
 
-namespace mbsolve{
+namespace mbsolve {
 
 std::vector<sim_constants_2lvl>
 init_sim_constants(std::shared_ptr<const device> dev,

@@ -19,23 +19,29 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
+#define EIGEN_DONT_PARALLELIZE
+#define EIGEN_NO_MALLOC
+
+#include <Eigen/Eigenvalues>
+#include <Eigen/Sparse>
+#include <unsupported/Eigen/MatrixFunctions>
 #include <common_openmp.hpp>
-#include <solver_openmp_2lvl_pc_red.hpp>
+#include <solver_openmp_3lvl_os_red.hpp>
 
-namespace mbsolve{
+namespace mbsolve {
 
-static solver_factory<solver_openmp_2lvl_pc_red> factory("openmp-2lvl-pc-red");
+static solver_factory<solver_openmp_3lvl_os_red> factory("openmp-3lvl-os-red");
 
 /* redundant calculation overlap */
 #ifdef XEON_PHI_OFFLOAD
 __mb_on_device const unsigned int OL = 32;
 #else
-const unsigned int OL = 128;
+const unsigned int OL = 1;
 #endif
 
-solver_openmp_2lvl_pc_red::solver_openmp_2lvl_pc_red
+solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
 (std::shared_ptr<const device> dev, std::shared_ptr<scenario> scen) :
-solver_int(dev, scen)
+    solver_int(dev, scen)
 {
     /* TODO: scenario, device sanity check */
 
@@ -44,20 +50,165 @@ solver_int(dev, scen)
      * overlap
      */
 
+    Eigen::initParallel();
+    Eigen::setNbThreads(1);
+
+    if (dev->get_regions().size() == 0) {
+        throw std::invalid_argument("No regions in device!");
+    }
+
     /* determine simulation settings */
     init_fdtd_simulation(dev, scen, 0.5);
 
+
+    /* set up SU(N) generators u -- real part off-diagonal elements */
+    for (int k = 0; k < num_lvl; k++) {
+        for (int j = 0; j < k; j++) {
+            Eigen::Matrix<complex, num_lvl, num_lvl> g;
+            g(j, k) = 1;
+            g(k, j) = 1;
+            m_generators.push_back(g);
+        }
+    }
+
+    /* set up SU(N) generators v -- imag part off-diagonal elements */
+    for (int k = 0; k < num_lvl; k++) {
+        for (int j = 0; j < k; j++) {
+            Eigen::Matrix<complex, num_lvl, num_lvl> g;
+            g(j, k) = complex(0, -1);
+            g(k, j) = complex(0, +1);
+            m_generators.push_back(g);
+        }
+    }
+
+    /* set up SU(N) generators w -- main-diagonal elements */
+    for (int l = 0; l < num_lvl - 1; l++) {
+        Eigen::Matrix<complex, num_lvl, num_lvl> g;
+        int j = 0;
+
+        for (j = 0; j <= l; j++) {
+            g(j, j) = 1.0;
+        }
+        g(j, j) = -(l + 1);
+
+        g *= -sqrt(2.0/((l + 1) * (l + 2)));
+        m_generators.push_back(g);
+    }
+    std::cout << m_generators[0] << std::endl;
+    std::cout << m_generators[1] << std::endl;
+    std::cout << m_generators[2] << std::endl;
+    std::cout << m_generators[3] << std::endl;
+    std::cout << m_generators[4] << std::endl;
+    std::cout << m_generators[5] << std::endl;
+    std::cout << m_generators[6] << std::endl;
+    std::cout << m_generators[7] << std::endl;
+
+
     /* set up simulaton constants */
     std::map<std::string, unsigned int> id_to_idx;
-    m_sim_consts = init_sim_constants(dev, scen, id_to_idx);
+    unsigned int j = 0;
+
+    for (const auto& mat_id : dev->get_used_materials()) {
+        sim_constants_3lvl_os sc;
+
+        auto mat = material::get_from_library(mat_id);
+
+        /* factor for electric field update */
+        sc.M_CE = scen->get_timestep_size()/
+            (EPS0 * mat->get_rel_permittivity());
+
+        /* factor for magnetic field update */
+        sc.M_CH = scen->get_timestep_size()/
+            (MU0 * mat->get_rel_permeability() * scen->get_gridpoint_size());
+
+        /* convert loss term to conductivity */
+        sc.sigma = sqrt(EPS0 * mat->get_rel_permittivity()/
+                        (MU0 * mat->get_rel_permeability()))
+            * mat->get_losses() * 2.0;
+
+        /* active region in 3-lvl description? */
+        /* TODO: remove ugly dynamic cast to qm_desc_3lvl, allow other
+         * representations? */
+        std::shared_ptr<qm_desc_3lvl> qm =
+            std::dynamic_pointer_cast<qm_desc_3lvl>(mat->get_qm());
+        if (qm) {
+            /* factor for macroscopic polarization */
+            sc.M_CP = -HBAR * mat->get_overlap_factor() *
+                qm->get_carrier_density();
+
+            /* 3-lvl quantum mechanical system */
+
+
+            // num_adj, num_lvl
+
+            // access generator matrices
+            // determine time-independent part in adjoint representation
+            Eigen::Matrix<real, num_adj, num_adj> L_0;
+
+            // determine constant propagator
+            Eigen::Matrix<real, num_adj, num_adj> A_0;
+
+            // determine dipole operator in adjoint representation
+            Eigen::Matrix<real, num_adj, num_adj> U;
+
+            //U <<
+
+            // diagonalize dipole operator
+            Eigen::EigenSolver<Eigen::Matrix<real, num_adj, num_adj> > es(U);
+
+            // caution: normalize eigenvectors
+
+            // update B1, B2
+            sc.B1 = A_0 * es.eigenvectors();
+            sc.B2 = es.eigenvectors().transpose() * A_0;
+
+            // update L
+            sc.L = es.eigenvalues();
+
+            std::cout << sc.L << std::endl;
+
+            //m_sim_consts[i].prop_U02 = (L_0 * materials[i].d_t/2).exp();
+
+            //Eigen::Vector3d equi_rho(0, 0, materials[i].equi_inv);
+            //m_sim_consts[i].equi_corr = (Eigen::Matrix3d::Identity() -
+            //                         m_sim_consts[i].prop_U02) * equi_rho;
+
+
+            /*sc.w12 = qm->get_transition_freq();
+              sc.d12 = qm->get_dipole_moment() * E0/HBAR;
+              sc.tau1 = qm->get_scattering_rate();
+              sc.gamma12 = qm->get_dephasing_rate();
+              sc.equi_inv = qm->get_equilibrium_inversion();
+
+              if (scen->get_dm_init_type() == scenario::lower_full) {
+              sc.inversion_init = -1.0;
+              } else if (scen->get_dm_init_type() == scenario::upper_full) {
+              sc.inversion_init = 1.0;
+              } else {
+
+              }*/
+        } else {
+            /* set all qm-related factors to zero */
+            sc.M_CP = 0.0;
+
+            //sc.equi_inv = 0.0;
+            //sc.inversion_init = 0.0;
+        }
+
+        /* simulation settings */
+        sc.d_x_inv = 1.0/scen->get_gridpoint_size();
+        sc.d_t = scen->get_timestep_size();
+
+        m_sim_consts.push_back(sc);
+        id_to_idx[mat->get_id()] = j;
+        j++;
+    }
 
     /* set up indices array and initialize data arrays */
     unsigned int P = omp_get_max_threads();
 
     std::cout << "Number of threads: " << P << std::endl;
-    m_inv = new real*[P];
-    m_dm12r = new real*[P];
-    m_dm12i = new real*[P];
+    m_d = new Eigen::Matrix<real, num_adj, 1>*[P];
     m_e = new real*[P];
     m_h = new real*[P];
     m_mat_indices = new unsigned int*[P];
@@ -74,9 +225,6 @@ solver_int(dev, scen)
                 break;
             }
         }
-
-        /* TODO handle region not found */
-
         l_mat_indices[i] = mat_idx;
     }
 
@@ -106,7 +254,7 @@ solver_int(dev, scen)
     }
 
     /* allocate scratchpad result memory */
-    m_result_scratch = new real[scratch_size];
+    m_result_scratch = (real *) mb_aligned_alloc(sizeof(real) * scratch_size);
     m_scratch_size = scratch_size;
 
     /* create source data */
@@ -147,7 +295,7 @@ solver_int(dev, scen)
     }
 
     /* prepare to offload simulation constants */
-    l_sim_consts = new sim_constants_2lvl[m_sim_consts.size()];
+    l_sim_consts = new sim_constants_2lvl_os[m_sim_consts.size()];
     for (unsigned int i = 0; i < m_sim_consts.size(); i++) {
         l_sim_consts[i] = m_sim_consts[i];
     }
@@ -166,7 +314,7 @@ solver_int(dev, scen)
     in(m_source_data:length(num_timesteps * num_sources) __mb_phi_create) \
     in(l_sim_sources:length(num_sources) __mb_phi_create)               \
     in(l_sim_consts:length(m_sim_consts.size()) __mb_phi_create)        \
-    inout(m_e,m_h,m_inv,m_dm12i,m_dm12r:length(P) __mb_phi_create)      \
+    inout(m_e,m_h,m_d:length(P) __mb_phi_create)                        \
     inout(m_mat_indices:length(P) __mb_phi_create)
     {
 #endif
@@ -181,9 +329,9 @@ solver_int(dev, scen)
             unsigned int size = chunk + 2 * OL;
 
 
-            m_inv[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-            m_dm12r[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-            m_dm12i[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
+            m_d[tid] = (Eigen::Matrix<real, num_adj, 1> *)
+                mb_aligned_alloc(size *
+                                 sizeof(Eigen::Matrix<real, num_adj, 1>));
             m_h[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
             m_e[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
             m_mat_indices[tid] = (unsigned int *)
@@ -205,36 +353,17 @@ solver_int(dev, scen)
 
             /* allocation */
             unsigned int size = chunk + 2 * OL;
-#if 0
-            real *t_inv = (real *) mb_aligned_alloc(size * sizeof(real));
-            real *t_dm12r = (real *) mb_aligned_alloc(size * sizeof(real));
-            real *t_dm12i = (real *) mb_aligned_alloc(size * sizeof(real));
-            real *t_h = (real *) mb_aligned_alloc(size * sizeof(real));
-            real *t_e = (real *) mb_aligned_alloc(size * sizeof(real));
-            unsigned int *t_mat_indices = (unsigned int *)
-                mb_aligned_alloc(size * sizeof(unsigned int));
 
-            m_inv[tid] = t_inv;
-            m_dm12r[tid] = t_dm12r;
-            m_dm12i[tid] = t_dm12i;
-            m_h[tid] = t_h;
-            m_e[tid] = t_e;
-            m_mat_indices[tid] = t_mat_indices;
-#endif
-
-            real *t_inv, *t_dm12i, *t_dm12r, *t_h, *t_e;
+            Eigen::Matrix<real, num_adj, 1> *t_d;
+            real *t_h, *t_e;
             unsigned int *t_mat_indices;
 
-            t_inv = m_inv[tid];
-            t_dm12i = m_dm12i[tid];
-            t_dm12r = m_dm12r[tid];
+            t_d = m_d[tid];
             t_h = m_h[tid];
             t_e = m_e[tid];
             t_mat_indices = m_mat_indices[tid];
 
-            __mb_assume_aligned(t_inv);
-            __mb_assume_aligned(t_dm12r);
-            __mb_assume_aligned(t_dm12i);
+            __mb_assume_aligned(t_d);
             __mb_assume_aligned(t_e);
             __mb_assume_aligned(t_h);
             __mb_assume_aligned(t_mat_indices);
@@ -244,13 +373,16 @@ solver_int(dev, scen)
                 if ((global_idx >= 0) && (global_idx < num_gridpoints)) {
                     unsigned int mat_idx = l_mat_indices[global_idx];
                     t_mat_indices[i] = mat_idx;
-                    t_inv[i] = l_sim_consts[mat_idx].inversion_init;
+
+                    /* TODO update */
+                    //t_d[i][2] = l_sim_consts[mat_idx].inversion_init;
                 } else {
                     t_mat_indices[i] = 0;
-                    t_inv[i] = 0.0;
+                    /* TODO update */
+                    //t_d[i][2] = 0.0;
                 }
-                t_dm12r[i] = 0.0;
-                t_dm12i[i] = 0.0;
+                t_d[i][0] = 0.0;
+                t_d[i][1] = 0.0;
                 t_e[i] = 0.0;
                 t_h[i] = 0.0;
             }
@@ -263,7 +395,7 @@ solver_int(dev, scen)
     delete[] l_mat_indices;
 }
 
-solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
+solver_openmp_3lvl_os_red::~solver_openmp_3lvl_os_red()
 {
     unsigned int P = omp_get_max_threads();
     unsigned int num_sources = m_sim_sources.size();
@@ -278,7 +410,7 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
     in(m_source_data:length(num_timesteps * num_sources) __mb_phi_delete) \
     in(l_sim_sources:length(num_sources) __mb_phi_delete)               \
     in(l_sim_consts:length(m_sim_consts.size()) __mb_phi_delete)        \
-    in(m_e,m_h,m_inv,m_dm12i,m_dm12r,m_mat_indices:length(P) __mb_phi_delete)
+    in(m_e,m_h,m_d,m_mat_indices:length(P) __mb_phi_delete)
     {
 #endif
 #pragma omp parallel
@@ -287,9 +419,7 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
 
             mb_aligned_free(m_h[tid]);
             mb_aligned_free(m_e[tid]);
-            mb_aligned_free(m_inv[tid]);
-            mb_aligned_free(m_dm12r[tid]);
-            mb_aligned_free(m_dm12i[tid]);
+            mb_aligned_free(m_d[tid]);
             mb_aligned_free(m_mat_indices[tid]);
         }
 #ifdef XEON_PHI_OFFLOAD
@@ -300,25 +430,23 @@ solver_openmp_2lvl_pc_red::~solver_openmp_2lvl_pc_red()
     delete[] l_sim_sources;
 #endif
 
-    delete[] m_result_scratch;
+    mb_aligned_free(m_result_scratch);
     delete[] m_source_data;
 
     delete[] m_h;
     delete[] m_e;
-    delete[] m_inv;
-    delete[] m_dm12r;
-    delete[] m_dm12i;
+    delete[] m_d;
     delete[] m_mat_indices;
 }
 
 const std::string&
-solver_openmp_2lvl_pc_red::get_name() const
+solver_openmp_3lvl_os_red::get_name() const
 {
     return factory.get_name();
 }
 
 void
-solver_openmp_2lvl_pc_red::run() const
+solver_openmp_3lvl_os_red::run() const
 {
     unsigned int P = omp_get_max_threads();
     unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
@@ -336,7 +464,7 @@ solver_openmp_2lvl_pc_red::run() const
     in(m_source_data:length(num_timesteps * num_sources) __mb_phi_use)  \
     in(l_sim_sources:length(num_sources) __mb_phi_use)                  \
     in(l_sim_consts:length(m_sim_consts.size()) __mb_phi_use)           \
-    in(m_e,m_h,m_inv,m_dm12i,m_dm12r,m_mat_indices:length(P) __mb_phi_use) \
+    in(m_e,m_h,m_d,m_mat_indices:length(P) __mb_phi_use)                \
     inout(m_result_scratch:length(m_scratch_size))
     {
 #endif
@@ -350,51 +478,43 @@ solver_openmp_2lvl_pc_red::run() const
             unsigned int size = chunk + 2 * OL;
 
             /* gather pointers */
-            real *t_inv, *t_dm12i, *t_dm12r, *t_h, *t_e;
+            Eigen::Matrix<real, num_adj, 1> *t_d;
+            real *t_h, *t_e;
             unsigned int *t_mat_indices;
 
-            t_inv = m_inv[tid];
-            t_dm12i = m_dm12i[tid];
-            t_dm12r = m_dm12r[tid];
+            t_d = m_d[tid];
             t_h = m_h[tid];
             t_e = m_e[tid];
             t_mat_indices = m_mat_indices[tid];
 
-            __mb_assume_aligned(t_inv);
-            __mb_assume_aligned(t_dm12r);
-            __mb_assume_aligned(t_dm12i);
+            __mb_assume_aligned(t_d);
             __mb_assume_aligned(t_e);
             __mb_assume_aligned(t_h);
             __mb_assume_aligned(t_mat_indices);
 
-            /* gather prev and next pointers from other threads */
-            real *n_inv, *n_dm12i, *n_dm12r, *n_h, *n_e;
-            real *p_inv, *p_dm12i, *p_dm12r, *p_h, *p_e;
+            __mb_assume_aligned(m_result_scratch);
 
-            __mb_assume_aligned(p_inv);
-            __mb_assume_aligned(p_dm12r);
-            __mb_assume_aligned(p_dm12i);
+            /* gather prev and next pointers from other threads */
+            Eigen::Matrix<real, num_adj, 1> *n_d, *p_d;
+            real *n_h, *n_e;
+            real *p_h, *p_e;
+
+            __mb_assume_aligned(p_d);
             __mb_assume_aligned(p_e);
             __mb_assume_aligned(p_h);
 
-            __mb_assume_aligned(n_inv);
-            __mb_assume_aligned(n_dm12r);
-            __mb_assume_aligned(n_dm12i);
+            __mb_assume_aligned(n_d);
             __mb_assume_aligned(n_e);
             __mb_assume_aligned(n_h);
 
             if (tid > 0) {
-                p_inv = m_inv[tid - 1];
-                p_dm12i = m_dm12i[tid - 1];
-                p_dm12r = m_dm12r[tid - 1];
+                p_d = m_d[tid - 1];
                 p_h = m_h[tid - 1];
                 p_e = m_e[tid - 1];
             }
 
             if (tid < P - 1) {
-                n_inv = m_inv[tid + 1];
-                n_dm12i = m_dm12i[tid + 1];
-                n_dm12r = m_dm12r[tid + 1];
+                n_d = m_d[tid + 1];
                 n_h = m_h[tid + 1];
                 n_e = m_e[tid + 1];
             }
@@ -405,9 +525,7 @@ solver_openmp_2lvl_pc_red::run() const
                 if (tid > 0) {
 #pragma ivdep
                     for (unsigned int i = 0; i < OL; i++) {
-                        t_inv[i] = p_inv[chunk_base + i];
-                        t_dm12r[i] = p_dm12r[chunk_base + i];
-                        t_dm12i[i] = p_dm12i[chunk_base + i];
+                        t_d[i] = p_d[chunk_base + i];
                         t_e[i] = p_e[chunk_base + i];
                         t_h[i] = p_h[chunk_base + i];
                     }
@@ -416,9 +534,7 @@ solver_openmp_2lvl_pc_red::run() const
                 if (tid < P - 1) {
 #pragma ivdep
                     for (unsigned int i = 0; i < OL; i++) {
-                        t_inv[OL + chunk_base + i] = n_inv[OL + i];
-                        t_dm12r[OL + chunk_base + i] = n_dm12r[OL + i];
-                        t_dm12i[OL + chunk_base + i] = n_dm12i[OL + i];
+                        t_d[OL + chunk_base + i] = n_d[OL + i];
                         t_e[OL + chunk_base + i] = n_e[OL + i];
                         t_h[OL + chunk_base + i] = n_h[OL + i];
                     }
@@ -429,61 +545,26 @@ solver_openmp_2lvl_pc_red::run() const
 
                 /* sub-loop */
                 for (unsigned int m = 0; m < OL; m++) {
-                    /* update dm and e */
-                    //
-#pragma omp simd aligned(t_inv, t_dm12r, t_dm12i, t_e, t_mat_indices : ALIGN)
+                    /* update e */
+#pragma omp simd aligned(t_d, t_e, t_mat_indices : ALIGN)
                     for (int i = m; i < size - m - 1; i++) {
                         // for (int i = 0; i < chunk + 2 * OL - 1; i++) {
                         int mat_idx = t_mat_indices[i];
 
-                        real inv_e = t_inv[i];
-                        real rho12r_e = t_dm12r[i];
-                        real rho12i_e = t_dm12i[i];
-                        real field_e = t_e[i];
+                        real j = l_sim_consts[mat_idx].sigma * t_e[i];
 
-                        for (int pc_step = 0; pc_step < 4; pc_step++) {
-                            /* execute prediction - correction steps */
 
-                            real inv  = 0.5 * (t_inv[i] + inv_e);
-                            real rho12r = 0.5 * (t_dm12r[i] + rho12r_e);
-                            real rho12i = 0.5 * (t_dm12i[i] + rho12i_e);
-                            real e = 0.5 * (t_e[i] + field_e);
-                            real OmRabi = l_sim_consts[mat_idx].d12 * e;
-
-                            inv_e = t_inv[i] + l_sim_consts[mat_idx].d_t *
-                                (- 4.0 * OmRabi * rho12i
-                                 - l_sim_consts[mat_idx].tau1 *
-                                 (inv - l_sim_consts[mat_idx].equi_inv));
-
-                            rho12i_e = t_dm12i[i]
-                                + l_sim_consts[mat_idx].d_t *
-                                (- l_sim_consts[mat_idx].w12 * rho12r
-                                 + OmRabi * inv
-                                 - l_sim_consts[mat_idx].gamma12 * rho12i);
-
-                            rho12r_e = t_dm12r[i]
-                                + l_sim_consts[mat_idx].d_t *
-                                (+ l_sim_consts[mat_idx].w12 * rho12i
-                                 - l_sim_consts[mat_idx].gamma12 * rho12r);
-
-                            real j = l_sim_consts[mat_idx].sigma * e;
-
-                            real p_t = l_sim_consts[mat_idx].M_CP
-                                * l_sim_consts[mat_idx].d12 *
-                                (l_sim_consts[mat_idx].w12 * rho12i -
-                                 l_sim_consts[mat_idx].gamma12 * rho12r);
-
-                            field_e = t_e[i]
-                                + l_sim_consts[mat_idx].M_CE *
-                                (-j - p_t + (t_h[i + 1] - t_h[i]) *
-                                 l_sim_consts[mat_idx].d_x_inv);
-                        }
-
-                        /* final update step */
-                        t_inv[i] = inv_e;
-                        t_dm12i[i] = rho12i_e;
-                        t_dm12r[i] = rho12r_e;
-                        t_e[i] = field_e;
+                        /* TODO: update polarization calculation */
+                        real p_t = 0;
+                        #if 0
+                        real p_t = l_sim_consts[mat_idx].M_CP
+                            * l_sim_consts[mat_idx].d12 *
+                            (l_sim_consts[mat_idx].w12 * t_d[i][1] -
+                             l_sim_consts[mat_idx].gamma12 * t_d[i][0]);
+#endif
+                        t_e[i] += l_sim_consts[mat_idx].M_CE *
+                            (-j - p_t + (t_h[i + 1] - t_h[i]) *
+                             l_sim_consts[mat_idx].d_x_inv);
                     }
 
                     /* apply sources */
@@ -504,6 +585,32 @@ solver_openmp_2lvl_pc_red::run() const
                             } else {
                             }
                         }
+                    }
+
+                    /* update d */
+                    //#pragma omp simd aligned(t_e, t_d, t_mat_indices : ALIGN)
+                    for (int i = m; i < size - m - 1; i++) {
+                        int mat_idx = t_mat_indices[i];
+
+                        #if 0
+                        Eigen::Matrix3d prop_U1 = m_sim_consts[mat_idx].L_1E;
+                        prop_U1 = (prop_U1 * t_e[i]).exp();
+
+                        Eigen::Vector3d temp = t_d[i];
+
+                        /* first time-independent half-step */
+                        temp = m_sim_consts[mat_idx].prop_U02 * temp
+                            + m_sim_consts[mat_idx].equi_corr;
+
+                        /* time-dependent step */
+                        temp = prop_U1 * temp;
+
+                        /* second time-independent half-step */
+                        temp = m_sim_consts[mat_idx].prop_U02 * temp
+                            + m_sim_consts[mat_idx].equi_corr;
+
+                        t_d[i] = temp;
+                        #endif
                     }
 
                     /* update h */
@@ -535,20 +642,20 @@ solver_openmp_2lvl_pc_red::run() const
                             int off_r = l_copy_list[k].get_offset_scratch_real
                                 (n * OL + m, base_idx - pos);
 
-                            real *src_real;
-                            if (t == record::type::electric) {
-                                src_real = t_e;
-                            } else if (t == record::type::inversion) {
-                                src_real = t_inv;
-                            } else {
-                                /* TODO handle trouble */
-                            }
-
 #pragma omp simd
                             for (int i = OL; i < chunk + OL; i++) {
                                 int idx = base_idx + i;
                                 if ((idx >= pos) && (idx < pos + cols)) {
-                                    m_result_scratch[off_r + i] = src_real[i];
+                                    if (t == record::type::electric) {
+                                        m_result_scratch[off_r + i] = t_e[i];
+                                    } else if (t == record::type::inversion) {
+                                        m_result_scratch[off_r + i] =
+                                            t_d[i][2];
+                                    } else {
+                                        /* TODO handle trouble */
+
+                                        /* TODO calculate regular populations */
+                                    }
                                 }
                             }
 

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 project(mbsolve-tool)
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_executable(mbsolve-tool src/mbsolve-tool.cpp)
 set_property(TARGET mbsolve-tool PROPERTY CXX_STANDARD 11)

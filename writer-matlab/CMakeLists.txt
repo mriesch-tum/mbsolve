@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 project(writer-matlab)
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} ${MATLAB_INCLUDE_DIR} include/)
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_library(writer-matlab SHARED src/writer_matlab.cpp)
 set_property(TARGET writer-matlab PROPERTY CXX_STANDARD 11)

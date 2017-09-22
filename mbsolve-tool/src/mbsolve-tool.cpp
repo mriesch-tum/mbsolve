@@ -84,18 +84,35 @@ int main(int argc, char **argv)
 	ti::cpu_timer timer;
 	double total_time = 0;
 
+        /* Song setup */
+        Eigen::Matrix3d H, u;
+        Eigen::Matrix<mbsolve::real, 9, 9> L;
+        H <<1.0, 0, 0,
+            0, 1.0, 0,
+            0, 0, 1.0;
+        u <<0, 1.0, 2.0,
+            1.0, 0, 0,
+            2.0, 0, 0;
+        L(0, 0) = 1.0;
+
+
+        auto qm = std::make_shared<mbsolve::qm_desc_3lvl>
+            (1e42, H, u, L);
+
         /* Ziolkowski setup */
-        auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
-            (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
+        //auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
+        //    (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
 
         auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
-        auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
+        //auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
+        auto mat_ar = std::make_shared<mbsolve::material>("AR_Song", qm);
 
         mbsolve::material::add_to_library(mat_vac);
         mbsolve::material::add_to_library(mat_ar);
 
         /* set up device */
-        auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
+        //auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
+        auto dev = std::make_shared<mbsolve::device>("Song");
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum left", mat_vac, 0, 7.5e-6));
         dev->add_region(std::make_shared<mbsolve::region>

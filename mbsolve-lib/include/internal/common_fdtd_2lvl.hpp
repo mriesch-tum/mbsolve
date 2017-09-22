@@ -31,6 +31,39 @@
 
 namespace mbsolve {
 
+/* TODO: split properties for Maxwell's equations and Liouville-von Neumann
+ * equation, then create a struct combining the two for every method */
+
+
+class sim_constants_fdtd
+{
+public:
+    /* electromagnetic constants */
+    real M_CE;
+    real M_CH;
+    real M_CP;
+    real sigma;
+
+    /* simulation constants */
+    real d_x_inv;
+    real d_t;
+};
+
+class sim_constants_pstd
+{
+public:
+    real blah; /* TODO implement matching the needs */
+
+
+};
+
+class sim_constants_3lvl
+{
+public:
+
+
+};
+
 /**
  * This class stores the material and simulation properties in concentrated
  * form.
