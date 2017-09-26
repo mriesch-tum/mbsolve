@@ -283,16 +283,6 @@ solver_openmp_2lvl_os::run() const
                   prop_U1(1, 2) = s;
                   prop_U1(2, 1) = -s;
 
-                  //Eigen::SparseMatrix<double> gustav(4, 4);
-
-                  //Eigen::GeneralizedEigenSolver<Eigen::SparseMatrix<double> > ges;
-
-                  Eigen::EigenSolver<Eigen::MatrixXf> ges;
-                  Eigen::MatrixXf gustav = Eigen::MatrixXf::Random(4,4);
-                  ges.compute(gustav, true);
-                  //std::cout << "The (complex) numerators of the generalzied eigenvalues are: " << ges.alphas().transpose() << std::endl;
-
-
                   Eigen::Vector3d temp = m_d[i];
 
                   /* first time-independent half-step */

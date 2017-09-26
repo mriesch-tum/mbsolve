@@ -85,19 +85,25 @@ int main(int argc, char **argv)
 	double total_time = 0;
 
         /* Song setup */
+        /* TODO tryout */
+
+        /* Ziolkowski setup in 3-lvl notation */
         Eigen::Matrix3d H, u;
         Eigen::Matrix<mbsolve::real, 9, 9> L;
-        H <<1.0, 0, 0,
-            0, 1.0, 0,
-            0, 0, 1.0;
-        u <<0, 1.0, 2.0,
+        H <<0.5, 0, 0,
+            0, -0.5, 0,
+            0, 0, 0;
+        H = H * mbsolve::HBAR * 2 * M_PI * 2e14;
+        u <<0, 1.0, 0,
             1.0, 0, 0,
-            2.0, 0, 0;
-        L(0, 0) = 1.0;
+            0, 0, 0;
+        u = u * mbsolve::E0 * 6.24e-11;
 
+        L = Eigen::Matrix<mbsolve::real, 9, 9>::Zero();
 
         auto qm = std::make_shared<mbsolve::qm_desc_3lvl>
-            (1e42, H, u, L);
+            (1e24, H, u, L);
+
 
         /* Ziolkowski setup */
         //auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
@@ -123,12 +129,14 @@ int main(int argc, char **argv)
         /* Ziolkowski basic scenario */
         auto scen = std::make_shared<mbsolve::scenario>
             ("Basic", 32768, 200e-15);
+            //("Basic", 32768, 200e-15);
             //("Basic", 65536, 200e-15);
             //("Basic", 131072, 200e-15);
             //("Basic", 262144, 200e-15);
 
         auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
             ("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
+            //("sech", 0.0, mbsolve::source::hard_source, 4.2186e9, 2e14,
              10, 2e14);
         scen->add_source(sech_pulse);
 

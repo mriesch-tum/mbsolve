@@ -37,8 +37,19 @@ class sim_constants_3lvl_os
 {
 public:
     /* constant propagators */
-    Eigen::Matrix<complex, num_adj, num_adj> B1;
-    Eigen::Matrix<complex, num_adj, num_adj> B2;
+    Eigen::Matrix<complex, num_adj, num_adj> B_1;
+    Eigen::Matrix<complex, num_adj, num_adj> B_2;
+
+    /* backup: without diagonalization */
+    Eigen::Matrix<real, num_adj, num_adj> A_0;
+    Eigen::Matrix<complex, num_adj, num_adj> P;
+
+    /* required for polarization calc ? */
+    Eigen::Matrix<real, num_adj, num_adj> M_0;
+    Eigen::Matrix<real, num_adj, num_adj> U;
+    /* dipole moments */
+    /* TODO generalize */
+    real dipole_moments[3];
 
     /* diagonalized interaction propagator */
     /* TODO: special type for diagonal matrix? */
@@ -54,6 +65,10 @@ public:
     /* simulation constants */
     real d_x_inv;
     real d_t;
+
+    /* initialization constants */
+    real inversion_init;
+
 };
 
 class solver_openmp_3lvl_os_red : public solver_int

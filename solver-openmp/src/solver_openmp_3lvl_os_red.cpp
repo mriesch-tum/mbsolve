@@ -39,6 +39,27 @@ __mb_on_device const unsigned int OL = 32;
 const unsigned int OL = 1;
 #endif
 
+Eigen::Matrix<real, num_adj, num_adj>
+transform_to_adjoint(const Eigen::Matrix<real, num_lvl, num_lvl>& matrix,
+                     const std::vector<Eigen::Matrix<complex, num_lvl,
+                     num_lvl> >& generators)
+{
+    Eigen::Matrix<real, num_adj, num_adj> ret;
+
+    for (int i = 0; i < num_adj; i++) {
+        for (int j = 0; j < num_adj; j++) {
+            Eigen::Matrix<complex, num_lvl, num_lvl> result = matrix *
+                (generators[i] * generators[j] -
+                 generators[j] * generators[i]);
+            complex c = complex(0, 1) * 0.5 * result.trace();
+            ret(i, j) = c.real();
+        }
+    }
+
+    return ret;
+}
+
+
 solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
 (std::shared_ptr<const device> dev, std::shared_ptr<scenario> scen) :
     solver_int(dev, scen)
@@ -94,6 +115,7 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
         g *= -sqrt(2.0/((l + 1) * (l + 2)));
         m_generators.push_back(g);
     }
+
     std::cout << m_generators[0] << std::endl;
     std::cout << m_generators[1] << std::endl;
     std::cout << m_generators[2] << std::endl;
@@ -126,6 +148,7 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
                         (MU0 * mat->get_rel_permeability()))
             * mat->get_losses() * 2.0;
 
+        /* 3-lvl quantum mechanical system */
         /* active region in 3-lvl description? */
         /* TODO: remove ugly dynamic cast to qm_desc_3lvl, allow other
          * representations? */
@@ -133,66 +156,82 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
             std::dynamic_pointer_cast<qm_desc_3lvl>(mat->get_qm());
         if (qm) {
             /* factor for macroscopic polarization */
-            sc.M_CP = -HBAR * mat->get_overlap_factor() *
-                qm->get_carrier_density();
+            sc.M_CP = -mat->get_overlap_factor() * qm->get_carrier_density();
 
-            /* 3-lvl quantum mechanical system */
+            /* TODO generalize */
+            for (int i = 0; i < 3; i++) {
+                Eigen::Matrix<complex, num_lvl, num_lvl> m;
+                m = qm->get_dipole_op() * m_generators[i];
+                sc.dipole_moments[i] = m.real().trace() * 0.5;
 
+                std::cout << i << " " << sc.dipole_moments[i] << std::endl;
+            }
 
-            // num_adj, num_lvl
+            /* time-independent hamiltionian in adjoint representation */
+            Eigen::Matrix<real, num_adj, num_adj> M_0;
+            M_0 = transform_to_adjoint(qm->get_hamiltonian() * 1/HBAR,
+                                       m_generators);
 
-            // access generator matrices
-            // determine time-independent part in adjoint representation
-            Eigen::Matrix<real, num_adj, num_adj> L_0;
+            /* determine lindblad term in adjoint representation */
+            /* TODO get_lindblad_op() */
+            /* M_0 = M_0 + ... */
 
-            // determine constant propagator
+            /* determine constant propagator */
             Eigen::Matrix<real, num_adj, num_adj> A_0;
+            A_0 = (M_0 * scen->get_timestep_size()/2).exp();
 
-            // determine dipole operator in adjoint representation
+            /* determine dipole operator in adjoint representation */
             Eigen::Matrix<real, num_adj, num_adj> U;
+            U = transform_to_adjoint(qm->get_dipole_op() * 1/HBAR,
+                                     m_generators);
+            std::cout << "U: " << U << std::endl;
 
-            //U <<
-
-            // diagonalize dipole operator
+            /* diagonalize dipole operator */
+            /* note: returned eigenvectors are normalized */
             Eigen::EigenSolver<Eigen::Matrix<real, num_adj, num_adj> > es(U);
 
-            // caution: normalize eigenvectors
+            /* store propagators B1 and B2 */
+            sc.B_1 = A_0 * es.eigenvectors();
+            sc.B_2 = es.eigenvectors().adjoint() * A_0;
 
-            // update B1, B2
-            sc.B1 = A_0 * es.eigenvectors();
-            sc.B2 = es.eigenvectors().transpose() * A_0;
+            sc.A_0 = A_0;
+            sc.P = es.eigenvectors();
 
-            // update L
-            sc.L = es.eigenvalues();
+            sc.M_0 = M_0;
+            sc.U = U;
 
-            std::cout << sc.L << std::endl;
+            /* store diagonal matrix containing the eigenvalues */
+            sc.L = es.eigenvalues() * scen->get_timestep_size();
 
-            //m_sim_consts[i].prop_U02 = (L_0 * materials[i].d_t/2).exp();
+            //std::cout << sc.L << std::endl;
+            std::cout << es.eigenvectors() << std::endl;
+            std::cout << es.eigenvalues() << std::endl;
 
             //Eigen::Vector3d equi_rho(0, 0, materials[i].equi_inv);
             //m_sim_consts[i].equi_corr = (Eigen::Matrix3d::Identity() -
             //                         m_sim_consts[i].prop_U02) * equi_rho;
 
 
-            /*sc.w12 = qm->get_transition_freq();
-              sc.d12 = qm->get_dipole_moment() * E0/HBAR;
-              sc.tau1 = qm->get_scattering_rate();
-              sc.gamma12 = qm->get_dephasing_rate();
+            /*
               sc.equi_inv = qm->get_equilibrium_inversion();
-
-              if (scen->get_dm_init_type() == scenario::lower_full) {
-              sc.inversion_init = -1.0;
-              } else if (scen->get_dm_init_type() == scenario::upper_full) {
-              sc.inversion_init = 1.0;
-              } else {
-
-              }*/
+            */
+            if (scen->get_dm_init_type() == scenario::lower_full) {
+                sc.inversion_init = -1.0;
+            } else if (scen->get_dm_init_type() == scenario::upper_full) {
+                sc.inversion_init = 1.0;
+            } else {
+            }
         } else {
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;
 
+            sc.B_1 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
+            sc.B_2 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
+
+            sc.L = Eigen::Matrix<complex, num_adj, 1>::Zero();
+
             //sc.equi_inv = 0.0;
-            //sc.inversion_init = 0.0;
+            sc.inversion_init = 0.0;
         }
 
         /* simulation settings */
@@ -375,11 +414,11 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
                     t_mat_indices[i] = mat_idx;
 
                     /* TODO update */
-                    //t_d[i][2] = l_sim_consts[mat_idx].inversion_init;
+                    t_d[i][6] = -l_sim_consts[mat_idx].inversion_init;
                 } else {
                     t_mat_indices[i] = 0;
                     /* TODO update */
-                    //t_d[i][2] = 0.0;
+                    t_d[i][6] = 0.0;
                 }
                 t_d[i][0] = 0.0;
                 t_d[i][1] = 0.0;
@@ -553,15 +592,24 @@ solver_openmp_3lvl_os_red::run() const
 
                         real j = l_sim_consts[mat_idx].sigma * t_e[i];
 
-
                         /* TODO: update polarization calculation */
                         real p_t = 0;
-                        #if 0
-                        real p_t = l_sim_consts[mat_idx].M_CP
-                            * l_sim_consts[mat_idx].d12 *
-                            (l_sim_consts[mat_idx].w12 * t_d[i][1] -
-                             l_sim_consts[mat_idx].gamma12 * t_d[i][0]);
-#endif
+
+                        /* TODO remove useless calculations ? */
+
+                        Eigen::Matrix<real, num_adj, num_adj> M;
+                        M = l_sim_consts[mat_idx].M_0 +
+                            l_sim_consts[mat_idx].U * t_e[i];
+                        Eigen::Matrix<real, num_adj, 1> d_t = M * t_d[i];
+
+                        /* TODO generalization */
+                        for (int j = 0; j < 3; j++) {
+                            p_t += l_sim_consts[mat_idx].dipole_moments[j] *
+                                d_t[j];
+                        }
+
+                        p_t = p_t * l_sim_consts[mat_idx].M_CP;
+
                         t_e[i] += l_sim_consts[mat_idx].M_CE *
                             (-j - p_t + (t_h[i + 1] - t_h[i]) *
                              l_sim_consts[mat_idx].d_x_inv);
@@ -592,25 +640,51 @@ solver_openmp_3lvl_os_red::run() const
                     for (int i = m; i < size - m - 1; i++) {
                         int mat_idx = t_mat_indices[i];
 
-                        #if 0
-                        Eigen::Matrix3d prop_U1 = m_sim_consts[mat_idx].L_1E;
-                        prop_U1 = (prop_U1 * t_e[i]).exp();
-
-                        Eigen::Vector3d temp = t_d[i];
+#if 0
 
                         /* first time-independent half-step */
-                        temp = m_sim_consts[mat_idx].prop_U02 * temp
-                            + m_sim_consts[mat_idx].equi_corr;
+                        temp = l_sim_consts[mat_idx].prop_U02 * temp
+                            + l_sim_consts[mat_idx].equi_corr;
 
                         /* time-dependent step */
                         temp = prop_U1 * temp;
 
                         /* second time-independent half-step */
-                        temp = m_sim_consts[mat_idx].prop_U02 * temp
-                            + m_sim_consts[mat_idx].equi_corr;
+                        temp = l_sim_consts[mat_idx].prop_U02 * temp
+                            + l_sim_consts[mat_idx].equi_corr;
+#endif
 
-                        t_d[i] = temp;
-                        #endif
+
+                        Eigen::Matrix<complex, num_adj, 1> B_I;
+                        B_I = l_sim_consts[mat_idx].L * t_e[i];
+                        // TODO fix? B_I.unaryExp(std::ptr_fun(std::exp));
+                        B_I = B_I.array().exp();
+
+                        /* TODO */
+                        /*
+                         * precalc exponential, apply power?
+                         * prepare Eigen exp function as comparison
+                         * (compare performance and set up times)
+                         * split up B1, B2 into A0 and P
+                         */
+
+#if 0
+                        Eigen::Matrix<real, num_adj, num_adj> B =
+                            (l_sim_consts[mat_idx].P *
+                             Eigen::DiagonalMatrix<complex, num_adj>(B_I) *
+                             l_sim_consts[mat_idx].P.adjoint()).real();
+
+                        t_d[i] = l_sim_consts[mat_idx].A_0 * B *
+                            l_sim_consts[mat_idx].A_0 * t_d[i];
+
+#else
+                        Eigen::Matrix<real, num_adj, num_adj> B =
+                            (l_sim_consts[mat_idx].B_1 *
+                             Eigen::DiagonalMatrix<complex, num_adj>(B_I) *
+                             l_sim_consts[mat_idx].B_2).real();
+
+                        t_d[i] = B * t_d[i];
+#endif
                     }
 
                     /* update h */
@@ -650,7 +724,7 @@ solver_openmp_3lvl_os_red::run() const
                                         m_result_scratch[off_r + i] = t_e[i];
                                     } else if (t == record::type::inversion) {
                                         m_result_scratch[off_r + i] =
-                                            t_d[i][2];
+                                            -t_d[i][6];
                                     } else {
                                         /* TODO handle trouble */
 
