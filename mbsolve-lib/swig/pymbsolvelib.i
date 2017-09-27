@@ -32,6 +32,8 @@
 %shared_ptr(mbsolve::device)
 %shared_ptr(mbsolve::qm_description)
 %shared_ptr(mbsolve::qm_desc_2lvl)
+%shared_ptr(mbsolve::qm_desc_3lvl)
+%shared_ptr(mbsolve::qm_desc_nlvl)
 %shared_ptr(mbsolve::material)
 %shared_ptr(mbsolve::record)
 %shared_ptr(mbsolve::region)

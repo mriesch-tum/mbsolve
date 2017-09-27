@@ -660,7 +660,7 @@ solver_openmp_3lvl_os_red::run() const
                         /* new method with diagonalization */
                         Eigen::Array<complex, num_adj, 1> B_I;
                         B_I = l_sim_consts[mat_idx].L * t_e[i];
-                        //B_I = B_I.exp();
+                        B_I = B_I.exp();
 
                         /* TODO */
                         /*
