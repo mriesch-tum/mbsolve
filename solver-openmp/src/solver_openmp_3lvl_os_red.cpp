@@ -654,11 +654,13 @@ solver_openmp_3lvl_os_red::run() const
                             + l_sim_consts[mat_idx].equi_corr;
 #endif
 
+#define EXP_METHOD 1
 
-                        Eigen::Matrix<complex, num_adj, 1> B_I;
+#if EXP_METHOD==1
+                        /* new method with diagonalization */
+                        Eigen::Array<complex, num_adj, 1> B_I;
                         B_I = l_sim_consts[mat_idx].L * t_e[i];
-                        // TODO fix? B_I.unaryExp(std::ptr_fun(std::exp));
-                        B_I = B_I.array().exp();
+                        //B_I = B_I.exp();
 
                         /* TODO */
                         /*
@@ -668,22 +670,39 @@ solver_openmp_3lvl_os_red::run() const
                          * split up B1, B2 into A0 and P
                          */
 
-#if 0
+                        Eigen::Matrix<real, num_adj, num_adj> B =
+                            (l_sim_consts[mat_idx].B_1 *
+                             B_I.matrix().asDiagonal() *
+                             l_sim_consts[mat_idx].B_2).real();
+
+                        t_d[i] = B * t_d[i];
+
+#elif EXP_METHOD==2
+                        /* split A0 and P */
+                        Eigen::Array<complex, num_adj, 1> B_I;
+                        B_I = l_sim_consts[mat_idx].L * t_e[i];
+                        B_I = B_I.exp();
+
                         Eigen::Matrix<real, num_adj, num_adj> B =
                             (l_sim_consts[mat_idx].P *
-                             Eigen::DiagonalMatrix<complex, num_adj>(B_I) *
+                             B_I.matrix().asDiagonal() *
                              l_sim_consts[mat_idx].P.adjoint()).real();
 
                         t_d[i] = l_sim_consts[mat_idx].A_0 * B *
                             l_sim_consts[mat_idx].A_0 * t_d[i];
 
-#else
-                        Eigen::Matrix<real, num_adj, num_adj> B =
-                            (l_sim_consts[mat_idx].B_1 *
-                             Eigen::DiagonalMatrix<complex, num_adj>(B_I) *
-                             l_sim_consts[mat_idx].B_2).real();
+#elif EXP_METHOD==3
+                        /* analytic solution? */
 
-                        t_d[i] = B * t_d[i];
+#else
+                        /* Eigen matrix exponential */
+                        Eigen::Matrix<real, num_adj, num_adj> B =
+                            (l_sim_consts[mat_idx].U * t_e[i] *
+                             l_sim_consts[mat_idx].d_t).exp();
+
+                        t_d[i] = l_sim_consts[mat_idx].A_0 * B *
+                            l_sim_consts[mat_idx].A_0 * t_d[i];
+
 #endif
                     }
 

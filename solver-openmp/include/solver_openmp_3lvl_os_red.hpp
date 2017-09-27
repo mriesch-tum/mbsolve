@@ -54,7 +54,7 @@ public:
     /* diagonalized interaction propagator */
     /* TODO: special type for diagonal matrix? */
     /* TODO: vector would do, right? */
-    Eigen::Matrix<complex, num_adj, 1> L;
+    Eigen::Array<complex, num_adj, 1> L;
 
     /* electromagnetic constants */
     real M_CE;
