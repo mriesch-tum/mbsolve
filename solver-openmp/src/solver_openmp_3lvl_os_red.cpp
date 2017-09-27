@@ -36,8 +36,10 @@ static solver_factory<solver_openmp_3lvl_os_red> factory("openmp-3lvl-os-red");
 #ifdef XEON_PHI_OFFLOAD
 __mb_on_device const unsigned int OL = 32;
 #else
-const unsigned int OL = 1;
+const unsigned int OL = 32;
 #endif
+
+const unsigned int VEC = 2;
 
 Eigen::Matrix<real, num_adj, num_adj>
 transform_to_adjoint(const Eigen::Matrix<real, num_lvl, num_lvl>& matrix,
@@ -334,7 +336,7 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
     }
 
     /* prepare to offload simulation constants */
-    l_sim_consts = new sim_constants_2lvl_os[m_sim_consts.size()];
+    l_sim_consts = new sim_constants_3lvl_os[m_sim_consts.size()];
     for (unsigned int i = 0; i < m_sim_consts.size(); i++) {
         l_sim_consts[i] = m_sim_consts[i];
     }
@@ -485,6 +487,150 @@ solver_openmp_3lvl_os_red::get_name() const
 }
 
 void
+update_e(unsigned int size, unsigned int border, real *t_e, real *t_h,
+         Eigen::Matrix<real, num_adj, 1>* t_d,
+         unsigned int *t_mat_indices, sim_constants_3lvl_os *l_sim_consts)
+{
+#pragma omp simd aligned(t_d, t_e, t_h, t_mat_indices : ALIGN)
+    for (int i = border; i < size - border - 1; i++) {
+        int mat_idx = t_mat_indices[i];
+
+        real j = l_sim_consts[mat_idx].sigma * t_e[i];
+
+        /* TODO: update polarization calculation */
+        real p_t = 0;
+
+        /* TODO remove useless calculations ? */
+
+        Eigen::Matrix<real, num_adj, num_adj> M;
+        M = l_sim_consts[mat_idx].M_0 +
+            l_sim_consts[mat_idx].U * t_e[i];
+        Eigen::Matrix<real, num_adj, 1> d_t = M * t_d[i];
+
+        /* TODO generalization */
+        for (int j = 0; j < 3; j++) {
+            p_t += l_sim_consts[mat_idx].dipole_moments[j] *
+                d_t[j];
+        }
+
+        p_t = p_t * l_sim_consts[mat_idx].M_CP;
+
+        t_e[i] += l_sim_consts[mat_idx].M_CE *
+            (-j - p_t + (t_h[i + 1] - t_h[i]) *
+             l_sim_consts[mat_idx].d_x_inv);
+    }
+}
+
+/* TODO combine update_e and update_h -> update_fdtd */
+
+void
+update_h(unsigned int size, unsigned int border, real *t_e, real *t_h,
+         unsigned int *t_mat_indices, sim_constants_3lvl_os *l_sim_consts)
+{
+#pragma omp simd aligned(t_e, t_mat_indices : ALIGN)
+    for (int i = border + 1; i < size - border - 1; i++) {
+        int mat_idx = t_mat_indices[i];
+
+        t_h[i] += l_sim_consts[mat_idx].M_CH * (t_e[i] - t_e[i - 1]);
+    }
+}
+
+void
+apply_sources(real *t_e, real *source_data, unsigned int num_sources,
+              sim_source *l_sim_sources, unsigned int time,
+              unsigned int base_pos, unsigned int chunk)
+{
+    for (unsigned int k = 0; k < num_sources; k++) {
+        int at = l_sim_sources[k].x_idx - base_pos + OL;
+        if ((at > 0) && (at < chunk + 2 * OL)) {
+            real src = source_data[l_sim_sources[k].data_base_idx + time];
+            if (l_sim_sources[k].type == source::type::hard_source) {
+                t_e[at] = src;
+            } else if (l_sim_sources[k].type == source::type::soft_source) {
+                /* TODO: fix source */
+                t_e[at] += src;
+            } else {
+            }
+        }
+    }
+}
+
+void
+update_d(unsigned int size, unsigned int border, real *t_e,
+         Eigen::Matrix<real, num_adj, 1>* t_d,
+         unsigned int *t_mat_indices, sim_constants_3lvl_os *l_sim_consts)
+{
+#pragma omp simd aligned(t_d, t_e, t_mat_indices : ALIGN)
+    for (int i = border; i < size - border - 1; i++) {
+        int mat_idx = t_mat_indices[i];
+
+#if 0
+        /* first time-independent half-step */
+        temp = l_sim_consts[mat_idx].prop_U02 * temp
+            + l_sim_consts[mat_idx].equi_corr;
+
+        /* time-dependent step */
+        temp = prop_U1 * temp;
+
+        /* second time-independent half-step */
+        temp = l_sim_consts[mat_idx].prop_U02 * temp
+            + l_sim_consts[mat_idx].equi_corr;
+#endif
+
+#define EXP_METHOD 1
+
+#if EXP_METHOD==1
+        /* new method with diagonalization */
+        Eigen::Array<complex, num_adj, 1> B_I;
+        B_I = l_sim_consts[mat_idx].L * t_e[i];
+        B_I = B_I.exp();
+
+        /* TODO */
+        /*
+         * precalc exponential, apply power?
+         * prepare Eigen exp function as comparison
+         * (compare performance and set up times)
+         * split up B1, B2 into A0 and P
+         */
+
+        Eigen::Matrix<real, num_adj, num_adj> B =
+            (l_sim_consts[mat_idx].B_1 *
+             B_I.matrix().asDiagonal() *
+             l_sim_consts[mat_idx].B_2).real();
+
+        t_d[i] = B * t_d[i];
+
+#elif EXP_METHOD==2
+        /* split A0 and P */
+        Eigen::Array<complex, num_adj, 1> B_I;
+        B_I = l_sim_consts[mat_idx].L * t_e[i];
+        B_I = B_I.exp();
+
+        Eigen::Matrix<real, num_adj, num_adj> B =
+            (l_sim_consts[mat_idx].P *
+             B_I.matrix().asDiagonal() *
+             l_sim_consts[mat_idx].P.adjoint()).real();
+
+        t_d[i] = l_sim_consts[mat_idx].A_0 * B *
+            l_sim_consts[mat_idx].A_0 * t_d[i];
+
+#elif EXP_METHOD==3
+        /* analytic solution? */
+
+#else
+        /* Eigen matrix exponential */
+        Eigen::Matrix<real, num_adj, num_adj> B =
+            (l_sim_consts[mat_idx].U * t_e[i] *
+             l_sim_consts[mat_idx].d_t).exp();
+
+        t_d[i] = l_sim_consts[mat_idx].A_0 * B *
+            l_sim_consts[mat_idx].A_0 * t_d[i];
+
+#endif
+    }
+}
+
+void
 solver_openmp_3lvl_os_red::run() const
 {
     unsigned int P = omp_get_max_threads();
@@ -559,7 +705,11 @@ solver_openmp_3lvl_os_red::run() const
             }
 
             /* main loop */
-            for (unsigned int n = 0; n < num_timesteps/OL; n++) {
+            for (unsigned int n = 0; n <= num_timesteps/OL; n++) {
+                /* handle loop remainder */
+                unsigned int subloop_ct = (n == num_timesteps/OL) ?
+                    num_timesteps % OL : OL;
+
                 /* exchange data */
                 if (tid > 0) {
 #pragma ivdep
@@ -583,139 +733,26 @@ solver_openmp_3lvl_os_red::run() const
 #pragma omp barrier
 
                 /* sub-loop */
-                for (unsigned int m = 0; m < OL; m++) {
+                for (unsigned int m = 0; m < subloop_ct; m++) {
+                    /* align border to vector length */
+                    unsigned int border = m / VEC;
+
                     /* update e */
-#pragma omp simd aligned(t_d, t_e, t_mat_indices : ALIGN)
-                    for (int i = m; i < size - m - 1; i++) {
-                        // for (int i = 0; i < chunk + 2 * OL - 1; i++) {
-                        int mat_idx = t_mat_indices[i];
-
-                        real j = l_sim_consts[mat_idx].sigma * t_e[i];
-
-                        /* TODO: update polarization calculation */
-                        real p_t = 0;
-
-                        /* TODO remove useless calculations ? */
-
-                        Eigen::Matrix<real, num_adj, num_adj> M;
-                        M = l_sim_consts[mat_idx].M_0 +
-                            l_sim_consts[mat_idx].U * t_e[i];
-                        Eigen::Matrix<real, num_adj, 1> d_t = M * t_d[i];
-
-                        /* TODO generalization */
-                        for (int j = 0; j < 3; j++) {
-                            p_t += l_sim_consts[mat_idx].dipole_moments[j] *
-                                d_t[j];
-                        }
-
-                        p_t = p_t * l_sim_consts[mat_idx].M_CP;
-
-                        t_e[i] += l_sim_consts[mat_idx].M_CE *
-                            (-j - p_t + (t_h[i + 1] - t_h[i]) *
-                             l_sim_consts[mat_idx].d_x_inv);
-                    }
+                    update_e(size, border, t_e, t_h, t_d, t_mat_indices,
+                             l_sim_consts);
 
                     /* apply sources */
-                    for (unsigned int k = 0; k < num_sources; k++) {
-                        int at = l_sim_sources[k].x_idx - tid * chunk_base
-                            + OL;
-                        if ((at > 0) && (at < chunk + 2 * OL)) {
-                            if (l_sim_sources[k].type ==
-                                source::type::hard_source) {
-                                t_e[at] = m_source_data
-                                    [l_sim_sources[k].data_base_idx
-                                     + (n * OL + m)];
-                            } else if (l_sim_sources[k].type ==
-                                       source::type::soft_source) {
-                                t_e[at] += m_source_data
-                                    [l_sim_sources[k].data_base_idx
-                                     + (n * OL + m)];
-                            } else {
-                            }
-                        }
-                    }
+                    apply_sources(t_e, m_source_data, num_sources,
+                                  l_sim_sources, n * OL + m, tid * chunk_base,
+                                  chunk);
 
                     /* update d */
-                    //#pragma omp simd aligned(t_e, t_d, t_mat_indices : ALIGN)
-                    for (int i = m; i < size - m - 1; i++) {
-                        int mat_idx = t_mat_indices[i];
-
-#if 0
-
-                        /* first time-independent half-step */
-                        temp = l_sim_consts[mat_idx].prop_U02 * temp
-                            + l_sim_consts[mat_idx].equi_corr;
-
-                        /* time-dependent step */
-                        temp = prop_U1 * temp;
-
-                        /* second time-independent half-step */
-                        temp = l_sim_consts[mat_idx].prop_U02 * temp
-                            + l_sim_consts[mat_idx].equi_corr;
-#endif
-
-#define EXP_METHOD 1
-
-#if EXP_METHOD==1
-                        /* new method with diagonalization */
-                        Eigen::Array<complex, num_adj, 1> B_I;
-                        B_I = l_sim_consts[mat_idx].L * t_e[i];
-                        B_I = B_I.exp();
-
-                        /* TODO */
-                        /*
-                         * precalc exponential, apply power?
-                         * prepare Eigen exp function as comparison
-                         * (compare performance and set up times)
-                         * split up B1, B2 into A0 and P
-                         */
-
-                        Eigen::Matrix<real, num_adj, num_adj> B =
-                            (l_sim_consts[mat_idx].B_1 *
-                             B_I.matrix().asDiagonal() *
-                             l_sim_consts[mat_idx].B_2).real();
-
-                        t_d[i] = B * t_d[i];
-
-#elif EXP_METHOD==2
-                        /* split A0 and P */
-                        Eigen::Array<complex, num_adj, 1> B_I;
-                        B_I = l_sim_consts[mat_idx].L * t_e[i];
-                        B_I = B_I.exp();
-
-                        Eigen::Matrix<real, num_adj, num_adj> B =
-                            (l_sim_consts[mat_idx].P *
-                             B_I.matrix().asDiagonal() *
-                             l_sim_consts[mat_idx].P.adjoint()).real();
-
-                        t_d[i] = l_sim_consts[mat_idx].A_0 * B *
-                            l_sim_consts[mat_idx].A_0 * t_d[i];
-
-#elif EXP_METHOD==3
-                        /* analytic solution? */
-
-#else
-                        /* Eigen matrix exponential */
-                        Eigen::Matrix<real, num_adj, num_adj> B =
-                            (l_sim_consts[mat_idx].U * t_e[i] *
-                             l_sim_consts[mat_idx].d_t).exp();
-
-                        t_d[i] = l_sim_consts[mat_idx].A_0 * B *
-                            l_sim_consts[mat_idx].A_0 * t_d[i];
-
-#endif
-                    }
+                    update_d(size, border, t_e, t_d, t_mat_indices,
+                             l_sim_consts);
 
                     /* update h */
-                    //
-#pragma omp simd aligned(t_e, t_mat_indices : ALIGN)
-                    for (int i = m + 1; i < size - m - 1; i++) {
-                        //for (int i = 1; i < chunk + 2 * OL - 1; i++) {
-                        int mat_idx = t_mat_indices[i];
-
-                        t_h[i] += l_sim_consts[mat_idx].M_CH *
-                            (t_e[i] - t_e[i - 1]);
-                    }
+                    update_h(size, border, t_e, t_h, t_mat_indices,
+                             l_sim_consts);
 
                     /* apply boundary condition */
                     if (tid == 0) {
