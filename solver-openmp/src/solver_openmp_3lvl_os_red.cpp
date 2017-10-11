@@ -39,30 +39,10 @@ __mb_on_device const unsigned int OL = 32;
 const unsigned int OL = 32;
 #endif
 
-const unsigned int VEC = 2;
+const unsigned int VEC = 4;
 
-Eigen::Matrix<real, num_adj, num_adj>
-transform_to_adjoint(const Eigen::Matrix<real, num_lvl, num_lvl>& matrix,
-                     const std::vector<Eigen::Matrix<complex, num_lvl,
-                     num_lvl> >& generators)
-{
-    Eigen::Matrix<real, num_adj, num_adj> ret;
-
-    for (int i = 0; i < num_adj; i++) {
-        for (int j = 0; j < num_adj; j++) {
-            Eigen::Matrix<complex, num_lvl, num_lvl> result = matrix *
-                (generators[i] * generators[j] -
-                 generators[j] * generators[i]);
-            complex c = complex(0, 1) * 0.5 * result.trace();
-            ret(i, j) = c.real();
-        }
-    }
-
-    return ret;
-}
-
-
-solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
+template<unsigned int num_lvl>
+solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
 (std::shared_ptr<const device> dev, std::shared_ptr<scenario> scen) :
     solver_int(dev, scen)
 {
@@ -83,57 +63,14 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
     /* determine simulation settings */
     init_fdtd_simulation(dev, scen, 0.5);
 
-
-    /* set up SU(N) generators u -- real part off-diagonal elements */
-    for (int k = 0; k < num_lvl; k++) {
-        for (int j = 0; j < k; j++) {
-            Eigen::Matrix<complex, num_lvl, num_lvl> g;
-            g(j, k) = 1;
-            g(k, j) = 1;
-            m_generators.push_back(g);
-        }
-    }
-
-    /* set up SU(N) generators v -- imag part off-diagonal elements */
-    for (int k = 0; k < num_lvl; k++) {
-        for (int j = 0; j < k; j++) {
-            Eigen::Matrix<complex, num_lvl, num_lvl> g;
-            g(j, k) = complex(0, -1);
-            g(k, j) = complex(0, +1);
-            m_generators.push_back(g);
-        }
-    }
-
-    /* set up SU(N) generators w -- main-diagonal elements */
-    for (int l = 0; l < num_lvl - 1; l++) {
-        Eigen::Matrix<complex, num_lvl, num_lvl> g;
-        int j = 0;
-
-        for (j = 0; j <= l; j++) {
-            g(j, j) = 1.0;
-        }
-        g(j, j) = -(l + 1);
-
-        g *= -sqrt(2.0/((l + 1) * (l + 2)));
-        m_generators.push_back(g);
-    }
-
-    std::cout << m_generators[0] << std::endl;
-    std::cout << m_generators[1] << std::endl;
-    std::cout << m_generators[2] << std::endl;
-    std::cout << m_generators[3] << std::endl;
-    std::cout << m_generators[4] << std::endl;
-    std::cout << m_generators[5] << std::endl;
-    std::cout << m_generators[6] << std::endl;
-    std::cout << m_generators[7] << std::endl;
-
+    setup_generators();
 
     /* set up simulaton constants */
     std::map<std::string, unsigned int> id_to_idx;
     unsigned int j = 0;
 
     for (const auto& mat_id : dev->get_used_materials()) {
-        sim_constants_3lvl_os sc;
+        sim_constants_clvl_os<num_lvl> sc;
 
         auto mat = material::get_from_library(mat_id);
 
@@ -154,38 +91,43 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
         /* active region in 3-lvl description? */
         /* TODO: remove ugly dynamic cast to qm_desc_3lvl, allow other
          * representations? */
-        std::shared_ptr<qm_desc_3lvl> qm =
-            std::dynamic_pointer_cast<qm_desc_3lvl>(mat->get_qm());
+        std::shared_ptr<qm_desc_clvl<num_lvl> > qm =
+            std::dynamic_pointer_cast<qm_desc_clvl<num_lvl> >(mat->get_qm());
         if (qm) {
             /* factor for macroscopic polarization */
-            sc.M_CP = -mat->get_overlap_factor() * qm->get_carrier_density();
+            sc.M_CP = mat->get_overlap_factor() * qm->get_carrier_density();
 
-            /* TODO generalize */
-            for (int i = 0; i < 3; i++) {
-                Eigen::Matrix<complex, num_lvl, num_lvl> m;
-                m = qm->get_dipole_op() * m_generators[i];
-                sc.dipole_moments[i] = m.real().trace() * 0.5;
-
-                std::cout << i << " " << sc.dipole_moments[i] << std::endl;
-            }
+            sc.v = get_adj_op(qm->get_dipole_op());
+            std::cout << sc.v << std::endl;
 
             /* time-independent hamiltionian in adjoint representation */
             Eigen::Matrix<real, num_adj, num_adj> M_0;
-            M_0 = transform_to_adjoint(qm->get_hamiltonian() * 1/HBAR,
-                                       m_generators);
+            M_0 = get_adj_liouvillian(qm->get_hamiltonian());
 
             /* determine lindblad term in adjoint representation */
-            /* TODO get_lindblad_op() */
-            /* M_0 = M_0 + ... */
+            Eigen::Matrix<real, num_adj, num_adj> G;
+            G = get_adj_sop(qm->get_lindblad_op());
+
+            /* time-independent part */
+            Eigen::Matrix<real, num_adj, num_adj> M = M_0 + G;
+
+            /* determine equilibrium/inhomogeneous term */
+            Eigen::Matrix<real, num_adj, 1> d_eq;
+            d_eq = get_adj_deq(qm->get_lindblad_op());
+
+            /* TODO: check if d_eq is zero */
+            /* if not, create M.inverse() -> check for errors */
+            /* then sc.d_in = M.inverse() * d_eq */
+            /* otherwise zero */
 
             /* determine constant propagator */
             Eigen::Matrix<real, num_adj, num_adj> A_0;
-            A_0 = (M_0 * scen->get_timestep_size()/2).exp();
+            A_0 = (M * scen->get_timestep_size()/2).exp();
 
             /* determine dipole operator in adjoint representation */
             Eigen::Matrix<real, num_adj, num_adj> U;
-            U = transform_to_adjoint(qm->get_dipole_op() * 1/HBAR,
-                                     m_generators);
+            U = get_adj_liouvillian(-qm->get_dipole_op());
+
             std::cout << "U: " << U << std::endl;
 
             /* diagonalize dipole operator */
@@ -193,13 +135,13 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
             Eigen::EigenSolver<Eigen::Matrix<real, num_adj, num_adj> > es(U);
 
             /* store propagators B1 and B2 */
-            sc.B_1 = A_0 * es.eigenvectors();
-            sc.B_2 = es.eigenvectors().adjoint() * A_0;
+            //sc.B_1 = A_0 * es.eigenvectors();
+            //sc.B_2 = es.eigenvectors().adjoint() * A_0;
 
             sc.A_0 = A_0;
-            sc.P = es.eigenvectors();
+            sc.B = es.eigenvectors();
 
-            sc.M_0 = M_0;
+            sc.M = M;
             sc.U = U;
 
             /* store diagonal matrix containing the eigenvalues */
@@ -227,8 +169,8 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;
 
-            sc.B_1 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
-            sc.B_2 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
+            //sc.B_1 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
+            //sc.B_2 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
 
             sc.L = Eigen::Matrix<complex, num_adj, 1>::Zero();
 
@@ -436,7 +378,8 @@ solver_openmp_3lvl_os_red::solver_openmp_3lvl_os_red
     delete[] l_mat_indices;
 }
 
-solver_openmp_3lvl_os_red::~solver_openmp_3lvl_os_red()
+template<unsigned int num_lvl>
+solver_openmp_clvl_os_red<num_lvl>::~solver_openmp_clvl_os_red()
 {
     unsigned int P = omp_get_max_threads();
     unsigned int num_sources = m_sim_sources.size();
@@ -480,16 +423,19 @@ solver_openmp_3lvl_os_red::~solver_openmp_3lvl_os_red()
     delete[] m_mat_indices;
 }
 
+template<unsigned int num_lvl>
 const std::string&
-solver_openmp_3lvl_os_red::get_name() const
+solver_openmp_clvl_os_red<num_lvl>::get_name() const
 {
     return factory.get_name();
 }
 
+template<unsigned int num_lvl, unsigned int num_adj>
 void
-update_e(unsigned int size, unsigned int border, real *t_e, real *t_h,
-         Eigen::Matrix<real, num_adj, 1>* t_d,
-         unsigned int *t_mat_indices, sim_constants_3lvl_os *l_sim_consts)
+update_fdtd(unsigned int size, unsigned int border, real *t_e, real *t_h,
+            Eigen::Matrix<real, num_adj, 1>* t_d,
+            unsigned int *t_mat_indices,
+            sim_constants_clvl_os<num_lvl> *l_sim_consts)
 {
 #pragma omp simd aligned(t_d, t_e, t_h, t_mat_indices : ALIGN)
     for (int i = border; i < size - border - 1; i++) {
@@ -501,37 +447,24 @@ update_e(unsigned int size, unsigned int border, real *t_e, real *t_h,
         real p_t = 0;
 
         /* TODO remove useless calculations ? */
-
+#if 0
         Eigen::Matrix<real, num_adj, num_adj> M;
-        M = l_sim_consts[mat_idx].M_0 +
-            l_sim_consts[mat_idx].U * t_e[i];
+        M = l_sim_consts[mat_idx].M_0 + l_sim_consts[mat_idx].U * t_e[i];
         Eigen::Matrix<real, num_adj, 1> d_t = M * t_d[i];
 
         /* TODO generalization */
         for (int j = 0; j < 3; j++) {
-            p_t += l_sim_consts[mat_idx].dipole_moments[j] *
-                d_t[j];
+            p_t += l_sim_consts[mat_idx].dipole_moments[j] * d_t[j];
         }
-
+#endif
         p_t = p_t * l_sim_consts[mat_idx].M_CP;
 
         t_e[i] += l_sim_consts[mat_idx].M_CE *
-            (-j - p_t + (t_h[i + 1] - t_h[i]) *
-             l_sim_consts[mat_idx].d_x_inv);
-    }
-}
+            (-j - p_t + (t_h[i + 1] - t_h[i]) * l_sim_consts[mat_idx].d_x_inv);
 
-/* TODO combine update_e and update_h -> update_fdtd */
-
-void
-update_h(unsigned int size, unsigned int border, real *t_e, real *t_h,
-         unsigned int *t_mat_indices, sim_constants_3lvl_os *l_sim_consts)
-{
-#pragma omp simd aligned(t_e, t_mat_indices : ALIGN)
-    for (int i = border + 1; i < size - border - 1; i++) {
-        int mat_idx = t_mat_indices[i];
-
-        t_h[i] += l_sim_consts[mat_idx].M_CH * (t_e[i] - t_e[i - 1]);
+        if (i >= border + 1) {
+            t_h[i] += l_sim_consts[mat_idx].M_CH * (t_e[i] - t_e[i - 1]);
+        }
     }
 }
 
@@ -555,12 +488,14 @@ apply_sources(real *t_e, real *source_data, unsigned int num_sources,
     }
 }
 
+template<unsigned int num_lvl, unsigned int num_adj>
 void
 update_d(unsigned int size, unsigned int border, real *t_e,
          Eigen::Matrix<real, num_adj, 1>* t_d,
-         unsigned int *t_mat_indices, sim_constants_3lvl_os *l_sim_consts)
+         unsigned int *t_mat_indices,
+         sim_constants_clvl_os<num_lvl> *l_sim_consts)
 {
-#pragma omp simd aligned(t_d, t_e, t_mat_indices : ALIGN)
+    //#pragma omp simd aligned(t_d, t_e, t_mat_indices : ALIGN)
     for (int i = border; i < size - border - 1; i++) {
         int mat_idx = t_mat_indices[i];
 
@@ -577,13 +512,12 @@ update_d(unsigned int size, unsigned int border, real *t_e,
             + l_sim_consts[mat_idx].equi_corr;
 #endif
 
-#define EXP_METHOD 1
+#define EXP_METHOD 2
 
 #if EXP_METHOD==1
         /* new method with diagonalization */
-        Eigen::Array<complex, num_adj, 1> B_I;
-        B_I = l_sim_consts[mat_idx].L * t_e[i];
-        B_I = B_I.exp();
+        Eigen::Array<complex, num_adj, 1> A_I;
+        A_I = (l_sim_consts[mat_idx].L * t_e[i]).exp();
 
         /* TODO */
         /*
@@ -607,9 +541,9 @@ update_d(unsigned int size, unsigned int border, real *t_e,
         B_I = B_I.exp();
 
         Eigen::Matrix<real, num_adj, num_adj> B =
-            (l_sim_consts[mat_idx].P *
+            (l_sim_consts[mat_idx].B *
              B_I.matrix().asDiagonal() *
-             l_sim_consts[mat_idx].P.adjoint()).real();
+             l_sim_consts[mat_idx].B.adjoint()).real();
 
         t_d[i] = l_sim_consts[mat_idx].A_0 * B *
             l_sim_consts[mat_idx].A_0 * t_d[i];
@@ -630,8 +564,9 @@ update_d(unsigned int size, unsigned int border, real *t_e,
     }
 }
 
+template<unsigned int num_lvl>
 void
-solver_openmp_3lvl_os_red::run() const
+solver_openmp_clvl_os_red<num_lvl>::run() const
 {
     unsigned int P = omp_get_max_threads();
     unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
@@ -737,30 +672,27 @@ solver_openmp_3lvl_os_red::run() const
                     /* align border to vector length */
                     unsigned int border = m / VEC;
 
-                    /* update e */
-                    update_e(size, border, t_e, t_h, t_d, t_mat_indices,
-                             l_sim_consts);
-
-                    /* apply sources */
-                    apply_sources(t_e, m_source_data, num_sources,
-                                  l_sim_sources, n * OL + m, tid * chunk_base,
-                                  chunk);
-
-                    /* update d */
-                    update_d(size, border, t_e, t_d, t_mat_indices,
-                             l_sim_consts);
-
-                    /* update h */
-                    update_h(size, border, t_e, t_h, t_mat_indices,
-                             l_sim_consts);
-
-                    /* apply boundary condition */
+                    /* apply field boundary condition */
                     if (tid == 0) {
                         t_h[OL] = 0;
                     }
                     if (tid == P - 1) {
                         t_h[OL + chunk] = 0;
                     }
+
+                    /* apply sources */
+                    apply_sources(t_e, m_source_data, num_sources,
+                                  l_sim_sources, n * OL + m, tid * chunk_base,
+                                  chunk);
+
+                    /* update e + h with fdtd */
+                    update_fdtd<num_lvl, num_adj>(size, border, t_e, t_h, t_d,
+                                                  t_mat_indices, l_sim_consts);
+
+                    /* update d */
+                    update_d<num_lvl, num_adj>(size, border, t_e, t_d,
+                                               t_mat_indices, l_sim_consts);
+
 
                     /* save results to scratchpad in parallel */
                     for (int k = 0; k < num_copy; k++) {

@@ -30,26 +30,33 @@
 
 namespace mbsolve {
 
-const unsigned int num_lvl = 3;
-const unsigned int num_adj = num_lvl * num_lvl - 1;
-
-class sim_constants_3lvl_os
+template<unsigned int num_lvl>
+class sim_constants_clvl_os
 {
+    static const unsigned int num_adj = num_lvl * num_lvl - 1;
+
+    typedef Eigen::Matrix<complex, num_adj, num_adj> complex_matrix_t;
+    typedef Eigen::Matrix<real, num_adj, num_adj> real_matrix_t;
+    typedef Eigen::Matrix<real, num_adj, 1> real_vector_t;
+
 public:
     /* constant propagators */
-    Eigen::Matrix<complex, num_adj, num_adj> B_1;
-    Eigen::Matrix<complex, num_adj, num_adj> B_2;
+    //    complex_matrix_t B_1;
+    //    complex_matrix_t B_2;
 
-    /* backup: without diagonalization */
-    Eigen::Matrix<real, num_adj, num_adj> A_0;
-    Eigen::Matrix<complex, num_adj, num_adj> P;
+    /* constant propagator A_0 = exp(M dt/2) */
+    real_matrix_t A_0;
+
+    /* unitary transformation matrix */
+    complex_matrix_t B;
 
     /* required for polarization calc ? */
-    Eigen::Matrix<real, num_adj, num_adj> M_0;
-    Eigen::Matrix<real, num_adj, num_adj> U;
+    real_matrix_t M;
+    real_matrix_t U;
+    real_vector_t d_in;
+
     /* dipole moments */
-    /* TODO generalize */
-    real dipole_moments[3];
+    real_vector_t v;
 
     /* diagonalized interaction propagator */
     /* TODO: special type for diagonal matrix? */
@@ -71,13 +78,21 @@ public:
 
 };
 
-class solver_openmp_3lvl_os_red : public solver_int
+template<unsigned int num_lvl>
+class solver_openmp_clvl_os_red : public solver_int
 {
+    static const unsigned int num_adj = num_lvl * num_lvl - 1;
+
+    typedef Eigen::Matrix<complex, num_lvl, num_lvl> qm_operator_t;
+    typedef Eigen::Matrix<complex, num_adj, num_adj> complex_matrix_t;
+    typedef Eigen::Matrix<real, num_adj, num_adj> real_matrix_t;
+    typedef Eigen::Matrix<real, num_adj, 1> real_vector_t;
+
 public:
-    solver_openmp_3lvl_os_red(std::shared_ptr<const device> dev,
+    solver_openmp_clvl_os_red(std::shared_ptr<const device> dev,
                               std::shared_ptr<scenario> scen);
 
-    ~solver_openmp_3lvl_os_red();
+    ~solver_openmp_clvl_os_red();
 
     const std::string& get_name() const;
 
@@ -91,9 +106,9 @@ private:
     /*
      * Position-dependent density matrix in adjoint representation.
      */
-    Eigen::Matrix<real, num_adj, 1> **m_d;
+    real_vector_t **m_d;
 
-    std::vector<Eigen::Matrix<complex, num_lvl, num_lvl>  > m_generators;
+    std::vector<qm_operator_t > m_generators;
 
     real **m_h;
     real **m_e;
@@ -112,14 +127,113 @@ private:
     copy_list_entry *l_copy_list;
 #endif
     sim_source *l_sim_sources;
-    sim_constants_3lvl_os *l_sim_consts;
+    sim_constants_clvl_os<num_lvl> *l_sim_consts;
 
-    std::vector<sim_constants_3lvl_os> m_sim_consts;
+    std::vector<sim_constants_clvl_os<num_lvl> > m_sim_consts;
 
     std::vector<sim_source> m_sim_sources;
 
     std::vector<copy_list_entry> m_copy_list;
+
+    void
+    setup_generators()
+    {
+        m_generators.clear();
+
+        /* set up SU(N) generators u -- real part off-diagonal elements */
+        for (int k = 0; k < num_lvl; k++) {
+            for (int j = 0; j < k; j++) {
+                qm_operator_t g;
+                g(j, k) = 1;
+                g(k, j) = 1;
+                m_generators.push_back(g);
+            }
+        }
+
+        /* set up SU(N) generators v -- imag part off-diagonal elements */
+        for (int k = 0; k < num_lvl; k++) {
+            for (int j = 0; j < k; j++) {
+                qm_operator_t g;
+                g(j, k) = complex(0, -1);
+                g(k, j) = complex(0, +1);
+                m_generators.push_back(g);
+            }
+        }
+
+        /* set up SU(N) generators w -- main-diagonal elements */
+        for (int l = 0; l < num_lvl - 1; l++) {
+            qm_operator_t g;
+            int j = 0;
+
+            for (j = 0; j <= l; j++) {
+                g(j, j) = 1.0;
+            }
+            g(j, j) = -(l + 1);
+
+            g *= -sqrt(2.0/((l + 1) * (l + 2)));
+            m_generators.push_back(g);
+        }
+    }
+
+    real_vector_t
+    get_adj_op(const qm_operator_t& op)
+    {
+        real_vector_t ret;
+        for (int i = 0; i < num_adj; i++) {
+            qm_operator_t m;
+            m = op * m_generators[i];
+            ret[i] = m.real().trace();
+        }
+        return ret;
+    }
+
+    real_matrix_t
+    get_adj_sop(qm_operator_t (*G)(const qm_operator_t&))
+    {
+        real_matrix_t ret;
+
+        for (int i = 0; i < num_adj; i++) {
+            for (int j = 0; j < num_adj; j++) {
+                qm_operator_t result = G(m_generators[j]) * m_generators[i];
+                complex c = 0.5 * result.trace();
+                ret(i, j) = c.real();
+            }
+        }
+        return ret;
+    }
+
+    real_vector_t
+    get_adj_deq(qm_operator_t (*G)(const qm_operator_t&))
+    {
+        real_vector_t ret;
+        for (int i = 0; i < num_adj; i++) {
+            qm_operator_t m;
+            qm_operator_t I = Eigen::Matrix<complex, num_lvl, num_lvl>::Identity;
+            m = G(I) * m_generators[i];
+            ret[i] = m.real().trace() * 1.0/num_lvl;
+        }
+        return ret;
+    }
+
+    real_matrix_t
+    get_adj_liouvillian(const qm_operator_t& H) {
+        real_matrix_t ret;
+
+        for (int i = 0; i < num_adj; i++) {
+            for (int j = 0; j < num_adj; j++) {
+                qm_operator_t result = H *
+                    (m_generators[i] * m_generators[j] -
+                     m_generators[j] * m_generators[i]);
+                complex c = complex(0, 1) * 0.5 * result.trace();
+                ret(i, j) = c.real() * 1.0/HBAR;
+            }
+        }
+        return ret;
+    }
+
 };
+
+typedef solver_openmp_clvl_os_red<3> solver_openmp_3lvl_os_red;
 
 }
 

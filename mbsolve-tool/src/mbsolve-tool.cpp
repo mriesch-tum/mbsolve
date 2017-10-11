@@ -75,6 +75,14 @@ static void parse_args(int argc, char **argv)
     }
 }
 
+Eigen::Matrix<mbsolve::complex, 3, 3>
+relax_sop(const Eigen::Matrix<mbsolve::complex, 3, 3>& arg)
+{
+    Eigen::Matrix<mbsolve::complex, 3, 3> ret(arg);
+
+    return ret;
+}
+
 int main(int argc, char **argv)
 {
     /* parse command line arguments */
@@ -88,8 +96,8 @@ int main(int argc, char **argv)
         /* TODO tryout */
 
         /* Ziolkowski setup in 3-lvl notation */
-        Eigen::Matrix3d H, u;
-        Eigen::Matrix<mbsolve::real, 9, 9> L;
+        Eigen::Matrix<mbsolve::complex, 3, 3> H, u;
+
         H <<0.5, 0, 0,
             0, -0.5, 0,
             0, 0, 0;
@@ -99,10 +107,8 @@ int main(int argc, char **argv)
             0, 0, 0;
         u = u * mbsolve::E0 * 6.24e-11;
 
-        L = Eigen::Matrix<mbsolve::real, 9, 9>::Zero();
-
         auto qm = std::make_shared<mbsolve::qm_desc_3lvl>
-            (1e24, H, u, L);
+            (1e24, H, u, &relax_sop);
 
 
         /* Ziolkowski setup */
@@ -119,16 +125,20 @@ int main(int argc, char **argv)
         /* set up device */
         //auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
         auto dev = std::make_shared<mbsolve::device>("Song");
+        /*
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum left", mat_vac, 0, 7.5e-6));
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Active region", mat_ar, 7.5e-6, 142.5e-6));
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
+        */
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Active region", mat_ar, 0, 150e-6));
 
         /* Ziolkowski basic scenario */
         auto scen = std::make_shared<mbsolve::scenario>
-            ("Basic", 32768, 200e-15);
+            ("Basic", 32768, 10e-15);
             //("Basic", 32768, 200e-15);
             //("Basic", 65536, 200e-15);
             //("Basic", 131072, 200e-15);
