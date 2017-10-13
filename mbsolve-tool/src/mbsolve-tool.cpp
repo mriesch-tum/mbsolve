@@ -76,9 +76,29 @@ static void parse_args(int argc, char **argv)
 }
 
 Eigen::Matrix<mbsolve::complex, 3, 3>
-relax_sop(const Eigen::Matrix<mbsolve::complex, 3, 3>& arg)
+relax_sop_ziolk3(const Eigen::Matrix<mbsolve::complex, 3, 3>& arg)
 {
-    Eigen::Matrix<mbsolve::complex, 3, 3> ret(arg);
+    Eigen::Matrix<mbsolve::complex, 3, 3> ret =
+        Eigen::Matrix<mbsolve::complex, 3, 3>::Zero();
+
+    ret(0, 0) = +1e10 * arg(1, 1);
+    ret(1, 1) = -1e10 * arg(1, 1);
+    ret(0, 1) = -1e10 * arg(0, 1);
+    ret(1, 0) = -1e10 * arg(1, 0);
+
+    return ret;
+}
+
+Eigen::Matrix<mbsolve::complex, 2, 2>
+relax_sop_ziolk2(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
+{
+    Eigen::Matrix<mbsolve::complex, 2, 2> ret =
+        Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
+
+    ret(0, 0) = +1e10 * arg(1, 1);
+    ret(1, 1) = -1e10 * arg(1, 1);
+    ret(0, 1) = -1e10 * arg(0, 1);
+    ret(1, 0) = -1e10 * arg(1, 0);
 
     return ret;
 }
@@ -92,54 +112,114 @@ int main(int argc, char **argv)
 	ti::cpu_timer timer;
 	double total_time = 0;
 
+#define SETUP 4
+
+#if SETUP==1
         /* Song setup */
-        /* TODO tryout */
 
-        /* Ziolkowski setup in 3-lvl notation */
-        Eigen::Matrix<mbsolve::complex, 3, 3> H, u;
+        auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+        auto mat_ar = std::make_shared<mbsolve::material>("AR_Song", qm);
+        mbsolve::material::add_to_library(mat_vac);
+        mbsolve::material::add_to_library(mat_ar);
 
-        H <<0.5, 0, 0,
-            0, -0.5, 0,
+
+
+        auto dev = std::make_shared<mbsolve::device>("Song");
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Active region", mat_ar, 0, 150e-6));
+
+
+#elif SETUP==2
+        /* Ziolkowski setup in 3-lvl desc */
+
+        Eigen::Matrix<mbsolve::complex, 3, 3> H, u, d_init;
+
+        H <<-0.5, 0, 0,
+            0, 0.5, 0,
             0, 0, 0;
         H = H * mbsolve::HBAR * 2 * M_PI * 2e14;
         u <<0, 1.0, 0,
             1.0, 0, 0,
             0, 0, 0;
-        u = u * mbsolve::E0 * 6.24e-11;
+        u = u * mbsolve::E0 * 6.24e-11 * (-1);
+        d_init << 1, 0, 0,
+            0, 0, 0,
+            0, 0, 0;
 
         auto qm = std::make_shared<mbsolve::qm_desc_3lvl>
-            (1e24, H, u, &relax_sop);
-
-
-        /* Ziolkowski setup */
-        //auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
-        //    (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
+            (1e24, H, u, &relax_sop_ziolk3, d_init);
 
         auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
-        //auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
-        auto mat_ar = std::make_shared<mbsolve::material>("AR_Song", qm);
-
+        auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
         mbsolve::material::add_to_library(mat_vac);
         mbsolve::material::add_to_library(mat_ar);
 
         /* set up device */
-        //auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
-        auto dev = std::make_shared<mbsolve::device>("Song");
-        /*
+        auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum left", mat_vac, 0, 7.5e-6));
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Active region", mat_ar, 7.5e-6, 142.5e-6));
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
-        */
-        dev->add_region(std::make_shared<mbsolve::region>
-                        ("Active region", mat_ar, 0, 150e-6));
+        /* end */
+#elif SETUP==3
+        /* Ziolkowski setup in old 2-lvl desc */
+        auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
+            (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
 
-        /* Ziolkowski basic scenario */
+        auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+        auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
+        mbsolve::material::add_to_library(mat_vac);
+        mbsolve::material::add_to_library(mat_ar);
+
+        /* set up device */
+        auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Vacuum left", mat_vac, 0, 7.5e-6));
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Active region", mat_ar, 7.5e-6, 142.5e-6));
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
+        /* end */
+#elif SETUP==4
+        /* Ziolkowski setup in new 2-lvl desc */
+
+        Eigen::Matrix<mbsolve::complex, 2, 2> H, u, d_init;
+
+        H <<-0.5, 0,
+            0, 0.5;
+        H = H * mbsolve::HBAR * 2 * M_PI * 2e14;
+        u <<0, 1.0,
+            1.0, 0;
+        u = u * mbsolve::E0 * 6.24e-11 * (-1.0);
+        d_init << 1, 0,
+            0, 0;
+        auto qm = std::make_shared<mbsolve::qm_desc_clvl<2> >
+            (1e24, H, u, &relax_sop_ziolk2, d_init);
+
+        auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+        auto mat_ar = std::make_shared<mbsolve::material>("AR_Ziolkowski", qm);
+        mbsolve::material::add_to_library(mat_vac);
+        mbsolve::material::add_to_library(mat_ar);
+
+        /* set up device */
+        auto dev = std::make_shared<mbsolve::device>("Ziolkowski");
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Vacuum left", mat_vac, 0, 7.5e-6));
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Active region", mat_ar, 7.5e-6, 142.5e-6));
+        dev->add_region(std::make_shared<mbsolve::region>
+                        ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
+        /* end */
+#else
+
+#endif
+
+        /* Basic scenario */
         auto scen = std::make_shared<mbsolve::scenario>
-            ("Basic", 32768, 10e-15);
-            //("Basic", 32768, 200e-15);
+            //("Basic", 32768, 10e-15);
+            ("Basic", 32768, 200e-15);
             //("Basic", 65536, 200e-15);
             //("Basic", 131072, 200e-15);
             //("Basic", 262144, 200e-15);

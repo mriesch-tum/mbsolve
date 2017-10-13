@@ -156,21 +156,28 @@ private:
     /* Lindblad superoperator */
     callback_t m_g;
 
+    /* initial density matrix */
+    matrix_t m_d_init;
+
 public:
 
     explicit qm_desc_clvl(real carrier_density,
                           const matrix_t& hamiltonian,
                           const matrix_t& dipole_op,
-                          const callback_t& lindblad_op) :
+                          const callback_t& lindblad_op,
+                          const matrix_t& d_init) :
         qm_description(carrier_density),
-        m_h(hamiltonian), m_u(dipole_op), m_g(lindblad_op) { }
-
+        m_h(hamiltonian), m_u(dipole_op), m_g(lindblad_op), m_d_init(d_init)
+    {
+    }
 
     const matrix_t& get_hamiltonian() const { return m_h; }
 
     const matrix_t& get_dipole_op() const { return m_u; }
 
     const callback_t& get_lindblad_op() const { return m_g; }
+
+    const matrix_t& get_d_init() const { return m_d_init; }
 };
 
 typedef qm_desc_clvl<3> qm_desc_3lvl;

@@ -74,7 +74,7 @@ public:
     real d_t;
 
     /* initialization constants */
-    real inversion_init;
+    real_vector_t d_init;
 
 };
 
@@ -99,6 +99,8 @@ public:
     void run() const;
 
 private:
+    const std::string m_name;
+
     /* TODO: rule of three. make copy constructor etc. private?
      * or implement correctly
      */
@@ -112,6 +114,7 @@ private:
 
     real **m_h;
     real **m_e;
+    real **m_p;
 
     real *m_result_scratch;
 
@@ -208,8 +211,7 @@ private:
         real_vector_t ret;
         for (int i = 0; i < num_adj; i++) {
             qm_operator_t m;
-            qm_operator_t I = Eigen::Matrix<complex, num_lvl, num_lvl>::Identity;
-            m = G(I) * m_generators[i];
+            m = G(qm_operator_t::Identity()) * m_generators[i];
             ret[i] = m.real().trace() * 1.0/num_lvl;
         }
         return ret;

@@ -28,7 +28,7 @@
 
 namespace mbsolve{
 
-static solver_factory<solver_openmp_2lvl_os_red> factory("openmp-2lvl-os-red");
+static solver_factory<solver_openmp_2lvl_os_red> factory("openmp-2lvl-os-old");
 
 /* redundant calculation overlap */
 #ifdef XEON_PHI_OFFLOAD
