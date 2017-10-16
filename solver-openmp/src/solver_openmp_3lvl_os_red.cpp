@@ -103,6 +103,8 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             /* determine dipole operator as vector */
             sc.v = get_adj_op(qm->get_dipole_op());
 
+            std::cout << "v: " << std::endl << sc.v << std::endl;
+
             /* time-independent hamiltionian in adjoint representation */
             Eigen::Matrix<real, num_adj, num_adj> M_0;
             M_0 = get_adj_liouvillian(qm->get_hamiltonian());
@@ -183,6 +185,8 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
         } else {
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;
+
+            sc.v = Eigen::Matrix<real, num_adj, 1>::Zero();
 
             //sc.B_1 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
             //sc.B_2 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
@@ -678,7 +682,16 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
                 /* sub-loop */
                 for (unsigned int m = 0; m < subloop_ct; m++) {
                     /* align border to vector length */
-                    unsigned int border = m / VEC;
+                    unsigned int border = m - (m % VEC);
+
+                    /* update d */
+                    update_d<num_lvl, num_adj>(size, border, t_e, t_p, t_d,
+                                               t_mat_indices, l_sim_consts);
+
+                     /* update e + h with fdtd */
+                    update_fdtd<num_lvl, num_adj>(size, border, t_e, t_p, t_h,
+                                                  t_d, t_mat_indices,
+                                                  l_sim_consts);
 
                     /* apply field boundary condition */
                     if (tid == 0) {
@@ -688,19 +701,10 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
                         t_h[OL + chunk] = 0;
                     }
 
-                   /* update d */
-                    update_d<num_lvl, num_adj>(size, border, t_e, t_p, t_d,
-                                               t_mat_indices, l_sim_consts);
-
                     /* apply sources */
                     apply_sources(t_e, m_source_data, num_sources,
                                   l_sim_sources, n * OL + m, tid * chunk_base,
                                   chunk);
-
-                    /* update e + h with fdtd */
-                    update_fdtd<num_lvl, num_adj>(size, border, t_e, t_p, t_h,
-                                                  t_d, t_mat_indices,
-                                                  l_sim_consts);
 
                      /* save results to scratchpad in parallel */
                     for (int k = 0; k < num_copy; k++) {
