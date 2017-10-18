@@ -22,6 +22,8 @@
 #ifndef MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
 #define MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
 
+//#define EXP_METHOD 1
+
 #include <iostream>
 #include <omp.h>
 #include <solver.hpp>
@@ -43,6 +45,13 @@ public:
     /* constant propagators */
     //    complex_matrix_t B_1;
     //    complex_matrix_t B_2;
+
+    bool has_qm;
+    bool has_dipole;
+
+    /* analytic solution precalc */
+    real_matrix_t U2;
+    real theta;
 
     /* constant propagator A_0 = exp(M dt/2) */
     real_matrix_t A_0;

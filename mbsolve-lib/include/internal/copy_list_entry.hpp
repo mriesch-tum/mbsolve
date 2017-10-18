@@ -133,11 +133,16 @@ public:
     {
         m_dev.m_timestep = scen->get_timestep_size();
 
-        m_dev.m_rows = ceil(scen->get_endtime()/rec->get_interval()) + 1;
-        m_dev.m_interval = scen->get_endtime()/(m_dev.m_rows - 1);
-
-        m_dev.m_interval_idx =
-            floor(1.0 * (scen->get_num_timesteps() - 1)/(m_dev.m_rows - 1));
+        if (rec->get_interval() <= scen->get_timestep_size()) {
+            m_dev.m_rows = scen->get_num_timesteps();
+            m_dev.m_interval = scen->get_timestep_size();
+            m_dev.m_interval_idx = 1;
+        } else {
+            m_dev.m_rows = ceil(scen->get_endtime()/rec->get_interval()) + 1;
+            m_dev.m_interval = scen->get_endtime()/(m_dev.m_rows - 1);
+            m_dev.m_interval_idx =
+                floor(1.0 * (scen->get_num_timesteps() - 1)/(m_dev.m_rows - 1));
+        }
 
         if (rec->get_position() < 0.0) {
             /* copy complete grid */
@@ -154,7 +159,6 @@ public:
                                             m_dev.m_rows);
 
         m_dev.m_type = rec->get_type();
-        m_dev.m_interval = rec->get_interval();
         m_dev.m_timestep = scen->get_timestep_size();
         m_dev.m_is_complex = rec->is_complex();
 

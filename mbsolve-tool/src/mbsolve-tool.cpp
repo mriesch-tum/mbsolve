@@ -76,6 +76,34 @@ static void parse_args(int argc, char **argv)
 }
 
 Eigen::Matrix<mbsolve::complex, 3, 3>
+relax_sop_song3(const Eigen::Matrix<mbsolve::complex, 3, 3>& arg)
+{
+    Eigen::Matrix<mbsolve::complex, 3, 3> ret =
+        Eigen::Matrix<mbsolve::complex, 3, 3>::Zero();
+
+    mbsolve::real d7_eq = 0.0;
+    mbsolve::real d8_eq = 0.0;
+    mbsolve::real T_1 = 1e-10;
+
+    ret(0, 0) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2 * arg(0, 0)
+                                  - d7_eq - d8_eq));
+    ret(1, 1) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2 * arg(0, 0)
+                                  - d7_eq - d8_eq))
+        - 1/T_1 * (arg(1, 1) - arg(0, 0) - d7_eq);
+    ret(2, 2) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2 * arg(0, 0)
+                                  - d7_eq - d8_eq))
+        - 1/T_1 * (arg(2, 2) - arg(0, 0) - d8_eq);
+    ret(1, 0) = -1/T_1 * arg(1, 0);
+    ret(0, 1) = -1/T_1 * arg(0, 1);
+    ret(2, 0) = -1/T_1 * arg(2, 0);
+    ret(0, 2) = -1/T_1 * arg(0, 2);
+    ret(2, 1) = -1/T_1 * arg(2, 1);
+    ret(1, 2) = -1/T_1 * arg(1, 2);
+
+    return ret;
+}
+
+Eigen::Matrix<mbsolve::complex, 3, 3>
 relax_sop_ziolk3(const Eigen::Matrix<mbsolve::complex, 3, 3>& arg)
 {
     Eigen::Matrix<mbsolve::complex, 3, 3> ret =
@@ -112,24 +140,47 @@ int main(int argc, char **argv)
 	ti::cpu_timer timer;
 	double total_time = 0;
 
-#define SETUP 4
+#define DEVICE 4
+#define SCENARIO 2
 
-#if SETUP==1
+#if DEVICE==1
         /* Song setup */
 
+        Eigen::Matrix<mbsolve::complex, 3, 3> H, u, d_init;
+
+        H <<0, 0, 0,
+            0, 2.3717, 0,
+            0, 0, 2.4165;
+        H = H * mbsolve::HBAR * 1e15;
+
+        // mbsolve::real g = 1.0;
+        mbsolve::real g = sqrt(2);
+
+        u <<0, 1.0, g,
+            1.0, 0, 0,
+            g, 0, 0;
+        u = u * mbsolve::E0 * 9.2374e-11;
+
+        d_init << 1, 0, 0,
+            0, 0, 0,
+            0, 0, 0;
+
+        auto qm = std::make_shared<mbsolve::qm_desc_3lvl>
+            (6e24, H, u, &relax_sop_song3, d_init);
+
         auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
-        auto mat_ar = std::make_shared<mbsolve::material>("AR_Song", qm);
         mbsolve::material::add_to_library(mat_vac);
+        auto mat_ar = std::make_shared<mbsolve::material>("AR_Song", qm);
         mbsolve::material::add_to_library(mat_ar);
 
-
-
         auto dev = std::make_shared<mbsolve::device>("Song");
+        //        dev->add_region(std::make_shared<mbsolve::region>
+        //                        ("Vacuum left", mat_vac, 0, 7.5e-6));
         dev->add_region(std::make_shared<mbsolve::region>
+                        //("Active region", mat_ar, 7.5e-6, 150e-6));
                         ("Active region", mat_ar, 0, 150e-6));
 
-
-#elif SETUP==2
+#elif DEVICE==2
         /* Ziolkowski setup in 3-lvl desc */
 
         Eigen::Matrix<mbsolve::complex, 3, 3> H, u, d_init;
@@ -163,7 +214,7 @@ int main(int argc, char **argv)
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
         /* end */
-#elif SETUP==3
+#elif DEVICE==3
         /* Ziolkowski setup in old 2-lvl desc */
         auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
             (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
@@ -182,7 +233,7 @@ int main(int argc, char **argv)
         dev->add_region(std::make_shared<mbsolve::region>
                         ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
         /* end */
-#elif SETUP==4
+#elif DEVICE==4
         /* Ziolkowski setup in new 2-lvl desc */
 
         Eigen::Matrix<mbsolve::complex, 2, 2> H, u, d_init;
@@ -216,7 +267,8 @@ int main(int argc, char **argv)
 
 #endif
 
-        /* Basic scenario */
+#if SCENARIO==1
+        /* Song basic scenario */
         auto scen = std::make_shared<mbsolve::scenario>
             //("Basic", 32768, 10e-15);
             ("Basic", 32768, 200e-15);
@@ -225,13 +277,37 @@ int main(int argc, char **argv)
             //("Basic", 262144, 200e-15);
 
         auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
-            ("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
-            //("sech", 0.0, mbsolve::source::hard_source, 4.2186e9, 2e14,
+            ("sech", 0.0, mbsolve::source::hard_source, 3.5471e9, 3.8118e14,
+             17.248, 1.76/5e-15, -M_PI/2);
+        scen->add_source(sech_pulse);
+
+        scen->add_record(std::make_shared<mbsolve::record>("inv12", 0, 0.0));
+        scen->add_record(std::make_shared<mbsolve::record>("e", 0, 0.0));
+        //scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
+        //scen->add_record(std::make_shared<mbsolve::record>("inv12", 2.5e-15));
+
+#elif SCENARIO==2
+        /* Ziolkowski basic scenario */
+
+        auto scen = std::make_shared<mbsolve::scenario>
+            //("Basic", 32768, 10e-15);
+            ("Basic", 32768, 200e-15);
+            //("Basic", 65536, 200e-15);
+            //("Basic", 131072, 200e-15);
+            //("Basic", 262144, 200e-15);
+
+        auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
+            //("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
+            ("sech", 0.0, mbsolve::source::hard_source, 4.2186e9, 2e14,
              10, 2e14);
         scen->add_source(sech_pulse);
 
         scen->add_record(std::make_shared<mbsolve::record>("inv12", 2.5e-15));
         scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
+#else
+
+#endif
+
 
 	/* tic */
 	timer.start();

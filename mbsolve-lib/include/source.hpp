@@ -129,20 +129,22 @@ class sech_pulse : public source
 private:
 
     real m_beta;
+    real m_phase_sin;
 
 public:
     sech_pulse(const std::string& name, real position, type source_type,
                real ampl, real freq,
                real phase,
-               real beta) :
-        source(name, position, source_type, ampl, freq, phase), m_beta(beta)
+               real beta, real phase_sin = 0.0) :
+        source(name, position, source_type, ampl, freq, phase), m_beta(beta),
+        m_phase_sin(phase_sin)
     {
     }
 
     real calc_value(real t) const
     {
         return 1/std::cosh(m_beta * t - m_phase) *
-            sin(2 * M_PI * m_freq * t);
+            sin(2 * M_PI * m_freq * t - m_phase_sin);
     }
 
 };
