@@ -56,3 +56,10 @@ xlim([0, SimEndTime]);
 trace = rho11 + rho22 + rho33;
 trace_err = max(trace) - min(trace);
 display(trace_err)
+
+rho11_min = min(rho11)
+rho22_min = min(rho22)
+rho33_min = min(rho33)
+rho11_max = max(rho11)
+rho22_max = max(rho22)
+rho33_max = max(rho33)
