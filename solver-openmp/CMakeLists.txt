@@ -18,7 +18,7 @@ if(NOT ARCH STREQUAL "PHI")
   list(APPEND SOLVER_OPENMP_SRCS
     src/solver_openmp_2lvl_os.cpp
     src/solver_openmp_2lvl_os_red.cpp
-    src/solver_openmp_3lvl_os_red.cpp
+    src/solver_openmp_clvl_os_red.cpp
   )
 endif()
 

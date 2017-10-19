@@ -13,7 +13,9 @@ end
 
 % explicitely non-complex quantities to real numbers
 e = real(e);
-rho11 = real(inv12);
+rho11 = real(d11);
+rho22 = real(d22);
+rho33 = real(d33);
 
 % spatial plot
 %x = 0:GridPointSize:XDim;
@@ -42,9 +44,15 @@ xlim([0, SimEndTime]);
 
 figure;
 plot(t, rho11);
+hold on;
+plot(t, rho22);
+plot(t, rho33);
 if (use_reference == 1)
-    hold on;
     plot(comp_data(:, 1) * 1e-15, comp_data(:, 2));
 end
-ylabel('\rho_{11}');
+ylabel('populations');
 xlim([0, SimEndTime]);
+
+trace = rho11 + rho22 + rho33;
+trace_err = max(trace) - min(trace);
+display(trace_err)

@@ -26,7 +26,7 @@
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <common_openmp.hpp>
-#include <solver_openmp_3lvl_os_red.hpp>
+#include <solver_openmp_clvl_os_red.hpp>
 
 namespace mbsolve {
 
@@ -250,6 +250,8 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
     for (const auto& rec : scen->get_records()) {
         /* create copy list entry */
         copy_list_entry entry(rec, scen, scratch_size);
+
+        std::cout << "Rows: " << entry.get_rows() << " Cols: " << entry.get_cols() << std::endl;
 
         /* add result to solver */
         m_results.push_back(entry.get_result());
@@ -782,6 +784,8 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
                             unsigned int cols = l_copy_list[k].get_cols();
                             int base_idx = tid * chunk_base - OL;
                             record::type t = l_copy_list[k].get_type();
+                            unsigned int ridx = l_copy_list[k].get_row_idx();
+                            unsigned int cidx = l_copy_list[k].get_col_idx();
                             int off_r = l_copy_list[k].get_offset_scratch_real
                                 (n * OL + m, base_idx - pos);
 
@@ -793,13 +797,23 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
                                         m_result_scratch[off_r + i] = t_e[i];
                                     } else if (t == record::type::inversion) {
                                         m_result_scratch[off_r + i] =
-                                            //-t_d[i](6);
-                                            t_d[i](2);
-                                            /*
-                                            1.0/3 + 0.5 *
-                                            (- t_d[i](6)
-                                             - 1.0/sqrt(3) * t_d[i](7));
-                                            */
+                                            t_d[i](num_lvl * (num_lvl - 1));
+                                    } else if (t == record::type::density) {
+
+                                        /* right now only populations */
+                                        real temp = 1.0/num_lvl;
+                                        for (int l = num_lvl * (num_lvl - 1);
+                                             l < num_adj; l++) {
+                                            temp += 0.5 * t_d[i](l) *
+                                                m_generators[l](ridx, cidx).real();
+                                        }
+                                        m_result_scratch[off_r + i] = temp;
+
+                                        /* TODO: coherences
+                                         * remove 1/3
+                                         * consider only two/one corresponding
+                                         * entry */
+
                                     } else {
                                         /* TODO handle trouble */
 

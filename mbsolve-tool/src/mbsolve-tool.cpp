@@ -281,10 +281,13 @@ int main(int argc, char **argv)
              17.248, 1.76/5e-15, -M_PI/2);
         scen->add_source(sech_pulse);
 
-        scen->add_record(std::make_shared<mbsolve::record>("inv12", 0, 0.0));
+        scen->add_record(std::make_shared<mbsolve::record>
+                         ("d11", mbsolve::record::type::density, 1, 1, 0, 0));
+        scen->add_record(std::make_shared<mbsolve::record>
+                         ("d22", mbsolve::record::type::density, 2, 2, 0, 0));
+        scen->add_record(std::make_shared<mbsolve::record>
+                         ("d33", mbsolve::record::type::density, 3, 3, 0, 0));
         scen->add_record(std::make_shared<mbsolve::record>("e", 0, 0.0));
-        //scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
-        //scen->add_record(std::make_shared<mbsolve::record>("inv12", 2.5e-15));
 
 #elif SCENARIO==2
         /* Ziolkowski basic scenario */

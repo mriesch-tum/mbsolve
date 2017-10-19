@@ -65,6 +65,8 @@ private:
     real m_interval;
 
     record::type m_type;
+    unsigned int m_col_idx;
+    unsigned int m_row_idx;
 
     bool m_is_complex;
 
@@ -85,6 +87,14 @@ public:
 
     __mb_on_device record::type get_type() const {
         return m_type;
+    }
+
+    __mb_on_device unsigned int get_col_idx() const {
+        return m_col_idx;
+    }
+
+    __mb_on_device unsigned int get_row_idx() const {
+        return m_row_idx;
     }
 
     __mb_on_device unsigned int get_position() const {
@@ -166,11 +176,17 @@ public:
         m_dev.m_offset_scratch_imag = offset_scratch + m_dev.m_cols *
             m_dev.m_rows;
 
+        m_dev.m_col_idx = rec->get_col();
+        m_dev.m_row_idx = rec->get_row();
     }
 
     const copy_list_entry_dev& get_dev() const { return m_dev; }
 
     record::type get_type() const { return m_dev.get_type(); }
+
+    unsigned int get_col_idx() const { return m_dev.get_col_idx(); }
+
+    unsigned int get_row_idx() const { return m_dev.get_row_idx(); }
 
     bool hasto_record(unsigned int iteration) const {
         return m_dev.hasto_record(iteration);

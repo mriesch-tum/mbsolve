@@ -54,6 +54,9 @@ private:
 public:
     record(const std::string& name, real interval = 0.0, real position = -1.0);
 
+    record(const std::string& name, type record_type, unsigned int row_idx,
+           unsigned int col_idx, real interval = 0.0, real position = -1.0);
+
     const std::string& get_name() const { return m_name; }
 
     type get_type() const { return m_type; }
