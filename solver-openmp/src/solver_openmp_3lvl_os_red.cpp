@@ -162,16 +162,17 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             sc.M = M;
             sc.U = U;
 
+            /* for Rodrigues formula */
+            sc.U2 = U * U;
+            sc.theta_1 = sqrt(pow(U(0, 1), 2) + pow(U(0, 2), 2)
+                              + pow(U(1, 2), 2));
+
             /* TODO refine check? */
             sc.has_qm = true;
             sc.has_dipole = true;
 
             /* store diagonal matrix containing the eigenvalues */
             sc.L = es.eigenvalues() * scen->get_timestep_size();
-
-            //std::cout << sc.L << std::endl;
-            std::cout << es.eigenvectors() << std::endl;
-            std::cout << es.eigenvalues() << std::endl;
 
             sc.d_init = get_adj_op(qm->get_d_init());
 
@@ -203,7 +204,7 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             sc.M = Eigen::Matrix<real, num_adj, num_adj>::Zero();
             sc.U = Eigen::Matrix<real, num_adj, num_adj>::Zero();
 
-            sc.L = Eigen::Array<complex, num_adj, 1>::Zero();
+            sc.L = Eigen::Matrix<complex, num_adj, 1>::Zero();
 
             sc.d_in = Eigen::Matrix<real, num_adj, 1>::Zero();
 
@@ -557,6 +558,11 @@ apply_sources(real *t_e, real *source_data, unsigned int num_sources,
 //#endif
 #endif
 
+complex mexp(const complex& arg)
+{
+    return std::exp(arg);
+}
+
 template<unsigned int num_lvl, unsigned int num_adj>
 inline Eigen::Matrix<real, num_adj, num_adj>
 mat_exp(const sim_constants_clvl_os<num_lvl>& s, real e)
@@ -565,14 +571,17 @@ mat_exp(const sim_constants_clvl_os<num_lvl>& s, real e)
 
 #if EXP_METHOD==1
     /* by diagonalization */
-    Eigen::Array<complex, num_adj, 1> diag_exp;
-    diag_exp = (s.L * e).exp();
+    Eigen::Matrix<complex, num_adj, 1> diag_exp = s.L * e;
+    diag_exp = diag_exp.unaryExpr(&mexp);
 
-    ret = (s.B * diag_exp.matrix().asDiagonal() * s.B.adjoint()).real();
+    ret = (s.B * diag_exp.asDiagonal() * s.B.adjoint()).real();
 #elif EXP_METHOD==2
     /* analytic solution */
     if (num_lvl == 2) {
-
+        /* Rodrigues formula */
+        ret = sin(s.theta_1 * e * s.d_t)/s.theta_1 * s.U +
+            (1 - cos(s.theta_1 * e * s.d_t))/(s.theta_1 * s.theta_1) * s.U2 +
+            Eigen::Matrix<real, num_adj, num_adj>::Identity();
     } else {
         throw std::invalid_argument("Not implemented");
     }

@@ -22,7 +22,7 @@
 #ifndef MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
 #define MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
 
-//#define EXP_METHOD 1
+#define EXP_METHOD 1
 
 #include <iostream>
 #include <omp.h>
@@ -51,7 +51,7 @@ public:
 
     /* analytic solution precalc */
     real_matrix_t U2;
-    real theta;
+    real theta_1;
 
     /* constant propagator A_0 = exp(M dt/2) */
     real_matrix_t A_0;
@@ -70,7 +70,7 @@ public:
     /* diagonalized interaction propagator */
     /* TODO: special type for diagonal matrix? */
     /* TODO: vector would do, right? */
-    Eigen::Array<complex, num_adj, 1> L;
+    Eigen::Matrix<complex, num_adj, 1> L;
 
     /* electromagnetic constants */
     real M_CE;
