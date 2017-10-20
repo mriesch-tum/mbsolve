@@ -7,8 +7,8 @@
 #@tasks_per_node = 1
 #@ node_usage = not_shared
 #@ initialdir = $(home)/
-#@ output = omp-red-$(jobid).out
-#@ error = omp-red-$(jobid).out
+#@ output = omp-os-def-$(jobid).out
+#@ error = omp-os-def-$(jobid).out
 #@ notification=always
 #@ queue
 
@@ -17,5 +17,4 @@
 
 module load boost/1.61_icc
 
-mbsolve/tools/loadleveler/run_sim.sh openmp-2lvl-pc-red 5 1 40
-
+mbsolve/tools/loadleveler/run_sim.sh openmp-2lvl-os 1 40 40

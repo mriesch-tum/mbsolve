@@ -180,8 +180,8 @@ int main(int argc, char **argv)
 
             /* Song basic scenario */
             scen = std::make_shared<mbsolve::scenario>
-                //("Basic", 32768, 10e-15);
-                ("Basic", 32768, 200e-15);
+                ("Basic", 32768, 80e-15);
+                //("Basic", 32768, 200e-15);
             //("Basic", 65536, 200e-15);
             //("Basic", 131072, 200e-15);
             //("Basic", 262144, 200e-15);

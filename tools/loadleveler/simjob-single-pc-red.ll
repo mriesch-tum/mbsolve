@@ -7,8 +7,8 @@
 #@tasks_per_node = 1
 #@ node_usage = not_shared
 #@ initialdir = $(home)/
-#@ output = omp-red-$(jobid).out
-#@ error = omp-red-$(jobid).out
+#@ output = omp-pc-red-$(jobid).out
+#@ error = omp-pc-red-$(jobid).out
 #@ notification=always
 #@ queue
 
