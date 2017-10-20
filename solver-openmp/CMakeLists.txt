@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.6)
 project(solver-openmp)
 
+# specify matrix exponential method
+set(MAT_EXP_METHOD "DIAG" CACHE STRING "specify matrix exponential method")
+set_property(CACHE MAT_EXP_METHOD PROPERTY STRINGS "PADE" "DIAG" "RODR")
+
 string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
@@ -49,6 +53,13 @@ else()
     target_compile_options(solver-openmp PRIVATE "-xHost")
   else()
   endif()
+endif()
+
+if(MAT_EXP_METHOD STREQUAL "DIAG")
+  target_compile_definitions(solver-openmp PRIVATE EXP_METHOD=1)
+elseif(MAT_EXP_METHOD STREQUAL "RODR")
+  target_compile_definitions(solver-openmp PRIVATE EXP_METHOD=2)
+else()
 endif()
 
 target_compile_options(solver-openmp PRIVATE ${OpenMP_CXX_FLAGS})

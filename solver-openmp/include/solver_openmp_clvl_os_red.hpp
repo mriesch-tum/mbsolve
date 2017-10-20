@@ -22,8 +22,6 @@
 #ifndef MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
 #define MBSOLVE_SOLVER_OPENMP_3LVL_OS_RED_H
 
-#define EXP_METHOD 1
-
 #include <iostream>
 #include <omp.h>
 #include <solver.hpp>
