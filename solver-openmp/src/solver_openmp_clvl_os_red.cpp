@@ -167,6 +167,67 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             sc.theta_1 = sqrt(pow(U(0, 1), 2) + pow(U(0, 2), 2)
                               + pow(U(1, 2), 2));
 
+            /* for general analytic approach */
+
+            std::cout << "U^2" << std::endl << -U * U << std::endl;
+
+
+            Eigen::EigenSolver<real_matrix_t> es10(-U * U);
+
+            std::cout << "EigenSolver ev: " << std::endl << es10.eigenvalues()
+                      << std::endl;
+
+
+            Eigen::SelfAdjointEigenSolver<real_matrix_t> es2(-U * U);
+            Eigen::Array<real, num_adj, 1> val = es2.eigenvalues();
+
+            std::cout << "Eigenvalues after solver: " << std::endl << val
+                      << std::endl;
+
+            /* TODO better way to prevent numerical errors? */
+            val = val.abs().sqrt();
+
+            std::cout << " success: " << (es2.info() == Eigen::Success)
+                      << " issue: " << (es2.info() == Eigen::NumericalIssue)
+                      << " noconver: " << (es2.info() == Eigen::NoConvergence)
+                      << " invalid in: " << (es2.info() == Eigen::InvalidInput)
+                      << std::endl;
+
+            Eigen::Matrix<real, num_adj, num_adj> V = es2.eigenvectors();
+
+            /* TODO optimize
+             * ignore eigenvalues = 0
+             * group eigenvalues with multiplicity >= 2
+             */
+
+            std::cout << "V: " << std::endl << V << std::endl;
+            std::cout << "Inverse check: " << std::endl << V * es2.eigenvalues().asDiagonal() * V.transpose()
+                      << std::endl;
+
+            /* ignore first row/col if num_adj is odd */
+            unsigned int start = num_adj % 2;
+            for (int i = 0; i < num_adj/2; i++) {
+                Eigen::Matrix<real, num_adj, num_adj> b =
+                    Eigen::Matrix<real, num_adj, num_adj>::Zero();
+                unsigned int idx = start + i * 2;
+
+                /* TODO better way to prevent numerical errors? */
+                if (val(idx) > 1e-2) {
+                    b(idx, idx + 1) = -1;
+                    b(idx + 1, idx) = +1;
+                    sc.theta[i] = val(idx);
+                } else {
+                    sc.theta[i] = 0;
+                }
+
+                sc.coeff_1[i] = V * b * V.transpose();
+                sc.coeff_2[i] = V * b * b * V.transpose();
+
+
+                std::cout << "theta: "<< std::endl << sc.theta[i] << std::endl;
+                std::cout << "b = " << std::endl << b << std::endl;
+            }
+
             /* TODO refine check? */
             sc.has_qm = true;
             sc.has_dipole = true;
@@ -585,7 +646,12 @@ mat_exp(const sim_constants_clvl_os<num_lvl>& s, real e)
             (1 - cos(s.theta_1 * e * s.d_t))/(s.theta_1 * s.theta_1) * s.U2 +
             Eigen::Matrix<real, num_adj, num_adj>::Identity();
     } else {
-        throw std::invalid_argument("Not implemented");
+        ret = Eigen::Matrix<real, num_adj, num_adj>::Identity();
+        for (int i = 0; i < num_adj/2; i++) {
+            /* TODO nolias()? */
+            ret += sin(s.theta[i] * e * s.d_t) * s.coeff_1[i] +
+                (1 - cos(s.theta[i] * e * s.d_t)) * s.coeff_2[i];
+        }
     }
 #else
     /* Eigen matrix exponential */

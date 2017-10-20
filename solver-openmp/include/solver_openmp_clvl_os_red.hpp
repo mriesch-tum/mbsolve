@@ -48,6 +48,11 @@ public:
     bool has_dipole;
 
     /* analytic solution precalc */
+    real_matrix_t coeff_1[num_adj/2];
+    real_matrix_t coeff_2[num_adj/2];
+    real theta[num_adj/2];
+
+    /* rodrigues formula precalc */
     real_matrix_t U2;
     real theta_1;
 
