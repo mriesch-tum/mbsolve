@@ -42,6 +42,65 @@ const unsigned int OL = 32;
 
 const unsigned int VEC = 4;
 
+template<unsigned int num_lvl, unsigned int num_adj>
+void
+fill_rodr_coeff(const Eigen::Matrix<complex, num_adj, num_adj>& eigenvec,
+                const Eigen::Matrix<complex, num_adj, 1>& eigenval,
+                sim_constants_clvl_os<num_lvl>& sc)
+{
+    /* creating sorting order (descending eigenvalues) */
+    std::vector<size_t> perm_idx(num_adj);
+    std::iota(perm_idx.begin(), perm_idx.end(), 0);
+    std::sort(perm_idx.begin(), perm_idx.end(),
+              [&eigenval](size_t i1, size_t i2) {
+                  return (std::abs(eigenval(i1)) > std::abs(eigenval(i2)));
+              });
+
+    /* sort eigenvectors */
+    Eigen::Matrix<real, num_adj, num_adj> Q =
+        Eigen::Matrix<real, num_adj, num_adj>::Zero();
+    for (int i = 0; i < num_adj/2; i++) {
+        unsigned int i1 = perm_idx[2 * i];
+        unsigned int i2 = perm_idx[2 * i + 1];
+
+        Q.col(2 * i) = 1.0/sqrt(2) *
+            (eigenvec.col(i1) + eigenvec.col(i2)).real();
+        Q.col(2 * i + 1) = 1.0/sqrt(2) *
+            (-eigenvec.col(i1) + eigenvec.col(i2)).imag();
+    }
+    if (num_adj % 2 != 0) {
+        Q(num_adj - 1, num_adj - 1) = 1.0;
+    }
+
+    /* TODO optimize
+     * ignore eigenvalues = 0
+     * group eigenvalues with multiplicity >= 2
+     */
+    for (int i = 0; i < num_adj/2; i++) {
+        unsigned int i1 = perm_idx[2 * i];
+        unsigned int i2 = perm_idx[2 * i + 1];
+        Eigen::Matrix<real, num_adj, num_adj> b =
+            Eigen::Matrix<real, num_adj, num_adj>::Zero();
+
+        /* give warning if eigenvalues do not match */
+        if (std::abs(eigenval(i1)) + std::abs(eigenval(i2)) > 1e-5) {
+            std::cout << "Warning: Eigenvalues not pairwise: " <<
+                eigenval(i1) << " and " << eigenval(i2) << std::endl;
+        }
+        sc.theta[i] = std::abs(eigenval(i1));
+
+        b(2 * i, 2 * i + 1) = -1.0;
+        b(2 * i + 1, 2 * i) = +1.0;
+
+        sc.coeff_1[i] = Q * b * Q.transpose();
+        sc.coeff_2[i] = Q * b * b * Q.transpose();
+
+        std::cout << "theta: "<< std::endl << sc.theta[i] << std::endl;
+        std::cout << "b = " << std::endl << b << std::endl;
+    }
+}
+
+
 template<unsigned int num_lvl>
 solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
 (std::shared_ptr<const device> dev, std::shared_ptr<scenario> scen) :
@@ -168,65 +227,8 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
                               + pow(U(1, 2), 2));
 
             /* for general analytic approach */
-
-            std::cout << "U^2" << std::endl << -U * U << std::endl;
-
-
-            Eigen::EigenSolver<real_matrix_t> es10(-U * U);
-
-            std::cout << "EigenSolver ev: " << std::endl << es10.eigenvalues()
-                      << std::endl;
-
-
-            Eigen::SelfAdjointEigenSolver<real_matrix_t> es2(-U * U);
-            Eigen::Array<real, num_adj, 1> val = es2.eigenvalues();
-
-            std::cout << "Eigenvalues after solver: " << std::endl << val
-                      << std::endl;
-
-            /* TODO better way to prevent numerical errors? */
-            val = val.abs().sqrt();
-
-            std::cout << " success: " << (es2.info() == Eigen::Success)
-                      << " issue: " << (es2.info() == Eigen::NumericalIssue)
-                      << " noconver: " << (es2.info() == Eigen::NoConvergence)
-                      << " invalid in: " << (es2.info() == Eigen::InvalidInput)
-                      << std::endl;
-
-            Eigen::Matrix<real, num_adj, num_adj> V = es2.eigenvectors();
-
-            /* TODO optimize
-             * ignore eigenvalues = 0
-             * group eigenvalues with multiplicity >= 2
-             */
-
-            std::cout << "V: " << std::endl << V << std::endl;
-            std::cout << "Inverse check: " << std::endl << V * es2.eigenvalues().asDiagonal() * V.transpose()
-                      << std::endl;
-
-            /* ignore first row/col if num_adj is odd */
-            unsigned int start = num_adj % 2;
-            for (int i = 0; i < num_adj/2; i++) {
-                Eigen::Matrix<real, num_adj, num_adj> b =
-                    Eigen::Matrix<real, num_adj, num_adj>::Zero();
-                unsigned int idx = start + i * 2;
-
-                /* TODO better way to prevent numerical errors? */
-                if (val(idx) > 1e-2) {
-                    b(idx, idx + 1) = -1;
-                    b(idx + 1, idx) = +1;
-                    sc.theta[i] = val(idx);
-                } else {
-                    sc.theta[i] = 0;
-                }
-
-                sc.coeff_1[i] = V * b * V.transpose();
-                sc.coeff_2[i] = V * b * b * V.transpose();
-
-
-                std::cout << "theta: "<< std::endl << sc.theta[i] << std::endl;
-                std::cout << "b = " << std::endl << b << std::endl;
-            }
+            fill_rodr_coeff<num_lvl, num_adj>(es.eigenvectors(),
+                                              es.eigenvalues(), sc);
 
             /* TODO refine check? */
             sc.has_qm = true;
