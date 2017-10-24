@@ -37,7 +37,7 @@ mkdir -p $out_dir
 
 echo "Thread count: " $threads
 
-KMP_AFFINITY=granularity=fine,proclist=[`seq -s , 0 $(($threads - 1))`],explicit OMP_NUM_THREADS=$threads ../build-openmp-$exp_method/mbsolve-tool/mbsolve-tool -m $method -d $device -w matlab -o $out_dir/results.mat
+KMP_AFFINITY=granularity=fine,proclist=[`seq -s , 0 $(($threads - 1))`],explicit OMP_NUM_THREADS=$threads ../build-openmp-$exp_method/mbsolve-tool/mbsolve-tool -m $method -d $device -w matlab -o $out_dir/$name.mat
 
 done
 
