@@ -22,6 +22,7 @@
 #define EIGEN_DONT_PARALLELIZE
 #define EIGEN_NO_MALLOC
 
+#include <numeric>
 #include <Eigen/Eigenvalues>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>

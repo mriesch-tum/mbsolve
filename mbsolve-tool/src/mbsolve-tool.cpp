@@ -85,12 +85,12 @@ relax_sop_song3(const Eigen::Matrix<mbsolve::complex, 3, 3>& arg)
     mbsolve::real d8_eq = 0.0;
     mbsolve::real T_1 = 1e-10;
 
-    ret(0, 0) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2 * arg(0, 0)
+    ret(0, 0) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2.0 * arg(0, 0)
                                   - d7_eq - d8_eq));
-    ret(1, 1) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2 * arg(0, 0)
+    ret(1, 1) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2.0 * arg(0, 0)
                                   - d7_eq - d8_eq))
         - 1/T_1 * (arg(1, 1) - arg(0, 0) - d7_eq);
-    ret(2, 2) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2 * arg(0, 0)
+    ret(2, 2) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2.0 * arg(0, 0)
                                   - d7_eq - d8_eq))
         - 1/T_1 * (arg(2, 2) - arg(0, 0) - d8_eq);
     ret(1, 0) = -1/T_1 * arg(1, 0);
