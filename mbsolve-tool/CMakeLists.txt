@@ -21,3 +21,7 @@ endif(MBSOLVE_OPENMP)
 if(MBSOLVE_MATLAB)
   target_link_libraries(mbsolve-tool writer-matlab)
 endif(MBSOLVE_MATLAB)
+
+if(MBSOLVE_HDF5)
+  target_link_libraries(mbsolve-tool writer-hdf5)
+endif(MBSOLVE_HDF5)

@@ -15,6 +15,7 @@ set_property(CACHE ARCH PROPERTY STRINGS "HOST" "PHI" "AVX2" "SSE3")
 
 # specify components
 option(WITH_MATLAB "with(out) MATLAB writer" ON)
+option(WITH_HDF5 "with(out) HDF5 writer" ON)
 option(WITH_CUDA "with(out) CUDA solver" ON)
 option(WITH_OPENMP "with(out) OPENMP solver" ON)
 option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
@@ -45,6 +46,15 @@ if(WITH_MATLAB)
     add_subdirectory(writer-matlab)
   endif(MATLAB_FOUND)
 endif(WITH_MATLAB)
+
+# HDF support?
+if(WITH_HDF5)
+  find_package(HDF5 COMPONENTS C CXX)
+  if(HDF5_FOUND)
+    set(MBSOLVE_HDF5 TRUE)
+    add_subdirectory(writer-hdf5)
+  endif(HDF5_FOUND)
+endif(WITH_HDF5)
 
 # CUDA support?
 if(WITH_CUDA)
