@@ -41,69 +41,49 @@ writer_hdf5::get_name() const
 }
 
 void
-writer_hdf5::write(const std::string& file,
+writer_hdf5::write(const std::string& filename,
                    const std::vector<std::shared_ptr<result> >& results,
                    std::shared_ptr<const device> dev,
                    std::shared_ptr<const scenario> scen) const
 {
-    /* dataset dimensions */
-    const int NX = 4;
-    const int NY = 6;
-    const int RANK = 2;
-    hsize_t dims[2];
-    dims[0] = NX;
-    dims[1] = NY;
-    H5::DataSpace dataspace(RANK, dims);
+    auto h5_dbl = H5::PredType::NATIVE_DOUBLE;
 
+    /* create file */
+    H5::H5File file(filename, H5F_ACC_TRUNC);
 
-#if 0
-    MATFile *pmat;
-    mxArray *t;
+    /* attributes */
+    H5::DataSpace space_scalar;
+    H5::Attribute a_timestep = file.createAttribute("timestep_size", h5_dbl,
+                                                    space_scalar);
+    double timestep = scen->get_timestep_size();
+    a_timestep.write(h5_dbl, &timestep);
 
-    /* open result file */
-    pmat = matOpen(file.c_str(), "w");
-    if (pmat == NULL) {
-        throw std::invalid_argument("File \"" + file + "\" not found");
+    H5::Attribute a_gridpoint = file.createAttribute("gridpoint_size", h5_dbl,
+                                                     space_scalar);
+    double gridpoint = scen->get_gridpoint_size();
+    a_gridpoint.write(h5_dbl, &gridpoint);
+
+    /*
+     * ...
+     */
+
+    for (auto result : results) {
+        /* dataset dimensions */
+        const int rank = 2;
+        hsize_t dims[rank];
+        dims[0] = result->get_rows();
+        dims[1] = result->get_cols();
+
+        H5::DataSpace dataspace(rank, dims);
+
+        H5::DataSet dataset = file.createDataSet(result->get_name(), h5_dbl,
+                                                 dataspace);
+        dataset.write(result->get_data_real_raw(), h5_dbl);
+
+        /* TODO: create group, attribute is_complex,
+         *  two datasets real/complex
+         */
     }
-
-    /* put scenario data */
-    t = mxCreateDoubleScalar(scen->get_endtime());
-    matPutVariable(pmat, "SimEndTime", t);
-    mxDestroyArray(t);
-
-    t = mxCreateDoubleScalar(scen->get_timestep_size());
-    matPutVariable(pmat, "TimeStepSize", t);
-    mxDestroyArray(t);
-
-    t = mxCreateDoubleScalar(scen->get_gridpoint_size());
-    matPutVariable(pmat, "GridPointSize", t);
-    mxDestroyArray(t);
-
-    /* put device data */
-    t = mxCreateDoubleScalar(dev->get_length());
-    matPutVariable(pmat, "XDim", t);
-    mxDestroyArray(t);
-
-    /* put result data */
-    for (auto r : results) {
-        /* matlab array is created transposed in order to match order */
-        mxArray *var = mxCreateDoubleMatrix(r->get_cols(), r->get_rows(),
-                                            mxCOMPLEX);
-
-        auto data_real = r->get_data_real().cbegin();
-        auto data_imag = r->get_data_imag().cbegin();
-
-        std::copy(data_real, data_real + r->get_count(), mxGetPr(var));
-        std::copy(data_imag, data_imag + r->get_count(), mxGetPi(var));
-
-        matPutVariable(pmat, r->get_name().c_str(), var);
-
-        mxDestroyArray(var);
-    }
-
-    /* close result file */
-    matClose(pmat);
-#endif
 }
 
 const std::string&
