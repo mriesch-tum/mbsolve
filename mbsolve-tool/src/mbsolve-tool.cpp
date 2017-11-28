@@ -287,18 +287,79 @@ int main(int argc, char **argv)
                                 ("Active region", mat_ar, 7.5e-6, 142.5e-6));
                 dev->add_region(std::make_shared<mbsolve::region>
                                 ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
+            }  else if (solver_method == "openmp-2lvl-rk") {
+                /* Ziolkowski setup in new 2-lvl desc */
+                Eigen::Matrix<mbsolve::complex, 2, 2> H, u, d_init;
+
+                H <<-0.5, 0,
+                    0, 0.5;
+                H = H * mbsolve::HBAR * 2 * M_PI * 2e14;
+                u <<0, 1.0,
+                    1.0, 0;
+                u = u * mbsolve::E0 * 6.24e-11 * (-1.0);
+                d_init << 1, 0,
+                    0, 0;
+                auto qm = std::make_shared<mbsolve::qm_desc_clvl<2> >
+                    (1e24, H, u, &relax_sop_ziolk2, d_init);
+
+                auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+                auto mat_ar = std::make_shared<mbsolve::material>
+                    ("AR_Ziolkowski", qm);
+                mbsolve::material::add_to_library(mat_vac);
+                mbsolve::material::add_to_library(mat_ar);
+                /* set up device */
+                dev = std::make_shared<mbsolve::device>("Ziolkowski");
+                dev->add_region(std::make_shared<mbsolve::region>
+                                ("Vacuum left", mat_vac, 0, 7.5e-6));
+                dev->add_region(std::make_shared<mbsolve::region>
+                                ("Active region", mat_ar, 7.5e-6, 142.5e-6));
+                dev->add_region(std::make_shared<mbsolve::region>
+                                ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
+            } else if (solver_method == "openmp-3lvl-rk") {
+                /* Ziolkowski setup in 3-lvl desc */
+
+                Eigen::Matrix<mbsolve::complex, 3, 3> H, u, d_init;
+
+                H <<-0.5, 0, 0,
+                    0, 0.5, 0,
+                    0, 0, 0;
+                H = H * mbsolve::HBAR * 2 * M_PI * 2e14;
+                u <<0, 1.0, 0,
+                    1.0, 0, 0,
+                    0, 0, 0;
+                u = u * mbsolve::E0 * 6.24e-11 * (-1);
+                d_init << 1, 0, 0,
+                    0, 0, 0,
+                    0, 0, 0;
+
+                auto qm = std::make_shared<mbsolve::qm_desc_3lvl>
+                    (1e24, H, u, &relax_sop_ziolk3, d_init);
+
+                auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+                auto mat_ar = std::make_shared<mbsolve::material>
+                    ("AR_Ziolkowski", qm);
+                mbsolve::material::add_to_library(mat_vac);
+                mbsolve::material::add_to_library(mat_ar);
+
+                /* set up device */
+                dev = std::make_shared<mbsolve::device>("Ziolkowski");
+                dev->add_region(std::make_shared<mbsolve::region>
+                                ("Vacuum left", mat_vac, 0, 7.5e-6));
+                dev->add_region(std::make_shared<mbsolve::region>
+                                ("Active region", mat_ar, 7.5e-6, 142.5e-6));
+                dev->add_region(std::make_shared<mbsolve::region>
+                                ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
+                std::cout << "Test_setup_dev" << std::endl;
             } else {
             }
 
             /* Ziolkowski basic scenario */
-
             scen = std::make_shared<mbsolve::scenario>
                 //("Basic", 32768, 10e-15);
-                ("Basic", 32768, 500e-15);
+                ("Basic", 32768, 200e-15);
             //("Basic", 65536, 200e-15);
             //("Basic", 131072, 200e-15);
             //("Basic", 262144, 200e-15);
-
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
                 //("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
                 ("sech", 0.0, mbsolve::source::hard_source, 4.2186e9, 2e14,
@@ -311,14 +372,13 @@ int main(int argc, char **argv)
 
         } else {
         }
-
 	/* tic */
 	timer.start();
 
-	mbsolve::writer writer(writer_method);
+        mbsolve::writer writer(writer_method);
 	mbsolve::solver solver(solver_method, dev, scen);
 
-	/* toc */
+        /* toc */
 	timer.stop();
 	ti::cpu_times times = timer.elapsed();
 	std::cout << "Time required (setup): " << 1e-9 * times.wall
