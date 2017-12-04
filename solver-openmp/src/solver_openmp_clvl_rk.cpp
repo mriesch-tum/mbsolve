@@ -289,6 +289,7 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
     std::cout << "Number of threads: " << P << std::endl;
     m_d = new Eigen::Matrix<real, num_adj, 1>*[P];
     m_e = new real*[P];
+    m_e_o = new real*[P];
     m_h = new real*[P];
     m_p = new real*[P];
     m_mat_indices = new unsigned int*[P];
@@ -415,6 +416,7 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
                                  sizeof(Eigen::Matrix<real, num_adj, 1>));
             m_h[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
             m_e[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
+            m_e_o[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
             m_p[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
             m_mat_indices[tid] = (unsigned int *)
                 mb_aligned_alloc(size * sizeof(unsigned int));
@@ -443,7 +445,7 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
             t_d = m_d[tid];
             t_h = m_h[tid];
             t_e = m_e[tid];
-            t_e_o = m_e[tid];
+            t_e_o = m_e_o[tid];
             t_p = m_p[tid];
             t_mat_indices = m_mat_indices[tid];
 
@@ -506,6 +508,7 @@ solver_openmp_clvl_rk<num_lvl>::~solver_openmp_clvl_rk()
 
             mb_aligned_free(m_h[tid]);
             mb_aligned_free(m_e[tid]);
+            mb_aligned_free(m_e_o[tid]);
             mb_aligned_free(m_p[tid]);
             mb_aligned_free(m_d[tid]);
             mb_aligned_free(m_mat_indices[tid]);
@@ -523,6 +526,7 @@ solver_openmp_clvl_rk<num_lvl>::~solver_openmp_clvl_rk()
 
     delete[] m_h;
     delete[] m_e;
+    delete[] m_e_o;
     delete[] m_p;
     delete[] m_d;
     delete[] m_mat_indices;
@@ -537,8 +541,8 @@ solver_openmp_clvl_rk<num_lvl>::get_name() const
 
 template<unsigned int num_lvl, unsigned int num_adj>
 void
-update_fdtd(unsigned int size, unsigned int border, real *t_e, real *t_e_o, real *t_p,
-            real *t_h, Eigen::Matrix<real, num_adj, 1>* t_d,
+update_fdtd(unsigned int size, unsigned int border, real *t_e, real *t_e_o,
+            real *t_p, real *t_h, Eigen::Matrix<real, num_adj, 1>* t_d,
             unsigned int *t_mat_indices,
             sim_constants_clvl_rk<num_lvl> *l_sim_consts)
 {
@@ -631,8 +635,8 @@ apply_sources_rk(real *t_e, real *source_data, unsigned int num_sources,
 
 template<unsigned int num_lvl, unsigned int num_adj>
 void
-update_d(unsigned int size, unsigned int border, real *t_e, real *t_e_o, real *t_p,
-         Eigen::Matrix<real, num_adj, 1>* t_d,
+update_d(unsigned int size, unsigned int border, real *t_e, real *t_e_o,
+         real *t_p, Eigen::Matrix<real, num_adj, 1>* t_d,
          unsigned int *t_mat_indices,
          sim_constants_clvl_rk<num_lvl> *l_sim_consts)
 {
@@ -647,16 +651,20 @@ update_d(unsigned int size, unsigned int border, real *t_e, real *t_e_o, real *t
             //setup Runge-Kutta coefficients
             real t_e_avg = (t_e_o[i] + t_e[i]) / 2;
             Eigen::Matrix<real, num_adj, 1> k1 = l_sim_consts[mat_idx].d_t
-                      * ((l_sim_consts[mat_idx].M +  l_sim_consts[mat_idx].U * t_e_o[i] )
+                      * ((l_sim_consts[mat_idx].M
+                      + l_sim_consts[mat_idx].U * t_e_o[i] )
                       * t_d[i] + l_sim_consts[mat_idx].d_in);
             Eigen::Matrix<real, num_adj, 1> k2 = l_sim_consts[mat_idx].d_t
-                      * ((l_sim_consts[mat_idx].M +  l_sim_consts[mat_idx].U * t_e_avg )
+                      * ((l_sim_consts[mat_idx].M
+                      + l_sim_consts[mat_idx].U * t_e_avg )
                       * (t_d[i] + k1 / 2) + l_sim_consts[mat_idx].d_in);
             Eigen::Matrix<real, num_adj, 1> k3 = l_sim_consts[mat_idx].d_t
-                      * ((l_sim_consts[mat_idx].M +  l_sim_consts[mat_idx].U  * t_e_avg )
+                      * ((l_sim_consts[mat_idx].M
+                      + l_sim_consts[mat_idx].U  * t_e_avg )
                       * (t_d[i] + k2 / 2) + l_sim_consts[mat_idx].d_in);
             Eigen::Matrix<real, num_adj, 1> k4 = l_sim_consts[mat_idx].d_t
-                      * ((l_sim_consts[mat_idx].M +  l_sim_consts[mat_idx].U  * t_e[i] )
+                      * ((l_sim_consts[mat_idx].M
+                      + l_sim_consts[mat_idx].U  * t_e[i] )
                       * (t_d[i] + k3) +  l_sim_consts[mat_idx].d_in);
                   t_d[i] = t_d[i] + (k1 + 2 * k2 + 2 * k3 + k4) / 6 ;
 
@@ -711,7 +719,7 @@ solver_openmp_clvl_rk<num_lvl>::run() const
             t_d = m_d[tid];
             t_h = m_h[tid];
             t_e = m_e[tid];
-            t_e_o = m_e[tid];
+            t_e_o = m_e_o[tid];
             t_p = m_p[tid];
             t_mat_indices = m_mat_indices[tid];
 
@@ -726,27 +734,31 @@ solver_openmp_clvl_rk<num_lvl>::run() const
 
             /* gather prev and next pointers from other threads */
             Eigen::Matrix<real, num_adj, 1> *n_d, *p_d;
-            real *n_h, *n_e;
-            real *p_h, *p_e;
+            real *n_h, *n_e, *n_e_o;
+            real *p_h, *p_e, *p_e_o;
 
             __mb_assume_aligned(p_d);
             __mb_assume_aligned(p_e);
+            __mb_assume_aligned(p_e_o);
             __mb_assume_aligned(p_h);
 
             __mb_assume_aligned(n_d);
             __mb_assume_aligned(n_e);
+            __mb_assume_aligned(n_e_o);
             __mb_assume_aligned(n_h);
 
             if (tid > 0) {
                 p_d = m_d[tid - 1];
                 p_h = m_h[tid - 1];
                 p_e = m_e[tid - 1];
+                p_e_o = m_e_o[tid - 1];
             }
 
             if (tid < P - 1) {
                 n_d = m_d[tid + 1];
                 n_h = m_h[tid + 1];
                 n_e = m_e[tid + 1];
+                n_e_o = m_e_o[tid + 1];
             }
 
             /* main loop */
@@ -761,6 +773,7 @@ solver_openmp_clvl_rk<num_lvl>::run() const
                     for (unsigned int i = 0; i < OL; i++) {
                         t_d[i] = p_d[chunk_base + i];
                         t_e[i] = p_e[chunk_base + i];
+                        t_e_o[i] = p_e_o[chunk_base + i];
                         t_h[i] = p_h[chunk_base + i];
                     }
                 }
@@ -770,6 +783,7 @@ solver_openmp_clvl_rk<num_lvl>::run() const
                     for (unsigned int i = 0; i < OL; i++) {
                         t_d[OL + chunk_base + i] = n_d[OL + i];
                         t_e[OL + chunk_base + i] = n_e[OL + i];
+                        t_e_o[OL + chunk_base + i] = n_e_o[OL + i];
                         t_h[OL + chunk_base + i] = n_h[OL + i];
                     }
                 }
@@ -783,12 +797,12 @@ solver_openmp_clvl_rk<num_lvl>::run() const
                     unsigned int border = m - (m % VEC);
 
                     /* update d */
-                    update_d<num_lvl, num_adj>(size, border, t_e, t_e_o, t_p, t_d,
-                                               t_mat_indices, l_sim_consts);
+                    update_d<num_lvl, num_adj>(size, border, t_e, t_e_o, t_p,
+                                               t_d, t_mat_indices, l_sim_consts);
 
                      /* update e + h with fdtd */
-                    update_fdtd<num_lvl, num_adj>(size, border, t_e, t_e_o, t_p, t_h,
-                                                  t_d, t_mat_indices,
+                    update_fdtd<num_lvl, num_adj>(size, border, t_e, t_e_o, t_p,
+                                                  t_h, t_d, t_mat_indices,
                                                   l_sim_consts);
 
                     /* apply sources */

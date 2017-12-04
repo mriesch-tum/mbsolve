@@ -126,6 +126,7 @@ private:
 
     real **m_h;
     real **m_e;
+    real **m_e_o;
     real **m_p;
 
     real *m_result_scratch;
