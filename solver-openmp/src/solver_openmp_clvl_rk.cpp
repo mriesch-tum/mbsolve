@@ -178,8 +178,9 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
 
             /* determine equilibrium term */
             Eigen::Matrix<real, num_adj, 1> d_eq;
-            d_eq = get_adj_deq(qm->get_lindblad_op());
+            sc.d_eq = get_adj_deq(qm->get_lindblad_op());
 
+#if 0
             /* determine inhomogeneous term */
             real eps = std::numeric_limits<real>::epsilon();
             if (d_eq.isZero(eps)) {
@@ -197,6 +198,7 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
                 }
             }
             std::cout << "d_in: " << std::endl << sc.d_in << std::endl;
+#endif
 
             /* determine constant propagator */
             Eigen::Matrix<real, num_adj, num_adj> A_0;
@@ -269,7 +271,7 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
 
             sc.L = Eigen::Matrix<complex, num_adj, 1>::Zero();
 
-            sc.d_in = Eigen::Matrix<real, num_adj, 1>::Zero();
+            sc.d_eq = Eigen::Matrix<real, num_adj, 1>::Zero();
 
             sc.d_init = Eigen::Matrix<real, num_adj, 1>::Zero();
         }
@@ -653,25 +655,25 @@ update_d(unsigned int size, unsigned int border, real *t_e, real *t_e_o,
             Eigen::Matrix<real, num_adj, 1> k1 = l_sim_consts[mat_idx].d_t
                       * ((l_sim_consts[mat_idx].M
                       + l_sim_consts[mat_idx].U * t_e_o[i] )
-                      * t_d[i] + l_sim_consts[mat_idx].d_in);
+                      * t_d[i] + l_sim_consts[mat_idx].d_eq);
             Eigen::Matrix<real, num_adj, 1> k2 = l_sim_consts[mat_idx].d_t
                       * ((l_sim_consts[mat_idx].M
                       + l_sim_consts[mat_idx].U * t_e_avg )
-                      * (t_d[i] + k1 / 2) + l_sim_consts[mat_idx].d_in);
+                      * (t_d[i] + k1 / 2) + l_sim_consts[mat_idx].d_eq);
             Eigen::Matrix<real, num_adj, 1> k3 = l_sim_consts[mat_idx].d_t
                       * ((l_sim_consts[mat_idx].M
                       + l_sim_consts[mat_idx].U  * t_e_avg )
-                      * (t_d[i] + k2 / 2) + l_sim_consts[mat_idx].d_in);
+                      * (t_d[i] + k2 / 2) + l_sim_consts[mat_idx].d_eq);
             Eigen::Matrix<real, num_adj, 1> k4 = l_sim_consts[mat_idx].d_t
                       * ((l_sim_consts[mat_idx].M
                       + l_sim_consts[mat_idx].U  * t_e[i] )
-                      * (t_d[i] + k3) +  l_sim_consts[mat_idx].d_in);
+                      * (t_d[i] + k3) +  l_sim_consts[mat_idx].d_eq);
                   t_d[i] = t_d[i] + (k1 + 2 * k2 + 2 * k3 + k4) / 6 ;
 
             /* update polarization */
             t_p[i] = l_sim_consts[mat_idx].M_CP *
                 l_sim_consts[mat_idx].v.transpose() *
-                (l_sim_consts[mat_idx].M * t_d[i] + l_sim_consts[mat_idx].d_in);
+                (l_sim_consts[mat_idx].M * t_d[i] + l_sim_consts[mat_idx].d_eq);
         } else {
             t_p[i] = 0.0;
         }

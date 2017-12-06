@@ -238,7 +238,8 @@ int main(int argc, char **argv)
                                 ("Active region", mat_ar, 7.5e-6, 142.5e-6));
                 dev->add_region(std::make_shared<mbsolve::region>
                                 ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
-            } else if (solver_method == "openmp-2lvl-os-old") {
+            } else if ((solver_method == "openmp-2lvl-os-old") ||
+                       (solver_method == "openmp-2lvl-pc-red")) {
                 /* Ziolkowski setup in old 2-lvl desc */
                 auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
                     (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);

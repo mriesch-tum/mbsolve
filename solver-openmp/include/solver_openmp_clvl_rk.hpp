@@ -65,7 +65,7 @@ public:
     /* required for polarization calc ? */
     real_matrix_t M;
     real_matrix_t U;
-    real_vector_t d_in;
+    real_vector_t d_eq;
 
     /* dipole moments */
     real_vector_t v;
