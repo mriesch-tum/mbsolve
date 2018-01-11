@@ -180,6 +180,7 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             /* determine equilibrium term */
             Eigen::Matrix<real, num_adj, 1> d_eq;
             d_eq = get_adj_deq(qm->get_lindblad_op());
+            sc.d_eq = d_eq;
 
             /* determine inhomogeneous term */
             real eps = std::numeric_limits<real>::epsilon();
@@ -271,7 +272,7 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             sc.L = Eigen::Matrix<complex, num_adj, 1>::Zero();
 
             sc.d_in = Eigen::Matrix<real, num_adj, 1>::Zero();
-
+            sc.d_eq = Eigen::Matrix<real, num_adj, 1>::Zero();
             sc.d_init = Eigen::Matrix<real, num_adj, 1>::Zero();
         }
 
@@ -702,7 +703,8 @@ update_d(unsigned int size, unsigned int border, real *t_e, real *t_p,
             /* update polarization */
             t_p[i] = l_sim_consts[mat_idx].M_CP *
                 l_sim_consts[mat_idx].v.transpose() *
-                (l_sim_consts[mat_idx].M * t_d[i] + l_sim_consts[mat_idx].d_in);
+                (l_sim_consts[mat_idx].M * t_d[i] +
+                 l_sim_consts[mat_idx].d_eq);
         } else {
             t_p[i] = 0.0;
         }
