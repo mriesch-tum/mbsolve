@@ -673,7 +673,8 @@ update_d(unsigned int size, unsigned int border, real *t_e, real *t_e_o,
             /* update polarization */
             t_p[i] = l_sim_consts[mat_idx].M_CP *
                 l_sim_consts[mat_idx].v.transpose() *
-                (l_sim_consts[mat_idx].M * t_d[i] + l_sim_consts[mat_idx].d_eq);
+                (l_sim_consts[mat_idx].M * t_d[i] +
+                 l_sim_consts[mat_idx].d_eq);
         } else {
             t_p[i] = 0.0;
         }
