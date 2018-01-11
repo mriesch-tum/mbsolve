@@ -55,7 +55,7 @@ The target architecture may be set using the ARCH option. By default, compiler o
 In particular, building for Intel's Xeon Phi coprocessor is enabled with
 
     $ CC=path_to_intel/icc CXX=path_to_intel/icpc cmake -DWITH_CUDA=OFF \
-      -DARCH=AVX2 -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
+      -DARCH=PHI -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 
 The Doxygen documentation can be build with
 
