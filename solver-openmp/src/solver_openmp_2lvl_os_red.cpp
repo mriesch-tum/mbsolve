@@ -34,7 +34,7 @@ static solver_factory<solver_openmp_2lvl_os_red> factory("openmp-2lvl-os-old");
 #ifdef XEON_PHI_OFFLOAD
 __mb_on_device const unsigned int OL = 32;
 #else
-const unsigned int OL = 1;
+const unsigned int OL = 16;
 #endif
 
 solver_openmp_2lvl_os_red::solver_openmp_2lvl_os_red
