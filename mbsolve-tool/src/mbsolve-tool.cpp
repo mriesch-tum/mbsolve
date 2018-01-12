@@ -35,6 +35,8 @@ static std::string output_file;
 static std::string scenario_file;
 static std::string solver_method;
 static std::string writer_method;
+static mbsolve::real sim_endtime;
+static unsigned int num_gridpoints;
 
 static void parse_args(int argc, char **argv)
 {
@@ -49,7 +51,11 @@ static void parse_args(int argc, char **argv)
 	("method,m", po::value<std::string>(&solver_method)->required(),
 	 "Set solver method")
 	("writer,w", po::value<std::string>(&writer_method)->required(),
-	 "Set writer");
+	 "Set writer")
+        ("endtime,e", po::value<mbsolve::real>(&sim_endtime),
+         "Set simulation end time")
+        ("gridpoints,g", po::value<unsigned int>(&num_gridpoints),
+         "Set number of spatial grid points");
 
     po::variables_map vm;
     try {
@@ -165,14 +171,17 @@ int main(int argc, char **argv)
             dev->add_region(std::make_shared<mbsolve::region>
                             ("Active region", mat_ar, 0, 150e-6));
 
+           /* default settings */
+            if (num_gridpoints == 0) {
+                num_gridpoints = 32768;
+            }
+            if (sim_endtime < 1e-21) {
+                sim_endtime = 80e-15;
+            }
 
             /* Song basic scenario */
             scen = std::make_shared<mbsolve::scenario>
-                ("Basic", 32768, 80e-15);
-                //("Basic", 32768, 200e-15);
-            //("Basic", 65536, 200e-15);
-            //("Basic", 131072, 200e-15);
-            //("Basic", 262144, 200e-15);
+                ("Basic", num_gridpoints, sim_endtime);
 
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
                 ("sech", 0.0, mbsolve::source::hard_source, 3.5471e9,
@@ -237,14 +246,18 @@ int main(int argc, char **argv)
             dev->add_region(std::make_shared<mbsolve::region>
                             ("Vacuum right", mat_vac, 142.5e-6, 150e-6));
 
+            /* default settings */
+            if (num_gridpoints == 0) {
+                num_gridpoints = 32768;
+            }
+            if (sim_endtime < 1e-21) {
+                sim_endtime = 200e-15;
+            }
 
             /* Ziolkowski basic scenario */
             scen = std::make_shared<mbsolve::scenario>
-                //("Basic", 32768, 10e-15);
-                ("Basic", 32768, 200e-15);
-            //("Basic", 65536, 200e-15);
-            //("Basic", 131072, 200e-15);
-            //("Basic", 262144, 200e-15);
+                ("Basic", num_gridpoints, sim_endtime);
+
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
                 //("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
                 ("sech", 0.0, mbsolve::source::hard_source, 4.2186e9, 2e14,
