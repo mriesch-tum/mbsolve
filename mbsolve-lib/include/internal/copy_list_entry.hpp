@@ -58,7 +58,7 @@ private:
 
     unsigned int m_rows;
     unsigned int m_cols;
-    unsigned int m_interval_idx;
+    real m_interval_ratio;
     unsigned int m_position_idx;
 
     real m_timestep;
@@ -76,7 +76,7 @@ public:
     __mb_on_device bool hasto_record(unsigned int iteration) const {
         real t_now = iteration * m_timestep;
         real t_next = t_now + m_timestep;
-        real t_sample = floor(1.0 * iteration / m_interval_idx) * m_interval;
+        real t_sample = floor(m_interval_ratio * (iteration + 1)) * m_interval;
 
         return ((t_now <= t_sample) && (t_next >= t_sample));
     }
@@ -106,17 +106,17 @@ public:
     }
 
     __mb_on_device unsigned int
-    get_offset_scratch_real(unsigned int timestep,
+    get_offset_scratch_real(unsigned int iteration,
                             unsigned int gridpoint = 0) const {
-        return m_offset_scratch_real + (timestep/m_interval_idx) * m_cols
-            + gridpoint;
+        return m_offset_scratch_real +
+            floor(m_interval_ratio * (iteration + 1)) * m_cols + gridpoint;
     }
 
     __mb_on_device unsigned int
-    get_offset_scratch_imag(unsigned int timestep,
+    get_offset_scratch_imag(unsigned int iteration,
                             unsigned int gridpoint = 0) const {
-        return m_offset_scratch_imag + (timestep/m_interval_idx) * m_cols
-            + gridpoint;
+        return m_offset_scratch_imag +
+            floor(m_interval_ratio * (iteration + 1)) * m_cols + gridpoint;
     }
 };
 
@@ -146,12 +146,12 @@ public:
         if (rec->get_interval() <= scen->get_timestep_size()) {
             m_dev.m_rows = scen->get_num_timesteps();
             m_dev.m_interval = scen->get_timestep_size();
-            m_dev.m_interval_idx = 1;
+            m_dev.m_interval_ratio = 1.0;
         } else {
-            m_dev.m_rows = ceil(scen->get_endtime()/rec->get_interval()) + 1;
-            m_dev.m_interval = scen->get_endtime()/(m_dev.m_rows - 1);
-            m_dev.m_interval_idx =
-                floor(1.0 * (scen->get_num_timesteps() - 1)/(m_dev.m_rows - 1));
+            m_dev.m_rows = floor(scen->get_endtime()/rec->get_interval()) + 1;
+            m_dev.m_interval = rec->get_interval();
+            m_dev.m_interval_ratio = scen->get_timestep_size()/
+                rec->get_interval();
         }
 
         if (rec->get_position() < 0.0) {
@@ -211,27 +211,29 @@ public:
     std::shared_ptr<result> get_result() const { return m_result; }
 
     std::vector<real>::iterator
-    get_result_real(unsigned int timestep, unsigned int gridpoint = 0) const {
-        return m_result->get_data_real(timestep/m_dev.m_interval_idx,
+    get_result_real(unsigned int iteration, unsigned int gridpoint = 0) const {
+        return m_result->get_data_real(floor(m_dev.m_interval_ratio *
+                                             (iteration + 1)),
                                        gridpoint);
     }
 
     std::vector<real>::iterator
-    get_result_imag(unsigned int timestep, unsigned int gridpoint = 0) const {
-        return m_result->get_data_imag(timestep/m_dev.m_interval_idx,
+    get_result_imag(unsigned int iteration, unsigned int gridpoint = 0) const {
+        return m_result->get_data_imag(floor(m_dev.m_interval_ratio *
+                                             (iteration + 1)),
                                        gridpoint);
     }
 
     unsigned int
-    get_offset_scratch_imag(unsigned int timestep,
+    get_offset_scratch_imag(unsigned int iteration,
                             unsigned int gridpoint = 0) const {
-        return m_dev.get_offset_scratch_imag(timestep, gridpoint);
+        return m_dev.get_offset_scratch_imag(iteration, gridpoint);
     }
 
     unsigned int
-    get_offset_scratch_real(unsigned int timestep,
+    get_offset_scratch_real(unsigned int iteration,
                             unsigned int gridpoint = 0) const {
-        return m_dev.get_offset_scratch_real(timestep, gridpoint);
+        return m_dev.get_offset_scratch_real(iteration, gridpoint);
     }
 };
 
