@@ -125,6 +125,48 @@ relax_sop_ziolk2(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     return ret;
 }
 
+/* tzenov2018 absorber relaxation superoperator */
+Eigen::Matrix<mbsolve::complex, 2, 2>
+relax_sop_tzenov2018_abs(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
+{
+    Eigen::Matrix<mbsolve::complex, 2, 2> ret =
+        Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
+
+    mbsolve::real scattering_rate = 3e-12;
+    mbsolve::real dephasing_rate = 160e-15;
+
+    /* at equilibrium, the lower level is fully populated */
+    ret(0, 0) = +scattering_rate * arg(1, 1);
+    ret(1, 1) = -scattering_rate * arg(1, 1);
+
+    /* dephasing of coherence terms */
+    ret(0, 1) = -dephasing_rate * arg(0, 1);
+    ret(1, 0) = -dephasing_rate * arg(1, 0);
+
+    return ret;
+}
+
+/* tzenov2018 gain relaxation superoperator */
+Eigen::Matrix<mbsolve::complex, 2, 2>
+relax_sop_tzenov2018_gain(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
+{
+    Eigen::Matrix<mbsolve::complex, 2, 2> ret =
+        Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
+
+    mbsolve::real scattering_rate = 10e-12;
+    mbsolve::real dephasing_rate = 200e-15;
+
+    /* at equilibrium, the upper level is fully populated */
+    ret(0, 0) = -scattering_rate * arg(0, 0);
+    ret(1, 1) = +scattering_rate * arg(0, 0);
+
+    /* dephasing of coherence terms */
+    ret(0, 1) = -dephasing_rate * arg(0, 1);
+    ret(1, 0) = -dephasing_rate * arg(1, 0);
+
+    return ret;
+}
+
 int main(int argc, char **argv)
 {
     /* parse command line arguments */
@@ -267,6 +309,75 @@ int main(int argc, char **argv)
             scen->add_record(std::make_shared<mbsolve::record>
                              ("inv12", 2.5e-15));
             scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
+
+        } else if (device_file == "tzenov2018-cpml") {
+            /* set up quantum mechanical descriptions */
+            std::shared_ptr<mbsolve::qm_description> qm_gain;
+            std::shared_ptr<mbsolve::qm_description> qm_absorber;
+
+            if (solver_method == "openmp-2lvl-os-red") {
+                /* 2-lvl description */
+                Eigen::Matrix<mbsolve::complex, 2, 2> H;
+                Eigen::Matrix<mbsolve::complex, 2, 2> u_gain, u_abs;
+                Eigen::Matrix<mbsolve::complex, 2, 2> d_init;
+
+                /* Hamiltonian */
+                H <<-0.5, 0,
+                    0, 0.5;
+                H = H * mbsolve::HBAR * 2 * M_PI * 3.4e12;
+
+                /* dipole moment operator */
+                u_gain << 0, 1.0, 1.0, 0;
+                u_gain = u_gain * mbsolve::E0 * 2e-9;
+                u_abs << 0, 1.0, 1.0, 0;
+                u_abs = u_abs * mbsolve::E0 * 6e-9;
+
+                /* initial value density matrix */
+                d_init << 0.5, 0.001,
+                    0.001, 0.5;
+
+                qm_gain = std::make_shared<mbsolve::qm_desc_clvl<2> >
+                    (5e21, H, u_gain, &relax_sop_tzenov2018_gain, d_init);
+                qm_absorber = std::make_shared<mbsolve::qm_desc_clvl<2> >
+                    (1e21, H, u_abs, &relax_sop_tzenov2018_abs, d_init);
+
+
+            } else if (solver_method == "openmp-3lvl-os-red") {
+
+
+            } else {
+                throw std::invalid_argument("Solver not suitable!");
+            }
+
+            /* materials */
+            auto mat_absorber = std::make_shared<mbsolve::material>
+                ("Absorber", qm_absorber, 12.96, 1.0, 1000);
+            auto mat_gain = std::make_shared<mbsolve::material>
+                ("Gain", qm_gain, 12.96, 1000);
+            mbsolve::material::add_to_library(mat_absorber);
+            mbsolve::material::add_to_library(mat_gain);
+
+            /* set up device */
+            dev = std::make_shared<mbsolve::device>("tzenov-cpml");
+            dev->add_region(std::make_shared<mbsolve::region>
+                            ("Absorber L", mat_absorber, 0, 125e-6));
+            dev->add_region(std::make_shared<mbsolve::region>
+                            ("Gain", mat_gain, 125e-6, 1125e-6));
+            dev->add_region(std::make_shared<mbsolve::region>
+                            ("Absorber R", mat_absorber, 1125e-6, 1250e-6));
+
+
+            /* default settings */
+            if (num_gridpoints == 0) {
+                num_gridpoints = 32768;
+            }
+            if (sim_endtime < 1e-21) {
+                sim_endtime = 200e-15;
+            }
+
+            /* basic scenario */
+            scen = std::make_shared<mbsolve::scenario>
+                ("basic", num_gridpoints, sim_endtime);
 
         } else {
             throw std::invalid_argument("Specified device not found!");

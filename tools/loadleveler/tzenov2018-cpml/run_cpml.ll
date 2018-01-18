@@ -2,7 +2,7 @@
 #@ wall_clock_limit = 24:00:00
 #@ job_name = mbsolve
 #@ job_type = parallel
-#@ class = test
+#@ class = fat
 #@ node = 1
 #@tasks_per_node = 1
 #@ node_usage = not_shared
@@ -35,7 +35,7 @@ mkdir -p $out_dir
 
 echo "Thread count: " $threads
 
-KMP_AFFINITY=granularity=fine,proclist=[`seq -s , 0 $(($threads - 1))`],explicit OMP_NUM_THREADS=$threads ../build-tzenov2018/mbsolve-tool/mbsolve-tool -m $method -d $device -w matlab -g $gridpoints -e $endtime -o $out_dir/$name.mat
+KMP_AFFINITY=granularity=fine,proclist=[`seq -s , 0 $(($threads - 1))`],explicit OMP_NUM_THREADS=$threads ../build-tzenov2018/mbsolve-tool/mbsolve-tool -m $method -d $device -w hdf5 -g $gridpoints -e $endtime -o $out_dir/$name.mat
 
 done
 
