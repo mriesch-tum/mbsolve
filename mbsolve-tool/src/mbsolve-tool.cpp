@@ -341,7 +341,6 @@ int main(int argc, char **argv)
                 qm_absorber = std::make_shared<mbsolve::qm_desc_clvl<2> >
                     (1e21, H, u_abs, &relax_sop_tzenov2018_abs, d_init);
 
-
             } else if (solver_method == "openmp-3lvl-os-red") {
 
 
@@ -360,24 +359,28 @@ int main(int argc, char **argv)
             /* set up device */
             dev = std::make_shared<mbsolve::device>("tzenov-cpml");
             dev->add_region(std::make_shared<mbsolve::region>
-                            ("Absorber L", mat_absorber, 0, 125e-6));
+                            ("Gain R", mat_gain, 0, 0.5e-3));
             dev->add_region(std::make_shared<mbsolve::region>
-                            ("Gain", mat_gain, 125e-6, 1125e-6));
+                            ("Absorber", mat_absorber, 0.5e-3, 0.625e-3));
             dev->add_region(std::make_shared<mbsolve::region>
-                            ("Absorber R", mat_absorber, 1125e-6, 1250e-6));
-
+                            ("Gain L", mat_gain, 0.625e-3, 1.125e-3));
 
             /* default settings */
             if (num_gridpoints == 0) {
-                num_gridpoints = 32768;
+                num_gridpoints = 8192;
             }
             if (sim_endtime < 1e-21) {
-                sim_endtime = 200e-15;
+                sim_endtime = 2e-9;
             }
 
             /* basic scenario */
             scen = std::make_shared<mbsolve::scenario>
                 ("basic", num_gridpoints, sim_endtime);
+
+            //scen->add_record(std::make_shared<mbsolve::record>("e", 14e-15));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("e0", mbsolve::record::electric, 1, 1, 0.0,
+                              0.0));
 
         } else {
             throw std::invalid_argument("Specified device not found!");
