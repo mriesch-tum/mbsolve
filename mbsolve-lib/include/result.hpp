@@ -45,11 +45,13 @@ private:
     std::vector<real> m_real;
     std::vector<real> m_imag;
 
+    bool m_is_complex;
+
 public:
     explicit result(const std::string& name, unsigned int cols,
-		    unsigned int rows) :
+		    unsigned int rows, bool is_complex = false) :
 	m_name(name), m_cols(cols), m_rows(rows), m_count(cols * rows),
-        m_real(cols * rows), m_imag(cols * rows)
+        m_real(cols * rows), m_imag(cols * rows), m_is_complex(is_complex)
     {
     }
 
@@ -64,6 +66,8 @@ public:
 
     unsigned int get_rows() const { return m_rows; }
 
+    bool is_complex() const { return m_is_complex; }
+
     //   complex *get_data(unsigned int row = 0) { return &m_values[row * m_cols]; }
 
     std::vector<real>::iterator get_data_real(unsigned int row,
@@ -77,6 +81,8 @@ public:
     }
 
     real *get_data_real_raw() { return m_real.data(); }
+
+    real *get_data_imag_raw() { return m_imag.data(); }
 
     const std::vector<real>& get_data_real() const { return m_real; }
 
