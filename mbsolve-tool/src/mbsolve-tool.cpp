@@ -132,8 +132,8 @@ relax_sop_tzenov2018_abs(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     Eigen::Matrix<mbsolve::complex, 2, 2> ret =
         Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
 
-    mbsolve::real scattering_rate = 3e-12;
-    mbsolve::real dephasing_rate = 160e-15;
+    mbsolve::real scattering_rate = 1.0/3e-12;
+    mbsolve::real dephasing_rate = 1.0/160e-15;
 
     /* at equilibrium, the lower level is fully populated */
     ret(0, 0) = +scattering_rate * arg(1, 1);
@@ -153,8 +153,8 @@ relax_sop_tzenov2018_gain(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
     Eigen::Matrix<mbsolve::complex, 2, 2> ret =
         Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
 
-    mbsolve::real scattering_rate = 10e-12;
-    mbsolve::real dephasing_rate = 200e-15;
+    mbsolve::real scattering_rate = 1.0/10e-12;
+    mbsolve::real dephasing_rate = 1.0/200e-15;
 
     /* at equilibrium, the upper level is fully populated */
     ret(0, 0) = -scattering_rate * arg(0, 0);

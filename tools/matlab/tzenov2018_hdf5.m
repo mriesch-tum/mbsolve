@@ -20,7 +20,7 @@ t = 0:d_t:t_e;
 %plot(x, e(:, 76));
 %plot(x, inv12(:, 76));
 
-if 1
+if 0
     %% display "video" of e-field pattern in cavity
     %% takes a while
     e = h5read(f, '/e/real');
