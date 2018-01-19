@@ -18,10 +18,10 @@
 module load boost/1.61_icc
 
 iterations=1
-threads=32
+threads=40
 
-gridpoints=32768
-endtime=300e-15
+gridpoints=8192
+endtime=2e-9
 name=tzenov2018-cpml
 method=openmp-2lvl-os-red
 device=tzenov2018-cpml
