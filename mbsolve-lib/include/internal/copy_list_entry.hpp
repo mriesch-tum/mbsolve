@@ -74,11 +74,10 @@ private:
 
 public:
     __mb_on_device bool hasto_record(unsigned int iteration) const {
-        real t_now = iteration * m_timestep;
-        real t_next = t_now + m_timestep;
-        real t_sample = floor(m_interval_ratio * (iteration + 1)) * m_interval;
+        int last = floor(m_interval_ratio * (iteration - 1));
+        int next = floor(m_interval_ratio * (iteration + 0));
 
-        return ((t_now <= t_sample) && (t_next >= t_sample));
+        return (last != next);
     }
 
     __mb_on_device bool is_complex() const {
@@ -109,14 +108,14 @@ public:
     get_offset_scratch_real(unsigned int iteration,
                             unsigned int gridpoint = 0) const {
         return m_offset_scratch_real +
-            floor(m_interval_ratio * (iteration + 1)) * m_cols + gridpoint;
+            floor(m_interval_ratio * iteration) * m_cols + gridpoint;
     }
 
     __mb_on_device unsigned int
     get_offset_scratch_imag(unsigned int iteration,
                             unsigned int gridpoint = 0) const {
         return m_offset_scratch_imag +
-            floor(m_interval_ratio * (iteration + 1)) * m_cols + gridpoint;
+            floor(m_interval_ratio * iteration) * m_cols + gridpoint;
     }
 };
 
@@ -213,14 +212,14 @@ public:
     std::vector<real>::iterator
     get_result_real(unsigned int iteration, unsigned int gridpoint = 0) const {
         return m_result->get_data_real(floor(m_dev.m_interval_ratio *
-                                             (iteration + 1)),
+                                             iteration),
                                        gridpoint);
     }
 
     std::vector<real>::iterator
     get_result_imag(unsigned int iteration, unsigned int gridpoint = 0) const {
         return m_result->get_data_imag(floor(m_dev.m_interval_ratio *
-                                             (iteration + 1)),
+                                             iteration),
                                        gridpoint);
     }
 
