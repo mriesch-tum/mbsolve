@@ -350,9 +350,9 @@ int main(int argc, char **argv)
 
             /* materials */
             auto mat_absorber = std::make_shared<mbsolve::material>
-                ("Absorber", qm_absorber, 12.96, 1.0, 1000);
+                ("Absorber", qm_absorber, 12.96, 1.0, 500);
             auto mat_gain = std::make_shared<mbsolve::material>
-                ("Gain", qm_gain, 12.96, 1000);
+                ("Gain", qm_gain, 12.96, 1.0, 500);
             mbsolve::material::add_to_library(mat_absorber);
             mbsolve::material::add_to_library(mat_gain);
 
@@ -377,11 +377,15 @@ int main(int argc, char **argv)
             scen = std::make_shared<mbsolve::scenario>
                 ("basic", num_gridpoints, sim_endtime);
 
-            //scen->add_record(std::make_shared<mbsolve::record>("e", 14e-15));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("inv12", 1e-12));
+            scen->add_record(std::make_shared<mbsolve::record>("e", 1e-12));
             scen->add_record(std::make_shared<mbsolve::record>
                              ("e0", mbsolve::record::electric, 1, 1, 0.0,
                               0.0));
-
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("h0", mbsolve::record::magnetic, 1, 1, 0.0,
+                              1.373e-7));
         } else {
             throw std::invalid_argument("Specified device not found!");
         }

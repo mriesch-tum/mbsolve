@@ -27,7 +27,7 @@ if 0
     for i = 1:size(e, 2)
 
     figure(1);
-    plot(e(:, i));
+    plot(x, e(:, i));
     ylabel('E-Field');
     %xlim([0, XDim]);
 
