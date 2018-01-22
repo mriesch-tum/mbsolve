@@ -866,6 +866,8 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
                                 if ((idx >= pos) && (idx < pos + cols)) {
                                     if (t == record::type::electric) {
                                         m_result_scratch[off_r + i] = t_e[i];
+                                    } else if (t == record::type::magnetic) {
+                                        m_result_scratch[off_r + i] = t_h[i];
                                     } else if (t == record::type::inversion) {
                                         m_result_scratch[off_r + i] =
                                             t_d[i](num_lvl * (num_lvl - 1));
