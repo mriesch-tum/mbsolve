@@ -39,4 +39,33 @@ else
     plot(t, e(1, :));
     
     
+    I = abs(e).^2;
+
+figure;
+plot(t, I);
+xlim([1.8e-9, 1.84e-9]);
+
+interval = t > 2e-9 ;
+
+e = e(interval);
+t = t(interval);
+
+NFFT = 2^nextpow2(length(e));
+win = hanning(length(e)).';
+
+nconstant = normalize_fourier(NFFT,win,@ifft);
+Y = ifft(e.*win,NFFT)/nconstant/2; Y = Y(1:NFFT/2);
+%Y_p = ifft(P.*win,NFFT)/nconstant/2; Y_p = Y_p(1:NFFT/2);
+f = [0:NFFT/2-1]/NFFT*1/d_t;
+
+halfmax = max(abs(Y))*0.3162;
+
+figure;
+plot(f, abs(Y));
+hold on;
+plot(f, ones(size(f)) * halfmax);
+xlim([1.5e12, 3.5e12]);
+xlabel('Frequency/Hz');
+ylabel('Electric field at facet/a.u.');
+
 end
