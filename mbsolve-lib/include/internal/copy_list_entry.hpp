@@ -53,27 +53,27 @@ class copy_list_entry_dev
 {
     friend class copy_list_entry;
 private:
-    unsigned int m_offset_scratch_real;
-    unsigned int m_offset_scratch_imag;
+    uint64_t m_offset_scratch_real;
+    uint64_t m_offset_scratch_imag;
 
-    unsigned int m_rows;
-    unsigned int m_cols;
+    uint64_t m_rows;
+    uint64_t m_cols;
     real m_interval_ratio;
-    unsigned int m_position_idx;
+    uint64_t m_position_idx;
 
     real m_timestep;
     real m_interval;
 
     record::type m_type;
-    unsigned int m_col_idx;
-    unsigned int m_row_idx;
+    uint64_t m_col_idx;
+    uint64_t m_row_idx;
 
     bool m_is_complex;
 
     /*TODO make members private -> friend/nested with copy_list_entry? */
 
 public:
-    __mb_on_device bool hasto_record(unsigned int iteration) const {
+    __mb_on_device bool hasto_record(uint64_t iteration) const {
         int last = floor(m_interval_ratio * (iteration - 1));
         int next = floor(m_interval_ratio * (iteration + 0));
 
@@ -88,32 +88,32 @@ public:
         return m_type;
     }
 
-    __mb_on_device unsigned int get_col_idx() const {
+    __mb_on_device uint64_t get_col_idx() const {
         return m_col_idx;
     }
 
-    __mb_on_device unsigned int get_row_idx() const {
+    __mb_on_device uint64_t get_row_idx() const {
         return m_row_idx;
     }
 
-    __mb_on_device unsigned int get_position() const {
+    __mb_on_device uint64_t get_position() const {
         return m_position_idx;
     }
 
-    __mb_on_device unsigned int get_cols() const {
+    __mb_on_device uint64_t get_cols() const {
         return m_cols;
     }
 
-    __mb_on_device unsigned int
-    get_offset_scratch_real(unsigned int iteration,
-                            unsigned int gridpoint = 0) const {
+    __mb_on_device int64_t
+    get_offset_scratch_real(uint64_t iteration,
+                            int64_t gridpoint = 0) const {
         return m_offset_scratch_real +
             floor(m_interval_ratio * iteration) * m_cols + gridpoint;
     }
 
-    __mb_on_device unsigned int
-    get_offset_scratch_imag(unsigned int iteration,
-                            unsigned int gridpoint = 0) const {
+    __mb_on_device int64_t
+    get_offset_scratch_imag(uint64_t iteration,
+                            int64_t gridpoint = 0) const {
         return m_offset_scratch_imag +
             floor(m_interval_ratio * iteration) * m_cols + gridpoint;
     }
@@ -137,7 +137,7 @@ private:
 public:
     copy_list_entry(std::shared_ptr<const record> rec,
                     std::shared_ptr<const scenario> scen,
-                    unsigned int offset_scratch) :
+                    uint64_t offset_scratch) :
         m_record(rec)
     {
         m_dev.m_timestep = scen->get_timestep_size();
@@ -163,7 +163,7 @@ public:
             m_dev.m_cols = 1;
         }
 
-	/* create result */
+        /* create result */
         m_result = std::make_shared<result>(rec->get_name(), m_dev.m_cols,
                                             m_dev.m_rows);
 
@@ -183,11 +183,11 @@ public:
 
     record::type get_type() const { return m_dev.get_type(); }
 
-    unsigned int get_col_idx() const { return m_dev.get_col_idx(); }
+    uint64_t get_col_idx() const { return m_dev.get_col_idx(); }
 
-    unsigned int get_row_idx() const { return m_dev.get_row_idx(); }
+    uint64_t get_row_idx() const { return m_dev.get_row_idx(); }
 
-    bool hasto_record(unsigned int iteration) const {
+    bool hasto_record(uint64_t iteration) const {
         return m_dev.hasto_record(iteration);
     }
 
@@ -195,43 +195,43 @@ public:
         return m_dev.m_is_complex;
     }
 
-    unsigned int get_interval() const { return m_dev.m_interval; }
+    uint64_t get_interval() const { return m_dev.m_interval; }
 
-    unsigned int get_position() const { return m_dev.m_position_idx; }
+    uint64_t get_position() const { return m_dev.m_position_idx; }
 
-    unsigned int get_cols() const { return m_dev.m_cols; }
+    uint64_t get_cols() const { return m_dev.m_cols; }
 
-    unsigned int get_rows() const { return m_dev.m_rows; }
+    uint64_t get_rows() const { return m_dev.m_rows; }
 
-    unsigned int get_size() const { return m_dev.m_cols * m_dev.m_rows; }
+    uint64_t get_size() const { return m_dev.m_cols * m_dev.m_rows; }
 
     std::shared_ptr<const record> get_record() const { return m_record; };
 
     std::shared_ptr<result> get_result() const { return m_result; }
 
     std::vector<real>::iterator
-    get_result_real(unsigned int iteration, unsigned int gridpoint = 0) const {
+    get_result_real(uint64_t iteration, uint64_t gridpoint = 0) const {
         return m_result->get_data_real(floor(m_dev.m_interval_ratio *
                                              iteration),
                                        gridpoint);
     }
 
     std::vector<real>::iterator
-    get_result_imag(unsigned int iteration, unsigned int gridpoint = 0) const {
+    get_result_imag(uint64_t iteration, uint64_t gridpoint = 0) const {
         return m_result->get_data_imag(floor(m_dev.m_interval_ratio *
                                              iteration),
                                        gridpoint);
     }
 
-    unsigned int
-    get_offset_scratch_imag(unsigned int iteration,
-                            unsigned int gridpoint = 0) const {
+    int64_t
+    get_offset_scratch_imag(uint64_t iteration,
+                            int64_t gridpoint = 0) const {
         return m_dev.get_offset_scratch_imag(iteration, gridpoint);
     }
 
-    unsigned int
-    get_offset_scratch_real(unsigned int iteration,
-                            unsigned int gridpoint = 0) const {
+    int64_t
+    get_offset_scratch_real(uint64_t iteration,
+                            int64_t gridpoint = 0) const {
         return m_dev.get_offset_scratch_real(iteration, gridpoint);
     }
 };

@@ -311,7 +311,7 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
     }
 
     /* set up results and transfer data structures */
-    unsigned int scratch_size = 0;
+    uint64_t scratch_size = 0;
     for (const auto& rec : scen->get_records()) {
         /* create copy list entry */
         copy_list_entry entry(rec, scen, scratch_size);
@@ -361,10 +361,10 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
         base_idx += scen->get_num_timesteps();
     }
 
-    unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
-    unsigned int chunk_base = m_scenario->get_num_gridpoints()/P;
-    unsigned int chunk_rem = m_scenario->get_num_gridpoints() % P;
-    unsigned int num_timesteps = m_scenario->get_num_timesteps();
+    uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
+    uint64_t chunk_base = m_scenario->get_num_gridpoints()/P;
+    uint64_t chunk_rem = m_scenario->get_num_gridpoints() % P;
+    uint64_t num_timesteps = m_scenario->get_num_timesteps();
 
 #ifndef XEON_PHI_OFFLOAD
     l_copy_list = m_copy_list.data();
@@ -410,7 +410,7 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             }
 
             /* allocation */
-            unsigned int size = chunk + 2 * OL;
+            uint64_t size = chunk + 2 * OL;
 
             m_d[tid] = (Eigen::Matrix<real, num_adj, 1> *)
                 mb_aligned_alloc(size *
@@ -429,14 +429,14 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
              */
 
             unsigned int tid = omp_get_thread_num();
-            unsigned int chunk = chunk_base;
+            uint64_t chunk = chunk_base;
 
             if (tid == P - 1) {
                 chunk += chunk_rem;
             }
 
             /* allocation */
-            unsigned int size = chunk + 2 * OL;
+            uint64_t size = chunk + 2 * OL;
 
             Eigen::Matrix<real, num_adj, 1> *t_d;
             real *t_h, *t_e, *t_p;
@@ -455,7 +455,7 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
             __mb_assume_aligned(t_mat_indices);
 
             for (int i = 0; i < size; i++) {
-                unsigned int global_idx = tid * chunk_base + (i - OL);
+                uint64_t global_idx = tid * chunk_base + (i - OL);
                 if ((global_idx >= 0) && (global_idx < num_gridpoints)) {
                     unsigned int mat_idx = l_mat_indices[global_idx];
                     t_mat_indices[i] = mat_idx;
@@ -485,8 +485,8 @@ solver_openmp_clvl_os_red<num_lvl>::~solver_openmp_clvl_os_red()
     unsigned int P = omp_get_max_threads();
     unsigned int num_sources = m_sim_sources.size();
     unsigned int num_copy = m_copy_list.size();
-    unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
-    unsigned int num_timesteps = m_scenario->get_num_timesteps();
+    uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
+    uint64_t num_timesteps = m_scenario->get_num_timesteps();
 
 #ifdef XEON_PHI_OFFLOAD
 #pragma offload target(mic:0) in(P)                                     \
@@ -535,7 +535,7 @@ solver_openmp_clvl_os_red<num_lvl>::get_name() const
 
 template<unsigned int num_lvl, unsigned int num_adj>
 void
-update_fdtd(unsigned int size, unsigned int border, real *t_e, real *t_p,
+update_fdtd(uint64_t size, unsigned int border, real *t_e, real *t_p,
             real *t_h, Eigen::Matrix<real, num_adj, 1>* t_d,
             unsigned int *t_mat_indices,
             sim_constants_clvl_os<num_lvl> *l_sim_consts)
@@ -576,8 +576,8 @@ update_h(unsigned int size, unsigned int border, real *t_e, real *t_p,
 
 void
 apply_sources(real *t_e, real *source_data, unsigned int num_sources,
-              sim_source *l_sim_sources, unsigned int time,
-              unsigned int base_pos, unsigned int chunk)
+              sim_source *l_sim_sources, uint64_t time,
+              unsigned int base_pos, uint64_t chunk)
 {
     for (unsigned int k = 0; k < num_sources; k++) {
         int at = l_sim_sources[k].x_idx - base_pos + OL;
@@ -667,7 +667,7 @@ mat_exp(const sim_constants_clvl_os<num_lvl>& s, real e)
 
 template<unsigned int num_lvl, unsigned int num_adj>
 void
-update_d(unsigned int size, unsigned int border, real *t_e, real *t_p,
+update_d(uint64_t size, unsigned int border, real *t_e, real *t_p,
          Eigen::Matrix<real, num_adj, 1>* t_d,
          unsigned int *t_mat_indices,
          sim_constants_clvl_os<num_lvl> *l_sim_consts)
@@ -716,10 +716,10 @@ void
 solver_openmp_clvl_os_red<num_lvl>::run() const
 {
     unsigned int P = omp_get_max_threads();
-    unsigned int num_gridpoints = m_scenario->get_num_gridpoints();
-    unsigned int chunk_base = m_scenario->get_num_gridpoints()/P;
-    unsigned int chunk_rem = m_scenario->get_num_gridpoints() % P;
-    unsigned int num_timesteps = m_scenario->get_num_timesteps();
+    uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
+    uint64_t chunk_base = m_scenario->get_num_gridpoints()/P;
+    uint64_t chunk_rem = m_scenario->get_num_gridpoints() % P;
+    uint64_t num_timesteps = m_scenario->get_num_timesteps();
     unsigned int num_sources = m_sim_sources.size();
     unsigned int num_copy = m_copy_list.size();
 
@@ -738,11 +738,11 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
 #pragma omp parallel
         {
             unsigned int tid = omp_get_thread_num();
-            unsigned int chunk = chunk_base;
+            uint64_t chunk = chunk_base;
             if (tid == P - 1) {
                 chunk += chunk_rem;
             }
-            unsigned int size = chunk + 2 * OL;
+            uint64_t size = chunk + 2 * OL;
 
             /* gather pointers */
             Eigen::Matrix<real, num_adj, 1> *t_d;
@@ -789,7 +789,7 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
             }
 
             /* main loop */
-            for (unsigned int n = 0; n <= num_timesteps/OL; n++) {
+            for (uint64_t n = 0; n <= num_timesteps/OL; n++) {
                 /* handle loop remainder */
                 unsigned int subloop_ct = (n == num_timesteps/OL) ?
                     num_timesteps % OL : OL;
@@ -848,21 +848,22 @@ solver_openmp_clvl_os_red<num_lvl>::run() const
                         t_h[OL + chunk] = 0;
                     }
 
-                     /* save results to scratchpad in parallel */
+                    /* save results to scratchpad in parallel */
                     for (int k = 0; k < num_copy; k++) {
                         if (l_copy_list[k].hasto_record(n * OL + m)) {
-                            unsigned int pos = l_copy_list[k].get_position();
-                            unsigned int cols = l_copy_list[k].get_cols();
-                            int base_idx = tid * chunk_base - OL;
+                            uint64_t pos = l_copy_list[k].get_position();
+                            uint64_t cols = l_copy_list[k].get_cols();
+                            uint64_t ridx = l_copy_list[k].get_row_idx();
+                            uint64_t cidx = l_copy_list[k].get_col_idx();
                             record::type t = l_copy_list[k].get_type();
-                            unsigned int ridx = l_copy_list[k].get_row_idx();
-                            unsigned int cidx = l_copy_list[k].get_col_idx();
-                            int off_r = l_copy_list[k].get_offset_scratch_real
+
+                            int64_t base_idx = tid * chunk_base - OL;
+                            int64_t off_r = l_copy_list[k].get_offset_scratch_real
                                 (n * OL + m, base_idx - pos);
 
 #pragma omp simd
-                            for (int i = OL; i < chunk + OL; i++) {
-                                int idx = base_idx + i;
+                            for (uint64_t i = OL; i < chunk + OL; i++) {
+                                int64_t idx = base_idx + i;
                                 if ((idx >= pos) && (idx < pos + cols)) {
                                     if (t == record::type::electric) {
                                         m_result_scratch[off_r + i] = t_e[i];

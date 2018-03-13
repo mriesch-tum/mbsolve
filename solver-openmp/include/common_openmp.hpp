@@ -17,7 +17,7 @@
 #endif
 
 #ifdef __INTEL_COMPILER
-__mb_on_device inline void *mb_aligned_alloc(unsigned int size)
+__mb_on_device inline void *mb_aligned_alloc(size_t size)
 {
     return _mm_malloc(size, ALIGN);
 }
@@ -31,7 +31,7 @@ __mb_on_device inline void mb_aligned_free(void *ptr)
 
 #else
 
-inline void *mb_aligned_alloc(unsigned int size)
+inline void *mb_aligned_alloc(size_t size)
 {
     void *addr;
     int ret;

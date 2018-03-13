@@ -131,7 +131,7 @@ private:
 
     real *m_result_scratch;
 
-    unsigned int m_scratch_size;
+    uint64_t m_scratch_size;
 
     real *m_source_data;
 
