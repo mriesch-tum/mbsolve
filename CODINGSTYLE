@@ -22,6 +22,7 @@ Naming
 Editor settings
   - The file .editorconfig is provided for editors that use the editorconfig
     project.
+  - The file eclipse-mbsolve-style.xml is provided for Eclipse.
   - EMACS: add the following to your .emacs file
 
 ;; treat CUDA code as C++ source files
