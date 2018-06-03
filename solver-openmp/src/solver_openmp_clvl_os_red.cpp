@@ -49,53 +49,34 @@ const unsigned int VEC = 4;
 
 template<unsigned int num_lvl, unsigned int num_adj>
 void
-fill_rodr_coeff(const Eigen::Matrix<complex, num_adj, num_adj>& eigenvec,
-                const Eigen::Matrix<complex, num_adj, 1>& eigenval,
+fill_rodr_coeff(const Eigen::Matrix<real, num_adj, num_adj>& eigenvec,
+                const Eigen::Matrix<real, num_adj, num_adj>& eigenval,
                 sim_constants_clvl_os<num_lvl>& sc)
 {
     /* creating sorting order (descending eigenvalues) */
-    std::vector<size_t> perm_idx(num_adj);
-    std::iota(perm_idx.begin(), perm_idx.end(), 0);
+    std::vector<size_t> perm_idx(num_adj - 1);
+    std::iota(perm_idx.begin(), perm_idx.end(), 1);
     std::sort(perm_idx.begin(), perm_idx.end(),
               [&eigenval](size_t i1, size_t i2) {
-                  return (std::abs(eigenval(i1)) > std::abs(eigenval(i2)));
+                  return std::abs(eigenval(i1, i1 - 1)) >
+                      std::abs(eigenval(i2, i2 - 1));
               });
 
-    /* sort eigenvectors */
-    Eigen::Matrix<real, num_adj, num_adj> Q =
-        Eigen::Matrix<real, num_adj, num_adj>::Zero();
-    for (int i = 0; i < num_adj/2; i++) {
-        unsigned int i1 = perm_idx[2 * i];
-        unsigned int i2 = perm_idx[2 * i + 1];
-
-        Q.col(2 * i) = 1.0/sqrt(2) *
-            (eigenvec.col(i1) + eigenvec.col(i2)).real();
-        Q.col(2 * i + 1) = 1.0/sqrt(2) *
-            (-eigenvec.col(i1) + eigenvec.col(i2)).imag();
-    }
-    if (num_adj % 2 != 0) {
-        Q(num_adj - 1, num_adj - 1) = 1.0;
-    }
+    const Eigen::Matrix<real, num_adj, num_adj> &Q = eigenvec;
 
     /* TODO optimize
      * ignore eigenvalues = 0
      * group eigenvalues with multiplicity >= 2
      */
     for (int i = 0; i < num_adj/2; i++) {
-        unsigned int i1 = perm_idx[2 * i];
-        unsigned int i2 = perm_idx[2 * i + 1];
+        unsigned int i1 = perm_idx[i];
         Eigen::Matrix<real, num_adj, num_adj> b =
             Eigen::Matrix<real, num_adj, num_adj>::Zero();
 
-        /* give warning if eigenvalues do not match */
-        if (std::abs(eigenval(i1)) + std::abs(eigenval(i2)) > 1e-5) {
-            std::cout << "Warning: Eigenvalues not pairwise: " <<
-                eigenval(i1) << " and " << eigenval(i2) << std::endl;
-        }
-        sc.theta[i] = std::abs(eigenval(i1));
+        sc.theta[i] = eigenval(i1, i1 - 1);
 
-        b(2 * i, 2 * i + 1) = -1.0;
-        b(2 * i + 1, 2 * i) = +1.0;
+        b(i1, i1 - 1) = +1.0;
+        b(i1 - 1, i1) = -1.0;
 
         sc.coeff_1[i] = Q * b * Q.transpose();
         sc.coeff_2[i] = Q * b * b * Q.transpose();
@@ -218,14 +199,17 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
 
             /* diagonalize dipole operator */
             /* note: returned eigenvectors are normalized */
-            Eigen::EigenSolver<Eigen::Matrix<real, num_adj, num_adj> > es(U);
+            Eigen::RealSchur<Eigen::Matrix<real, num_adj, num_adj> >
+                schur_r(U);
+            Eigen::ComplexSchur<Eigen::Matrix<real, num_adj, num_adj> >
+                schur_c(U);
 
             /* store propagators B1 and B2 */
             //sc.B_1 = A_0 * es.eigenvectors();
             //sc.B_2 = es.eigenvectors().adjoint() * A_0;
 
             sc.A_0 = A_0;
-            sc.B = es.eigenvectors();
+            sc.B = schur_c.matrixU();
 
             sc.M = M;
             sc.U = U;
@@ -236,15 +220,15 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
                               + pow(U(1, 2), 2));
 
             /* for general analytic approach */
-            fill_rodr_coeff<num_lvl, num_adj>(es.eigenvectors(),
-                                              es.eigenvalues(), sc);
+            fill_rodr_coeff<num_lvl, num_adj>(schur_r.matrixU(),
+                                              schur_r.matrixT(), sc);
 
             /* TODO refine check? */
             sc.has_qm = true;
             sc.has_dipole = true;
 
             /* store diagonal matrix containing the eigenvalues */
-            sc.L = es.eigenvalues() * scen->get_timestep_size();
+            sc.L = schur_c.matrixT().diagonal() * scen->get_timestep_size();
 
             /* initial coherence vector */
             sc.d_init = cvr.get_initial_vec(scen->get_rho_init());
