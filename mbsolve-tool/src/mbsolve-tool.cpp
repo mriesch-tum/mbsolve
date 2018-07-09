@@ -296,6 +296,114 @@ int main(int argc, char **argv)
             scen->add_record(std::make_shared<mbsolve::record>
                              ("h0", mbsolve::record::magnetic, 1, 1, 0.0,
                               1.373e-7));
+
+        } else if (device_file == "marskar2011") {
+            /**
+             * The marskar2011 setup is a 6-level anharmonic ladder system.
+             * In the scenario, the interaction with a few-cycle Gaussian pulse
+             * is simulated. For details see literature:
+             * https://doi.org/10.1364/OE.19.016784
+             */
+
+            /* set up quantum mechanical description */
+            std::vector<mbsolve::real> energies(6, 0.0);
+            for (int i = 1; i < 6; i++) {
+                energies[i] = energies[i - 1] + (1.0 - 0.1 * (i - 3)) *
+                    mbsolve::HBAR * 2 * M_PI * 1e13;
+            }
+
+            mbsolve::qm_operator H(energies);
+
+            mbsolve::real dipole = 1e-29;
+            std::vector<mbsolve::complex> dipoles = {
+                dipole,
+                0, dipole,
+                0, 0, dipole,
+                0, 0, 0, dipole,
+                0, 0, 0, 0, dipole
+            };
+
+            mbsolve::qm_operator u({0, 0, 0, 0, 0, 0}, dipoles);
+
+            mbsolve::real rate = 1e12;
+            std::vector<std::vector<mbsolve::real> > scattering_rates = {
+                { rate, 1.0/(1.0e-12), 0, 0, 0, 0 },
+                { 3.82950e+11, rate, 1.0/(1.1e-12), 0, 0, 0 },
+                { 0, 3.77127e+11, rate, 1.0/(1.2e-12), 0, 0 },
+                { 0, 0, 3.74488e+11, rate, 1.0/(1.3e-12), 0 },
+                { 0, 0, 0, 3.74467e+11, rate, 1.0/(1.4e-12) },
+                { 0, 0, 0, 0, 3.76675e+11, rate }
+            };
+
+            auto relax_sop = std::make_shared<mbsolve::qm_lindblad_relaxation>
+                (scattering_rates);
+
+            auto qm = std::make_shared<mbsolve::qm_description>
+                (1e25, H, u, relax_sop);
+
+            /* materials */
+            auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
+            mbsolve::material::add_to_library(mat_vac);
+            auto mat_ar = std::make_shared<mbsolve::material>("AR_Marsk", qm);
+            mbsolve::material::add_to_library(mat_ar);
+
+            /* set up device */
+            dev = std::make_shared<mbsolve::device>("Marskar");
+            dev->add_region(std::make_shared<mbsolve::region>
+                            ("Active region", mat_ar, 0, 1e-3));
+
+            /* default settings */
+            if (num_gridpoints == 0) {
+                num_gridpoints = 8192;
+            }
+            if (sim_endtime < 1e-21) {
+                sim_endtime = 2e-12;
+            }
+
+            mbsolve::qm_operator rho_init({0.60, 0.23, 0.096, 0.044, 0.02,
+                        0.01});
+
+            /* Marskar basic scenario */
+            scen = std::make_shared<mbsolve::scenario>
+                ("Basic", num_gridpoints, sim_endtime, rho_init);
+
+            /* input pulse */
+            mbsolve::real tau = 100e-15;
+            auto pulse = std::make_shared<mbsolve::gaussian_pulse>
+                ("gaussian",
+                 0.0, /* position */
+                 mbsolve::source::hard_source,
+                 5e8, /* amplitude */
+                 1e13, /* frequency */
+                 3.0 * tau, /* phase: 3*tau */
+                 tau /* tau */
+                 );
+            scen->add_source(pulse);
+
+            /* select data to be recorded */
+            mbsolve::real sample_time = 0.0;
+            mbsolve::real sample_pos = 0.0;
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("d11", mbsolve::record::type::density, 1, 1,
+                              sample_time, sample_pos));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("d22", mbsolve::record::type::density, 2, 2,
+                              sample_time, sample_pos));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("d33", mbsolve::record::type::density, 3, 3,
+                              sample_time, sample_pos));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("d44", mbsolve::record::type::density, 4, 4,
+                              sample_time, sample_pos));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("d55", mbsolve::record::type::density, 5, 5,
+                              sample_time, sample_pos));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("d66", mbsolve::record::type::density, 6, 6,
+                              sample_time, sample_pos));
+            scen->add_record(std::make_shared<mbsolve::record>
+                             ("e", mbsolve::record::type::electric, 0, 0,
+                              sample_time, sample_pos));
         } else {
             throw std::invalid_argument("Specified device not found!");
         }
