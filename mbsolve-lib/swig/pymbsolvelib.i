@@ -42,6 +42,7 @@
 %shared_ptr(mbsolve::region)
 %shared_ptr(mbsolve::result)
 %shared_ptr(mbsolve::scenario)
+%shared_ptr(mbsolve::gaussian_pulse)
 %shared_ptr(mbsolve::sech_pulse)
 %shared_ptr(mbsolve::sine_source)
 %shared_ptr(mbsolve::single_cycle_pulse)

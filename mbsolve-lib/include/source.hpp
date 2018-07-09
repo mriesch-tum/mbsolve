@@ -218,6 +218,48 @@ public:
 };
 */
 
+/**
+ * Gaussian pulse source.
+ * \ingroup MBSOLVE_LIB
+ */
+class gaussian_pulse : public source
+{
+private:
+    real m_tau;
+
+public:
+    /**
+     * Constructs Gaussian pulse source. The pulse is defined as
+     * \f[ E(t) = A \sin ( 2 \pi f t)
+     * \exp\left( - \frac{(t - t_0)^2}{\tau^2} \right) \f]
+     *
+     * \param [in] name        Name of the source.
+     * \param [in] position    Position of the source (in meter).
+     * \param [in] source_type Source type.
+     * \param [in] ampl        Amplitude \f$ A \f$ of the source.
+     * \param [in] freq        Frequency \f$ f \f$ of the source.
+     * \param [in] phase       Phase \f$ t_0 \f$ of the source.
+     * \param [in] tau         Parameter \f$ \tau \f$.
+     */
+    gaussian_pulse(const std::string& name,
+                   real position,
+                   type source_type,
+                   real ampl,
+                   real freq,
+                   real phase,
+                   real tau) :
+        source(name, position, source_type, ampl, freq, phase), m_tau(tau)
+    {
+    }
+
+    real calc_value(real t) const
+    {
+        return exp( - (t - m_phase) * (t - m_phase) / (m_tau * m_tau)) *
+            sin(2 * M_PI * m_freq * t);
+    }
+};
+
+
 /* TODO: custom functor source / callback function? */
 
 }
