@@ -52,6 +52,7 @@
 %template(vector_complex) std::vector<mbsolve::complex>;
 %template(vector_result) std::vector<std::shared_ptr<mbsolve::result> >;
 
+%include "../include/qm_description.hpp"
 %include "../include/material.hpp"
 %include "../include/device.hpp"
 %include "../include/record.hpp"
