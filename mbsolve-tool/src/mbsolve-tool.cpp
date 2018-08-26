@@ -81,128 +81,49 @@ static void parse_args(int argc, char **argv)
     }
 }
 
-/* song2005 relaxation superoperator */
-Eigen::Matrix<mbsolve::complex, 3, 3>
-relax_sop_song3(const Eigen::Matrix<mbsolve::complex, 3, 3>& arg)
-{
-    Eigen::Matrix<mbsolve::complex, 3, 3> ret =
-        Eigen::Matrix<mbsolve::complex, 3, 3>::Zero();
-
-    mbsolve::real d7_eq = 0.0;
-    mbsolve::real d8_eq = 0.0;
-    mbsolve::real T_1 = 1e-10;
-
-    ret(0, 0) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2.0 * arg(0, 0)
-                                  - d7_eq - d8_eq));
-    ret(1, 1) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2.0 * arg(0, 0)
-                                  - d7_eq - d8_eq))
-        - 1/T_1 * (arg(1, 1) - arg(0, 0) - d7_eq);
-    ret(2, 2) = 1.0/3 * (1/T_1 * (arg(2, 2) + arg(1, 1) - 2.0 * arg(0, 0)
-                                  - d7_eq - d8_eq))
-        - 1/T_1 * (arg(2, 2) - arg(0, 0) - d8_eq);
-    ret(1, 0) = -1/T_1 * arg(1, 0);
-    ret(0, 1) = -1/T_1 * arg(0, 1);
-    ret(2, 0) = -1/T_1 * arg(2, 0);
-    ret(0, 2) = -1/T_1 * arg(0, 2);
-    ret(2, 1) = -1/T_1 * arg(2, 1);
-    ret(1, 2) = -1/T_1 * arg(1, 2);
-
-    return ret;
-}
-
-/* ziolkowski1995 relaxation superoperator */
-Eigen::Matrix<mbsolve::complex, 2, 2>
-relax_sop_ziolk2(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
-{
-    Eigen::Matrix<mbsolve::complex, 2, 2> ret =
-        Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
-
-    ret(0, 0) = +1e10 * arg(1, 1);
-    ret(1, 1) = -1e10 * arg(1, 1);
-    ret(0, 1) = -1e10 * arg(0, 1);
-    ret(1, 0) = -1e10 * arg(1, 0);
-
-    return ret;
-}
-
-/* tzenov2018 absorber relaxation superoperator */
-Eigen::Matrix<mbsolve::complex, 2, 2>
-relax_sop_tzenov2018_abs(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
-{
-    Eigen::Matrix<mbsolve::complex, 2, 2> ret =
-        Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
-
-    mbsolve::real scattering_rate = 1.0/3e-12;
-    mbsolve::real dephasing_rate = 1.0/160e-15;
-
-    /* at equilibrium, the lower level is fully populated */
-    ret(0, 0) = +scattering_rate * arg(1, 1);
-    ret(1, 1) = -scattering_rate * arg(1, 1);
-
-    /* dephasing of coherence terms */
-    ret(0, 1) = -dephasing_rate * arg(0, 1);
-    ret(1, 0) = -dephasing_rate * arg(1, 0);
-
-    return ret;
-}
-
-/* tzenov2018 gain relaxation superoperator */
-Eigen::Matrix<mbsolve::complex, 2, 2>
-relax_sop_tzenov2018_gain(const Eigen::Matrix<mbsolve::complex, 2, 2>& arg)
-{
-    Eigen::Matrix<mbsolve::complex, 2, 2> ret =
-        Eigen::Matrix<mbsolve::complex, 2, 2>::Zero();
-
-    mbsolve::real scattering_rate = 1.0/10e-12;
-    mbsolve::real dephasing_rate = 1.0/200e-15;
-
-    /* at equilibrium, the upper level is fully populated */
-    ret(0, 0) = -scattering_rate * arg(0, 0);
-    ret(1, 1) = +scattering_rate * arg(0, 0);
-
-    /* dephasing of coherence terms */
-    ret(0, 1) = -dephasing_rate * arg(0, 1);
-    ret(1, 0) = -dephasing_rate * arg(1, 0);
-
-    return ret;
-}
-
 int main(int argc, char **argv)
 {
     /* parse command line arguments */
     parse_args(argc, argv);
 
     try {
-	ti::cpu_timer timer;
-	double total_time = 0;
+        ti::cpu_timer timer;
+        double total_time = 0;
 
         std::shared_ptr<mbsolve::device> dev;
         std::shared_ptr<mbsolve::scenario> scen;
 
         if (device_file == "song2005") {
             /* Song setup */
+            std::vector<mbsolve::real> energies = {
+                0,
+                2.3717 * mbsolve::HBAR * 1e15,
+                2.4165 * mbsolve::HBAR * 1e15
+            };
 
-            Eigen::Matrix<mbsolve::complex, 3, 3> H, u, d_init;
+            mbsolve::qm_operator H(energies);
 
-            H <<0, 0, 0,
-                0, 2.3717, 0,
-                0, 0, 2.4165;
-            H = H * mbsolve::HBAR * 1e15;
+            std::vector<mbsolve::complex> dipoles = {
+                mbsolve::E0 * 9.2374e-11,
+                mbsolve::E0 * 9.2374e-11 * sqrt(2),
+                0
+            };
 
-            // mbsolve::real g = 1.0;
-            mbsolve::real g = sqrt(2);
+            mbsolve::qm_operator u({0, 0, 0}, dipoles);
 
-            u <<0, 1.0, g,
-                1.0, 0, 0,
-                g, 0, 0;
-            u = u * mbsolve::E0 * 9.2374e-11;
+            mbsolve::real rate = 1e10;
+            std::vector<std::vector<mbsolve::real> > scattering_rates = {
+                { 0, rate, rate },
+                { rate, 0, rate },
+                { rate, rate, 0 } };
 
-            d_init << 1, 0, 0,
-                0, 0, 0,
-                0, 0, 0;
+            auto relax_sop = std::make_shared<mbsolve::qm_lindblad_relaxation>
+                (scattering_rates);
 
-            auto qm = std::make_shared<mbsolve::qm_desc_3lvl>
-                (6e24, H, u, &relax_sop_song3, d_init);
+            mbsolve::qm_operator rho_init({1, 0, 0});
+
+            auto qm = std::make_shared<mbsolve::qm_description>
+                (6e24, H, u, relax_sop, rho_init);
 
             auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
             mbsolve::material::add_to_library(mat_vac);
@@ -213,7 +134,7 @@ int main(int argc, char **argv)
             dev->add_region(std::make_shared<mbsolve::region>
                             ("Active region", mat_ar, 0, 150e-6));
 
-           /* default settings */
+            /* default settings */
             if (num_gridpoints == 0) {
                 num_gridpoints = 32768;
             }
@@ -244,33 +165,9 @@ int main(int argc, char **argv)
 
         } else if (device_file == "ziolkowski1995") {
             /* set up quantum mechanical description */
-            std::shared_ptr<mbsolve::qm_description> qm;
 
-            if ((solver_method == "openmp-2lvl-os") ||
-                (solver_method == "openmp-2lvl-os-old") ||
-                (solver_method == "openmp-2lvl-pc") ||
-                (solver_method == "openmp-2lvl-pc-red")) {
-                /* Ziolkowski setup in old 2-lvl desc */
-                /* TODO: transform to new description */
-                qm = std::make_shared<mbsolve::qm_desc_2lvl>
-                    (1e24, 2 * M_PI * 2e14, 6.24e-11, 0.5e10, 1.0e10);
-
-            } else {
-                /* Ziolkowski setup in new 2-lvl desc */
-
-                Eigen::Matrix<mbsolve::complex, 2, 2> H, u, d_init;
-
-                H <<-0.5, 0,
-                    0, 0.5;
-                H = H * mbsolve::HBAR * 2 * M_PI * 2e14;
-                u <<0, 1.0,
-                    1.0, 0;
-                u = u * mbsolve::E0 * 6.24e-11 * (-1.0);
-                d_init << 1, 0,
-                    0, 0;
-                qm = std::make_shared<mbsolve::qm_desc_clvl<2> >
-                    (1e24, H, u, &relax_sop_ziolk2, d_init);
-            }
+            auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
+                (1e24, 2 * M_PI * 2e14, 6.24e-11, 1.0e10, 1.0e10);
 
             /* materials */
             auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
@@ -312,42 +209,18 @@ int main(int argc, char **argv)
 
         } else if (device_file == "tzenov2018-cpml") {
             /* set up quantum mechanical descriptions */
-            std::shared_ptr<mbsolve::qm_description> qm_gain;
-            std::shared_ptr<mbsolve::qm_description> qm_absorber;
+            auto qm_gain = std::make_shared<mbsolve::qm_desc_2lvl>
+                (5e21, 2 * M_PI * 3.4e12, 2e-9, 1.0/10e-12, 1.0/200e-15, 1.0);
 
-            if (solver_method == "openmp-2lvl-os-red") {
-                /* 2-lvl description */
-                Eigen::Matrix<mbsolve::complex, 2, 2> H;
-                Eigen::Matrix<mbsolve::complex, 2, 2> u_gain, u_abs;
-                Eigen::Matrix<mbsolve::complex, 2, 2> d_init;
-
-                /* Hamiltonian */
-                H <<-0.5, 0,
-                    0, 0.5;
-                H = H * mbsolve::HBAR * 2 * M_PI * 3.4e12;
-
-                /* dipole moment operator */
-                u_gain << 0, 1.0, 1.0, 0;
-                u_gain = u_gain * mbsolve::E0 * 2e-9;
-                u_abs << 0, 1.0, 1.0, 0;
-                u_abs = u_abs * mbsolve::E0 * 6e-9;
-
-                /* initial value density matrix */
-                d_init << 0.5, 0.001,
-                    0.001, 0.5;
-
-                qm_gain = std::make_shared<mbsolve::qm_desc_clvl<2> >
-                    (5e21, H, u_gain, &relax_sop_tzenov2018_gain, d_init);
-                qm_absorber = std::make_shared<mbsolve::qm_desc_clvl<2> >
-                    (1e21, H, u_abs, &relax_sop_tzenov2018_abs, d_init);
-
-            } else if (solver_method == "openmp-3lvl-os-red") {
+            auto qm_absorber = std::make_shared<mbsolve::qm_desc_2lvl>
+                (1e21, 2 * M_PI * 3.4e12, 6e-9, 1.0/3e-12, 1.0/160e-15);
 
 
-            } else {
-                throw std::invalid_argument("Solver not suitable!");
-            }
-
+#if 0
+            /* initial value density matrix */
+            d_init << 0.5, 0.001,
+                0.001, 0.5;
+#endif
             /* materials */
             auto mat_absorber = std::make_shared<mbsolve::material>
                 ("Absorber", qm_absorber, 12.96, 1.0, 500);
@@ -389,56 +262,56 @@ int main(int argc, char **argv)
         } else {
             throw std::invalid_argument("Specified device not found!");
         }
-	/* tic */
-	timer.start();
+        /* tic */
+        timer.start();
 
         mbsolve::writer writer(writer_method);
-	mbsolve::solver solver(solver_method, dev, scen);
+        mbsolve::solver solver(solver_method, dev, scen);
 
         /* toc */
-	timer.stop();
-	ti::cpu_times times = timer.elapsed();
-	std::cout << "Time required (setup): " << 1e-9 * times.wall
-		  << std::endl;
-	total_time +=1e-9 * times.wall;
+        timer.stop();
+        ti::cpu_times times = timer.elapsed();
+        std::cout << "Time required (setup): " << 1e-9 * times.wall
+                  << std::endl;
+        total_time +=1e-9 * times.wall;
 
-	std::cout << solver.get_name() << std::endl;
+        std::cout << solver.get_name() << std::endl;
 
-	/* tic */
-	timer.start();
+        /* tic */
+        timer.start();
 
-	/* execute solver */
-	solver.run();
+        /* execute solver */
+        solver.run();
 
-	/* toc */
-	timer.stop();
-	times = timer.elapsed();
-	std::cout << "Time required (run): " << 1e-9 * times.wall << std::endl;
-	total_time +=1e-9 * times.wall;
+        /* toc */
+        timer.stop();
+        times = timer.elapsed();
+        std::cout << "Time required (run): " << 1e-9 * times.wall << std::endl;
+        total_time +=1e-9 * times.wall;
 
-	/* grid point updates per second */
-	double gpups = 1e-6 * 1e9/times.wall * scen->get_num_gridpoints() *
+        /* grid point updates per second */
+        double gpups = 1e-6 * 1e9/times.wall * scen->get_num_gridpoints() *
             scen->get_endtime()/scen->get_timestep_size();
-	std::cout << "Performance: " << gpups << " MGPU/s" << std::endl;
+        std::cout << "Performance: " << gpups << " MGPU/s" << std::endl;
 
-	/* tic */
-	timer.start();
+        /* tic */
+        timer.start();
 
-	/* write results */
-	writer.write(output_file, solver.get_results(), dev, scen);
+        /* write results */
+        writer.write(output_file, solver.get_results(), dev, scen);
 
-	/* toc */
-	timer.stop();
-	times = timer.elapsed();
-	std::cout << "Time required (write): " << 1e-9 * times.wall
-		  << std::endl;
-	total_time +=1e-9 * times.wall;
+        /* toc */
+        timer.stop();
+        times = timer.elapsed();
+        std::cout << "Time required (write): " << 1e-9 * times.wall
+                  << std::endl;
+        total_time +=1e-9 * times.wall;
 
-	std::cout << "Time required (total): " << total_time << std::endl;
+        std::cout << "Time required (total): " << total_time << std::endl;
 
     } catch (std::exception& e) {
-	std::cout << "Error: " << e.what() << std::endl;
-	exit(1);
+        std::cout << "Error: " << e.what() << std::endl;
+        exit(1);
     }
 
     exit(0);

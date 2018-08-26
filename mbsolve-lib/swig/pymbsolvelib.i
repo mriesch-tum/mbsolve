@@ -30,6 +30,9 @@
  */
 
 %shared_ptr(mbsolve::device)
+%shared_ptr(mbsolve::qm_operator)
+%shared_ptr(mbsolve::qm_superop)
+%shared_ptr(mbsolve::qm_lindblad_relaxation)
 %shared_ptr(mbsolve::qm_description)
 %shared_ptr(mbsolve::qm_desc_2lvl)
 %shared_ptr(mbsolve::qm_desc_3lvl)
@@ -51,6 +54,7 @@
 %template(vector_real) std::vector<mbsolve::real>;
 %template(vector_complex) std::vector<mbsolve::complex>;
 %template(vector_result) std::vector<std::shared_ptr<mbsolve::result> >;
+%template(matrix_real) std::vector<std::vector<mbsolve::real> >;
 
 %include "../include/qm_description.hpp"
 %include "../include/material.hpp"

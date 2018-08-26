@@ -25,7 +25,7 @@
 /**
 \mainpage
 
-The mbsolve project provides a framework for solving the Maxwell-Bloch (or Maxwell-Liouville) equations.
+The mbsolve project provides a framework for solving the Maxwell-Bloch (or Maxwell-Liouville-von Neumann) equations.
 
  */
 
@@ -44,5 +44,11 @@ The mbsolve project provides a framework for solving the Maxwell-Bloch (or Maxwe
 #include <source.hpp>
 #include <types.hpp>
 #include <writer.hpp>
+
+/**
+ * \defgroup MBSOLVE_LIB_INT mbsolve-lib-internal
+ * Provides helper functions and data structures in order to factor out
+ * common tasks of solvers (and writers).
+ */
 
 #endif

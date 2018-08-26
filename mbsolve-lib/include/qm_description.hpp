@@ -25,10 +25,221 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <Eigen/Dense>
+#include <vector>
 #include <types.hpp>
 
 namespace mbsolve {
+
+/**
+ * Quantum operator in matrix form, e.g. for the Hamiltonian, dipole moment
+ * operator, ...
+ * \ingroup MBSOLVE_LIB
+ */
+class qm_operator
+{
+private:
+
+    /* number of levels */
+    unsigned int m_num_levels;
+
+    /* main diagonal entries */
+    std::vector<real> m_main_diag;
+
+    /* off-diagonal entries */
+    std::vector<complex> m_off_diag;
+
+public:
+    /**
+     * Constructs quantum operator using two vectors
+     */
+    explicit qm_operator(const std::vector<real>& main_diagonal,
+                         /**< [IN] Main diagonal entries (real) */
+                         const std::vector<complex>& off_diagonal =
+                         std::vector<complex>()
+                         /**< [IN] Top half of the off-diagonal entries
+                          *   (complex), arranged in column-major ordering */
+                         ) :
+        m_num_levels(main_diagonal.size()),
+        m_main_diag(main_diagonal),
+        m_off_diag(off_diagonal)
+    {
+        /* TODO: assert or exception: vector sizes do not match */
+    }
+
+    virtual ~qm_operator()
+    {
+    }
+
+    /**
+     * Gets number of levels.
+     */
+    unsigned int get_num_levels() const {
+        return m_num_levels;
+    }
+
+    /**
+     * Gets main diagonal entries
+     */
+    const std::vector<real>& get_main_diagonal() const
+    {
+        return m_main_diag;
+    }
+
+    /**
+     * Gets off-diagonal entries (top half, column major ordering)
+     */
+    const std::vector<complex>& get_off_diagonal() const
+    {
+        return m_off_diag;
+    }
+
+};
+
+/**
+ * Quantum superoperator, e.g. for the relaxation superoperator.
+ * \ingroup MBSOLVE_LIB
+ */
+class qm_superop
+{
+private:
+
+protected:
+    /* number of levels */
+    unsigned int m_num_levels;
+
+public:
+    explicit qm_superop(unsigned int num_levels) :
+        m_num_levels(num_levels)
+    {
+
+    }
+
+    virtual ~qm_superop()
+    {
+    }
+
+    /**
+     * Superoperator function. Must be implemented by subclass.
+     */
+    virtual qm_operator operator()(const qm_operator& arg) const = 0;
+
+    /**
+     * Get number of levels.
+     */
+    unsigned int get_num_levels() const {
+        return m_num_levels;
+    }
+};
+
+/**
+ * Lindblad form relaxation superoperator.
+ * \ingroup MBSOLVE_LIB
+ */
+class qm_lindblad_relaxation : public qm_superop
+{
+private:
+    std::vector<std::vector<real> > m_scattering;
+    std::vector<real> m_dephasing;
+
+public:
+    /**
+     * Constructs the Lindblad relaxation superoperator using the matrix
+     * \p rates.
+     *
+     * \param [in] rates Matrix with non-negative entries, whose off-diagonal
+     * terms with index (m, n) describe the scattering rates from energy level
+     * m to energy level n. The main-diagonal entries (m, m) of the matrix
+     * represent pure dephasing.
+     */
+    explicit qm_lindblad_relaxation(const std::vector<std::vector<real> >&
+                                    rates) :
+        qm_superop(rates.size()),
+        m_scattering(rates.size(), std::vector<real>(rates.size(), 0)),
+        m_dephasing((rates.size() * (rates.size() - 1))/2, 0)
+    {
+        /* TODO exception or assert: rates not quadratic? */
+        /* TODO exception or assert: all physical constraints fulfilled? */
+        /* TODO in particular pure dephasing issue?! */
+        /* TODO last main diagonal element must be zero? */
+
+        /** Implementation info: see https://doi.org/10.1364/OE.19.016784
+         * Eqs. (9ab)
+         */
+
+        /* determine relaxation rates */
+        for (int m = 0; m < m_num_levels; m++) {
+            real relaxation_rate = 0;
+
+            for (int j = 0; j < m_num_levels; j++) {
+                if (j != m) {
+                    relaxation_rate += rates[j][m];
+                    m_scattering[m][j] = rates[m][j];
+                }
+            }
+            m_scattering[m][m] = -relaxation_rate;
+        }
+
+        /* determine dephasing rate for transition mn */
+        unsigned int idx_dephasing = 0;
+        for (int n = 0; n < m_num_levels; n++) {
+            for (int m = 0; m < n; m++) {
+                real dephasing = 0;
+
+                /* dephasing due to relaxation */
+                dephasing -= 0.5 * (std::abs(m_scattering[m][m]) +
+                                    std::abs(m_scattering[n][n]));
+                /* pure dephasing */
+                dephasing -= 0.5 * (rates[m][m] + rates[n][n]);
+
+                m_dephasing[idx_dephasing] = dephasing;
+                idx_dephasing++;
+            }
+        }
+    }
+
+    /**
+     * Executes the superoperator on the operator \p arg. Alias to \ref action.
+     *
+     * \param [in] arg Operator argument to the superoperator.
+     */
+    qm_operator operator()(const qm_operator& arg) const
+    {
+        return this->action(arg);
+    }
+
+    /**
+     * Executes the superoperator on the operator \p arg.
+     *
+     * \param [in] arg Operator argument to the superoperator.
+     */
+    qm_operator action(const qm_operator& arg) const
+    {
+        /* TODO exception or assert: operator size does not match */
+        /* TODO in particular off-diagonal elements/rates? */
+
+        /** Implementation info: see https://doi.org/10.1364/OE.19.016784
+         * Eqs. (9ab)
+         */
+
+        std::vector<real> populations(m_num_levels);
+
+        for (int m = 0; m < m_num_levels; m++) {
+            real pop = 0;
+            for (int n = 0; n < m_num_levels; n++) {
+                pop += m_scattering[m][n] * arg.get_main_diagonal()[n];
+            }
+            populations[m] = pop;
+        }
+
+        std::vector<complex> coherences = arg.get_off_diagonal();
+        for (int i = 0; i < coherences.size(); i++) {
+            coherences[i] *= m_dephasing[i];
+        }
+
+        return qm_operator(populations, coherences);
+    }
+
+};
 
 /**
  * Provides the quantum mechanical description of an active \ref region.
@@ -38,6 +249,10 @@ class qm_description
 {
 private:
 
+protected:
+    /* number of levels */
+    unsigned int m_num_levels;
+
     /* density of charge carriers */
     real m_carrier_density;
 
@@ -45,25 +260,84 @@ private:
       real m_period_length;
     */
 
+    /* hamiltonian */
+    qm_operator m_hamiltonian;
+
+    /* dipole moment operator */
+    qm_operator m_dipole_op;
+
+    /* relaxation superoperator */
+    std::shared_ptr<qm_superop> m_relax_superop;
+
+    /* initial density matrix */
+    qm_operator m_rho_init;
+
 public:
-    explicit qm_description(real carrier_density) :
-        m_carrier_density(carrier_density)
+    explicit qm_description(real carrier_density,
+                            const qm_operator& hamiltonian,
+                            const qm_operator& dipole_operator,
+                            std::shared_ptr<qm_superop> relaxation_superop,
+                            const qm_operator& rho_init) :
+        m_num_levels(hamiltonian.get_num_levels()),
+        m_carrier_density(carrier_density),
+        m_hamiltonian(hamiltonian),
+        m_dipole_op(dipole_operator),
+        m_relax_superop(relaxation_superop),
+        m_rho_init(rho_init)
     {
+        /* TODO: assert or exception: level count different? */
+        /* TODO: default argument rho_init? */
     }
 
     virtual ~qm_description()
     {
     }
 
-    /*
-      use some sparse structures that provide unique access to a given
-      element. transition frequencies are dense, but coupling and anticrossing
-      are likely to be sparse.
+    /**
+     * Gets number of levels.
      */
+    unsigned int get_num_levels() const {
+        return m_num_levels;
+    }
 
+    /**
+     * Gets carrier density.
+     */
     real get_carrier_density() const
     {
         return m_carrier_density;
+    }
+
+    /**
+     * Gets Hamiltonian.
+     */
+    const qm_operator& get_hamiltonian() const
+    {
+        return m_hamiltonian;
+    }
+
+    /**
+     * Gets dipole moment operator.
+     */
+    const qm_operator& get_dipole_operator() const
+    {
+        return m_dipole_op;
+    }
+
+    /**
+     * Gets relaxation superoperator.
+     */
+    std::shared_ptr<qm_superop> get_relaxation_superop() const
+    {
+        return m_relax_superop;
+    }
+
+    /**
+     * Gets initial density matrix.
+     */
+    const qm_operator& get_rho_init() const
+    {
+        return m_rho_init;
     }
 
 };
@@ -91,19 +365,53 @@ private:
     real m_equi_inv;
 
 public:
-    explicit qm_desc_2lvl(real carrier_density = 0.0,
-                          real transition_freq = 0.0,
-                          real dipole_moment = 0.0,
-                          real scattering_rate = 0.0,
-                          real dephasing_rate = 0.0,
+    /**
+     * Constructs a two-level system description with the Hamiltonian
+     * \f[ \hat H = \frac{\hbar}{2} \begin{bmatrix} -\omega_0 & 0 \\ 0 &
+     \omega_0 \end{bmatrix} \f]
+     * and the dipole moment operator \f[ \hat \mu =
+     \begin{bmatrix} 0 & e d \\ e d & 0 \end{bmatrix}, \f]
+    * where \f$ e \f$ is the elementary charge.
+
+     * \param [in] carrier_density         Density of particles in the system.
+     * \param [in] transition_freq         = \f$ \omega_0 \f$
+     * \param [in] dipole_moment           = \f$ d \f$
+     * \param [in] scattering_rate         Describes the decay of the
+     * population inversion towards \p equilibrium_inversion.
+     * \param [in] dephasing_rate          Describes the decay of the
+     * coherence term \f$ \rho_{12} = \rho_{21}^* \f$.
+     * \param [in] equilibrium_inversion   Equilibrium value of the population
+     * inversion. By default, all particles are in the lower energy level.
+     */
+    explicit qm_desc_2lvl(real carrier_density,
+                          real transition_freq,
+                          real dipole_moment,
+                          real scattering_rate,
+                          real dephasing_rate,
                           real equilibrium_inversion = -1.0) :
-        qm_description(carrier_density),
+        qm_description(carrier_density,
+                       qm_operator({ - HBAR * transition_freq/2,
+                                   + HBAR * transition_freq/2}),
+                       qm_operator({0, 0}, {E0 * dipole_moment}),
+                       std::make_shared<qm_lindblad_relaxation>
+                       (std::vector<std::vector<real> >{
+                           { 2 * dephasing_rate - scattering_rate,
+                             scattering_rate * 0.5 *
+                                   (1 - equilibrium_inversion)},
+                           { scattering_rate * 0.5 *
+                                   (1 + equilibrium_inversion), 0 }}),
+                       qm_operator({1, 0})),
         m_trans_freq(transition_freq),
         m_dipole_mom(dipole_moment),
         m_scattering(scattering_rate),
         m_dephasing(dephasing_rate),
         m_equi_inv(equilibrium_inversion)
     {
+        /* TODO: initial density matrix argument? default? */
+        /*
+           const qm_operator& rho_init
+        */
+
     }
 
     ~qm_desc_2lvl()
@@ -134,82 +442,6 @@ public:
      * Get equilibrium population inversion.
      */
     real get_equilibrium_inversion() const { return m_equi_inv; }
-};
-
-/**
- * Quantum mechanical description of a n-level system, where n must be known
- * at compile time.
- * \ingroup MBSOLVE_LIB
- */
-template<unsigned int n_lvl>
-class qm_desc_clvl : public qm_description
-{
-    typedef Eigen::Matrix<complex, n_lvl, n_lvl> matrix_t;
-    typedef matrix_t (*callback_t)(const matrix_t&);
-private:
-    /* Hamiltonian */
-    matrix_t m_h;
-
-    /* dipole moment operator */
-    matrix_t m_u;
-
-    /* Lindblad superoperator */
-    callback_t m_g;
-
-    /* initial density matrix */
-    matrix_t m_d_init;
-
-public:
-
-    explicit qm_desc_clvl(real carrier_density,
-                          const matrix_t& hamiltonian,
-                          const matrix_t& dipole_op,
-                          const callback_t& lindblad_op,
-                          const matrix_t& d_init) :
-        qm_description(carrier_density),
-        m_h(hamiltonian), m_u(dipole_op), m_g(lindblad_op), m_d_init(d_init)
-    {
-    }
-
-    const matrix_t& get_hamiltonian() const { return m_h; }
-
-    const matrix_t& get_dipole_op() const { return m_u; }
-
-    const callback_t& get_lindblad_op() const { return m_g; }
-
-    const matrix_t& get_d_init() const { return m_d_init; }
-};
-
-typedef qm_desc_clvl<3> qm_desc_3lvl;
-
-/**
- * Quantum mechanical description of a N-level system.
- * \ingroup MBSOLVE_LIB
- */
-class qm_desc_nlvl : public qm_description
-{
-private:
-    /* N x N Hamiltonian */
-    /* TODO: matrix */
-
-    /* N x N dipole moment operator */
-    /* TODO: matrix */
-
-    /* Lindblad superoperator */
-    /* TODO: functor */
-
-
-public:
-    explicit qm_desc_nlvl(real carrier_density) :
-        qm_description(carrier_density) { }
-
-    /* TODO: either this way, or make this the base class */
-    /* TODO: base class for all descriptions or only the _Nlvl ones? */
-    /* TODO: level count as template argument? */
-    //qm_desc_nlvl(const qm_desc_2lvl& desc) { }
-
-
-
 };
 
 }

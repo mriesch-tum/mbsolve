@@ -122,8 +122,6 @@ private:
      */
     real_vector_t **m_d;
 
-    std::vector<qm_operator_t > m_generators;
-
     real **m_h;
     real **m_e;
     real **m_e_o;
@@ -150,101 +148,6 @@ private:
     std::vector<sim_source> m_sim_sources;
 
     std::vector<copy_list_entry> m_copy_list;
-
-    void
-    setup_generators()
-    {
-        m_generators.clear();
-
-        /* set up SU(N) generators u -- real part off-diagonal elements */
-        for (int k = 0; k < num_lvl; k++) {
-            for (int j = 0; j < k; j++) {
-                qm_operator_t g;
-                g(j, k) = 1;
-                g(k, j) = 1;
-                m_generators.push_back(g);
-            }
-        }
-
-        /* set up SU(N) generators v -- imag part off-diagonal elements */
-        for (int k = 0; k < num_lvl; k++) {
-            for (int j = 0; j < k; j++) {
-                qm_operator_t g;
-                g(j, k) = complex(0, -1);
-                g(k, j) = complex(0, +1);
-                m_generators.push_back(g);
-            }
-        }
-
-        /* set up SU(N) generators w -- main-diagonal elements */
-        for (int l = 0; l < num_lvl - 1; l++) {
-            qm_operator_t g;
-            int j = 0;
-
-            for (j = 0; j <= l; j++) {
-                g(j, j) = 1.0;
-            }
-            g(j, j) = -(l + 1);
-
-            g *= -sqrt(2.0/((l + 1) * (l + 2)));
-            m_generators.push_back(g);
-        }
-    }
-
-    real_vector_t
-    get_adj_op(const qm_operator_t& op)
-    {
-        real_vector_t ret;
-        for (int i = 0; i < num_adj; i++) {
-            qm_operator_t m;
-            m = op * m_generators[i];
-            ret[i] = m.real().trace();
-        }
-        return ret;
-    }
-
-    real_matrix_t
-    get_adj_sop(qm_operator_t (*G)(const qm_operator_t&))
-    {
-        real_matrix_t ret;
-
-        for (int i = 0; i < num_adj; i++) {
-            for (int j = 0; j < num_adj; j++) {
-                qm_operator_t result = G(m_generators[j]) * m_generators[i];
-                complex c = 0.5 * result.trace();
-                ret(i, j) = c.real();
-            }
-        }
-        return ret;
-    }
-
-    real_vector_t
-    get_adj_deq(qm_operator_t (*G)(const qm_operator_t&))
-    {
-        real_vector_t ret;
-        for (int i = 0; i < num_adj; i++) {
-            qm_operator_t m;
-            m = G(qm_operator_t::Identity()) * m_generators[i];
-            ret[i] = m.real().trace() * 1.0/num_lvl;
-        }
-        return ret;
-    }
-
-    real_matrix_t
-    get_adj_liouvillian(const qm_operator_t& H) {
-        real_matrix_t ret;
-
-        for (int i = 0; i < num_adj; i++) {
-            for (int j = 0; j < num_adj; j++) {
-                qm_operator_t result = H *
-                    (m_generators[i] * m_generators[j] -
-                     m_generators[j] * m_generators[i]);
-                complex c = complex(0, 1) * 0.5 * result.trace();
-                ret(i, j) = c.real() * 1.0/HBAR;
-            }
-        }
-        return ret;
-    }
 
 };
 

@@ -26,6 +26,7 @@
 #include <Eigen/Eigenvalues>
 #include <Eigen/Sparse>
 #include <unsupported/Eigen/MatrixFunctions>
+#include <internal/coherence_vector_representation.hpp>
 #include <common_openmp.hpp>
 #include <solver_openmp_clvl_rk.hpp>
 
@@ -124,8 +125,6 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
     /* determine simulation settings */
     init_fdtd_simulation(dev, scen, 0.5);
 
-    setup_generators();
-
     /* set up simulaton constants */
     std::map<std::string, unsigned int> id_to_idx;
     unsigned int j = 0;
@@ -148,29 +147,34 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
                         (MU0 * mat->get_rel_permeability()))
             * mat->get_losses() * 2.0;
 
-        /* 3-lvl quantum mechanical system */
-        /* active region in 3-lvl description? */
-        /* TODO: remove ugly dynamic cast to qm_desc_3lvl, allow other
-         * representations? */
-        std::shared_ptr<qm_desc_clvl<num_lvl> > qm =
-            std::dynamic_pointer_cast<qm_desc_clvl<num_lvl> >(mat->get_qm());
+        /* quantum mechanical system */
+        std::shared_ptr<qm_description> qm = mat->get_qm();
         if (qm) {
+            /* check whether number of levels matches solver */
+            if (qm->get_num_levels() != num_lvl) {
+                throw std::invalid_argument("Number of energy levels does not "
+                                            "match selected solver!");
+            }
+
             /* factor for macroscopic polarization */
             sc.M_CP = 0.5 * mat->get_overlap_factor() *
                 qm->get_carrier_density();
 
+            /* create coherence vector representation */
+            cv_representation cvr(qm);
+
             /* determine dipole operator as vector */
-            sc.v = get_adj_op(qm->get_dipole_op());
+            sc.v = cvr.get_dipole_operator_vec();
 
             std::cout << "v: " << std::endl << sc.v << std::endl;
 
             /* time-independent hamiltionian in adjoint representation */
             Eigen::Matrix<real, num_adj, num_adj> M_0;
-            M_0 = get_adj_liouvillian(qm->get_hamiltonian());
+            M_0 = cvr.get_hamiltonian();
 
             /* determine lindblad term in adjoint representation */
             Eigen::Matrix<real, num_adj, num_adj> G;
-            G = get_adj_sop(qm->get_lindblad_op());
+            G = cvr.get_relaxation_superop();
 
             /* time-independent part */
             Eigen::Matrix<real, num_adj, num_adj> M = M_0 + G;
@@ -178,35 +182,11 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
 
             /* determine equilibrium term */
             Eigen::Matrix<real, num_adj, 1> d_eq;
-            sc.d_eq = get_adj_deq(qm->get_lindblad_op());
-
-#if 0
-            /* determine inhomogeneous term */
-            real eps = std::numeric_limits<real>::epsilon();
-            if (d_eq.isZero(eps)) {
-                sc.d_in = Eigen::Matrix<real, num_adj, 1>::Zero();
-            } else {
-                /* solve equation system M * d_in = d_eq */
-                sc.d_in = M.fullPivLu().solve(d_eq);
-
-                real err = (M * sc.d_in - d_eq).norm() / d_eq.norm();
-                std::cout << "d_in solver error: " << err << std::endl;
-                /* TODO: throw exception or only report warning? */
-                if (err > 1e-3) {
-                    throw std::invalid_argument("Time-indepent matrix not "
-                                                "invertible!");
-                }
-            }
-            std::cout << "d_in: " << std::endl << sc.d_in << std::endl;
-#endif
-
-            /* determine constant propagator */
-            Eigen::Matrix<real, num_adj, num_adj> A_0;
-            A_0 = (M * scen->get_timestep_size()/2).exp();
+            sc.d_eq = cvr.get_equilibrium_vec();
 
             /* determine dipole operator in adjoint representation */
             Eigen::Matrix<real, num_adj, num_adj> U;
-            U = get_adj_liouvillian(-qm->get_dipole_op());
+            U = -cvr.get_dipole_operator();
             std::cout << "U: " << std::endl << U << std::endl;
 
             /* diagonalize dipole operator */
@@ -236,10 +216,8 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
             sc.has_qm = true;
             sc.has_dipole = true;
 
-            /* store diagonal matrix containing the eigenvalues */
-            sc.L = es.eigenvalues() * scen->get_timestep_size();
-
-            sc.d_init = get_adj_op(qm->get_d_init());
+            /* initial coherence vector */
+            sc.d_init = cvr.get_initial_vec();
 
             std::cout << "init: " << sc.d_init << std::endl;
 
@@ -851,13 +829,14 @@ solver_openmp_clvl_rk<num_lvl>::run() const
                                     } else if (t == record::type::density) {
 
                                         /* right now only populations */
-                                        real temp = 1.0/num_lvl;
-                                        for (int l = num_lvl * (num_lvl - 1);
-                                             l < num_adj; l++) {
-                                            temp += 0.5 * t_d[i](l) *
-                                                m_generators[l](ridx, cidx).real();
+                                        if (ridx == cidx) {
+                                            m_result_scratch[off_r + i] =
+                                                cv_representation::calc_population<num_lvl, num_adj>(t_d[i], ridx);
+                                        } else {
+                                            /* coherence terms */
+
+                                            /* TODO */
                                         }
-                                        m_result_scratch[off_r + i] = temp;
 
                                         /* TODO: coherences
                                          * remove 1/3
