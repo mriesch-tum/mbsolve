@@ -817,7 +817,12 @@ solver_openmp_clvl_rk<num_lvl>::run() const
                             int64_t off_r = l_copy_list[k].get_offset_scratch_real
                                 (n * OL + m, base_idx - pos);
 
-#pragma omp simd
+                            /* TODO switch instead if else
+                             * exchange type switch and for loop
+                             * try again with vectorize
+                             */
+
+//#pragma omp simd
                             for (uint64_t i = OL; i < chunk + OL; i++) {
                                 int64_t idx = base_idx + i;
                                 if ((idx >= pos) && (idx < pos + cols)) {
