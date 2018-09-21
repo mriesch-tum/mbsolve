@@ -14,9 +14,9 @@ set(ARCH "HOST" CACHE STRING "specify architecture")
 set_property(CACHE ARCH PROPERTY STRINGS "HOST" "PHI" "AVX2" "SSE3")
 
 # specify components
-option(WITH_MATLAB "with(out) MATLAB writer" ON)
+option(WITH_MATLAB "with(out) MATLAB writer" OFF)
 option(WITH_HDF5 "with(out) HDF5 writer" ON)
-option(WITH_CUDA "with(out) CUDA solver" ON)
+option(WITH_CUDA "with(out) CUDA solver" OFF)
 option(WITH_OPENMP "with(out) OPENMP solver" ON)
 option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
 option(WITH_PYTHON "with(out) Python interface" ON)
