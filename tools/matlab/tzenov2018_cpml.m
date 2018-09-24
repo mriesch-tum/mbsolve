@@ -1,5 +1,4 @@
-% song2005  Displays result of song2005 setup.
-%           Reference data available in tools/reference-data.
+% tzenov2018_cpml  Displays result of tzenov2018_cpml setup.
 
 % mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
 %
@@ -27,44 +26,20 @@ close all;
 [filename, folder] = uigetfile('../../*.hdf', 'Select result data');
 f = fullfile(folder, filename);
 
-[filename, folder] = uigetfile('../reference-data/*.csv', ...
-    'Select compare trace');
-use_reference = 0;
-if (filename ~= 0)
-    comp_data = csvread(fullfile(folder, filename));
-    use_reference = 1;
-end
-
 % read global attributes
 d_x = h5readatt(f, '/', 'gridpoint_size');
 d_t = h5readatt(f, '/', 'timestep_size');
 t_e = h5readatt(f, '/', 'sim_endtime');
 L_x = h5readatt(f, '/', 'dev_length');
 
-% time grid
+% complete grid
+x = 0:d_x:L_x;
 t = 0:d_t:t_e;
 
 % data
-e = h5read(f, '/e/real');
-rho11 = h5read(f, '/d11/real');
-rho22 = h5read(f, '/d22/real');
-rho33 = h5read(f, '/d33/real');
+e = h5read(f, '/e0/real');
 
 figure;
 plot(t, e);
 xlabel('Time/s');
-ylabel('E-Field/Vm^{-1}');
-xlim([0, t_e]);
-
-figure;
-plot(t, rho11);
-hold on;
-plot(t, rho22);
-plot(t, rho33);
-if (use_reference == 1)
-    plot(comp_data(:, 1) * 1e-15, comp_data(:, 2));
-end
-xlabel('Time/s');
-ylabel('Populations');
-xlim([0, t_e]);
-%ylim([0, 1]);
+ylabel('Electric field at facet/Vm^{-1}');

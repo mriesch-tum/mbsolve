@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-""" ziolkowski1995.py: Runs ziolkowski1995 two-level SIT setup."""
+""" song2005.py: Runs song2005 three-level V-type setup."""
 
 # mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
 #
@@ -35,33 +35,46 @@ import numpy as np
 import math
 import time
 
-# vacuum
-mat_vac = mb.material("Vacuum")
-mb.material.add_to_library(mat_vac)
+# Hamiltonian
+energies = [ 0, 2.3717e15 * mb.HBAR, 2.4165e15 * mb.HBAR ]
+H = mb.qm_operator(energies)
 
-# Ziolkowski active region material
-qm = mb.qm_desc_2lvl(1e24, 2 * math.pi * 2e14, 6.24e-11, 1.0e10, 1.0e10, -1.0)
-mat_ar = mb.material("AR_Ziolkowski", qm)
+# dipole moment operator
+dipoles = [ 9.2374e-11 * mb.E0, 9.2374e-11 * math.sqrt(2) * mb.E0, 0]
+u = mb.qm_operator([ 0, 0, 0 ], dipoles)
+
+# relaxation superoperator
+rate = 1e10
+rates = [ [ 0, rate, rate ], [ rate, 0, rate ], [ rate, rate, 0 ] ]
+relax_sop = mb.qm_lindblad_relaxation(rates)
+
+# initial density matrix
+rho_init = mb.qm_operator([ 1, 0, 0 ])
+
+# quantum mechanical description
+qm = mb.qm_description(6e24, H, u, relax_sop, rho_init)
+mat_ar = mb.material("AR_Song", qm)
 mb.material.add_to_library(mat_ar)
 
 # Ziolkowski setup
-dev = mb.device("Ziolkowski")
-dev.add_region(mb.region("Vacuum left", mat_vac, 0, 7.5e-6))
-dev.add_region(mb.region("Active region", mat_ar, 7.5e-6, 142.5e-6))
-dev.add_region(mb.region("Vacuum right", mat_vac, 142.5e-6, 150e-6))
+dev = mb.device("Song")
+dev.add_region(mb.region("Active region", mat_ar, 0, 150e-6))
 
 # scenario
-sce = mb.scenario("Basic", 32768, 200e-15)
-sce.add_record(mb.record("inv12", 2.5e-15))
-sce.add_record(mb.record("e", 2.5e-15))
-sce.set_dm_init_type(mb.scenario.lower_full)
+sce = mb.scenario("Basic", 32768, 80e-15)
+sce.add_record(mb.record("e", 0.0, 0.0))
+sce.add_record(mb.record("d11", mb.record.density, 1, 1, 0.0, 0.0))
+sce.add_record(mb.record("d22", mb.record.density, 2, 2, 0.0, 0.0))
+sce.add_record(mb.record("d33", mb.record.density, 3, 3, 0.0, 0.0))
+
+#sce.set_dm_init_type(mb.scenario.lower_full)
 
 # add source
-sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 4.2186e9,
-                             2e14, 10, 2e14))
+sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 3.5471e9,
+                             3.8118e14, 17.248, 1.76/5e-15, -math.pi/2))
 
 # run solver
-sol = mb.solver("openmp-2lvl-os-red", dev, sce)
+sol = mb.solver("openmp-3lvl-os-red", dev, sce)
 print('Solver ' + sol.get_name() + ' started')
 tic = time.time()
 sol.run()
