@@ -28,7 +28,8 @@ namespace mbsolve {
 
 /**
  * \defgroup MBSOLVE_WRITER_MATLAB writer-matlab
- * Writer for MATLAB format.
+ * Writer for MATLAB format. Warning: This module is not maintained anymore.
+ * It is not recommended for new projects. Use \ref writer_hdf5 instead.
  */
 
 /**

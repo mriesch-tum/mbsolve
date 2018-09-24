@@ -36,7 +36,7 @@ class solver_int;
 
 /**
  * Abstract solver factory class.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class solver_factory_int
 {
@@ -56,7 +56,7 @@ public:
 /**
  * This internal class provides the base class for the different solver
  * implementations and collects the corresponding factories in a static array.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class solver_int
 {
@@ -99,7 +99,7 @@ public:
 /*
  * Solver factory template. Every solver implementation T has to provide
  * a \ref solver_factory<T> to create an instance of the solver class.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 template<typename T>
 class solver_factory : public solver_factory_int

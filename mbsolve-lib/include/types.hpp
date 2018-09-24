@@ -31,15 +31,39 @@ namespace mbsolve {
 
 /**
  * May be set to single or double precision.
+ * \ingroup MBSOLVE_LIB
  */
 typedef double real;
 //typedef float real;
 
+/**
+ * May be set to single or double precision.
+ * \ingroup MBSOLVE_LIB
+ */
 typedef std::complex<real> complex;
 
+/**
+ * Reduced Planck's constant.
+ * \ingroup MBSOLVE_LIB
+ */
 static const real HBAR = 1.05457266e-34;
+
+/**
+ * Vacuum permeability.
+ * \ingroup MBSOLVE_LIB
+ */
 static const real MU0 = M_PI * 4e-7;
+
+/**
+ * Vacuum permittivity.
+ * \ingroup MBSOLVE_LIB
+ */
 static const real EPS0 = 8.854187817e-12;
+
+/**
+ * Elementary charge.
+ * \ingroup MBSOLVE_LIB
+ */
 static const real E0 = 1.60217733e-19;
 
 }

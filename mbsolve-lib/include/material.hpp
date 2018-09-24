@@ -54,7 +54,18 @@ private:
     static std::map<std::string, std::shared_ptr<material> > m_materials;
 
 public:
-
+    /**
+     * Constructs material from given parameters and quantum mechanical
+     * description (if provided). Defaults to vacuum.
+     *
+     * \param [in] id               Identifier of material, must be unique.
+     * \param [in] qm               Quantum mechanical description.
+     * \param [in] rel_permittivity Relative permittivity.
+     * \param [in] overlap_factor   Overlap of active region an electric field
+                                    between 0.0 and 1.0.
+     * \param [in] losses           Optical losses.
+     * \param [in] rel_permeabiliy  Relative Permeability.
+     */
     explicit material(const std::string& id,
                       std::shared_ptr<qm_description> qm = nullptr,
                       real rel_permittivity = 1.0,
@@ -79,41 +90,54 @@ public:
     /* TODO assignment operator */
 
     /**
-     * Get the material ID.
+     * Gets the material ID.
      */
     const std::string& get_id() const { return m_id; }
 
     /**
-     * Get pointer to quantum mechanical description.
+     * Gets pointer to quantum mechanical description.
      */
     std::shared_ptr<qm_description> get_qm() const { return m_qm; }
 
     /**
-     * Get relative permittivity &epsilon;<sub>r</sub>
+     * Gets relative permittivity &epsilon;<sub>r</sub>
      */
     real get_rel_permittivity() const { return m_rel_permittivity; }
 
     /**
-     * Get relative permeability &mu;<sub>r</sub>
+     * Gets relative permeability &mu;<sub>r</sub>
      */
     real get_rel_permeability() const { return m_rel_permeability; }
 
     /**
-     * Get losses &alpha;.
+     * Gets losses &alpha;.
      */
     real get_losses() const { return m_losses; }
 
     /**
-     * Get overlap factor &Gamma;.
+     * Gets overlap factor &Gamma;.
      */
     real get_overlap_factor() const { return m_overlap_factor; }
 
-    //    void add_to_library() const;
-
+    /**
+     * Adds material to library.
+     *
+     * \param [in] mat Material to be added.
+     */
     static void add_to_library(std::shared_ptr<material> mat);
 
+    /**
+     * Adds material to library.
+     *
+     * \param [in] mat Material to be added.
+     */
     static void add_to_library(const material& mat);
 
+    /**
+     * Gets material from library.
+     *
+     * \param [in] id Material identifier.
+     */
     static std::shared_ptr<material> get_from_library(const std::string& id);
 };
 

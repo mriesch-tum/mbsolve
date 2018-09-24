@@ -48,6 +48,14 @@ private:
     bool m_is_complex;
 
 public:
+    /**
+     * Constructs result.
+     *
+     * \param [in] name       Name of the result.
+     * \param [in] cols       Number of columns (corresponds to grid points).
+     * \param [in] rows       Number of rows (corresponds to time steps).
+     * \param [in] is_complex Is result complex-valued?
+     */
     explicit result(const std::string& name, unsigned int cols,
 		    unsigned int rows, bool is_complex = false) :
 	m_name(name), m_cols(cols), m_rows(rows), m_count(cols * rows),
@@ -58,6 +66,9 @@ public:
     ~result() {
     }
 
+    /**
+     * Gets result name.
+     */
     std::string get_name() const { return m_name; }
 
     unsigned int get_count() const { return m_count; }
@@ -84,8 +95,14 @@ public:
 
     real *get_data_imag_raw() { return m_imag.data(); }
 
+    /**
+     * Gets result data (real part).
+     */
     const std::vector<real>& get_data_real() const { return m_real; }
 
+    /**
+     * Gets result data (imaginary part).
+     */
     const std::vector<real>& get_data_imag() const { return m_imag; }
 
     std::vector<complex> get_data_complex() const;

@@ -91,6 +91,12 @@ public:
 
 };
 
+/**
+ * OpenMP solver for c-lvl systems using the FDTD scheme and the operator
+ * splitting approach. The number of levels c can be chosen arbitrarily, but
+ * must be known at compile time.
+ * \ingroup MBSOLVE_SOLVER_OPENMP
+ */
 template<unsigned int num_lvl>
 class solver_openmp_clvl_os_red : public solver_int
 {

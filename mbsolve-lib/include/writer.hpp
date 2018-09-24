@@ -25,27 +25,47 @@
 #include <string>
 #include <vector>
 #include <device.hpp>
+#include <internal/writer_int.hpp>
 #include <scenario.hpp>
 #include <types.hpp>
-#include <writer_int.hpp>
 
 namespace mbsolve {
 
+/**
+ * This class provides the interface to create an instance of a writer
+ * implementation. Each implementation is a subclass of \ref writer_int and
+ * is created internally.
+ * \ingroup MBSOLVE_LIB
+ */
 class writer
 {
 private:
     std::shared_ptr<writer_int> m_writer;
 
 public:
+    /**
+     * Constructs writer of a given \p name.
+     */
     writer(const std::string& name);
 
     ~writer();
 
+    /**
+     * Writes results to a \p file.
+     *
+     * \param [in] file     Filename.
+     * \param [in] results  Results to be written.
+     * \param [in] dev      Device that was simulated.
+     * \param [in] scenario Scenario that was used.
+     */
     void write(const std::string& file,
                const std::vector<std::shared_ptr<result> >& results,
                std::shared_ptr<const device> dev,
                std::shared_ptr<const scenario> scen) const;
 
+    /**
+     * Gets file extension.
+     */
     const std::string& get_extension() const;
 };
 

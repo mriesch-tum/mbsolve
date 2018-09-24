@@ -49,6 +49,14 @@ private:
     real m_x_end;
 
 public:
+    /**
+     * Constructs region with a certain material in 1D.
+     *
+     * \param [in] name    Name of the region.
+     * \param [in] mat     Material of the region.
+     * \param [in] x_start Start position in x-direction.
+     * \param [in] x_end   End position in x-direction.
+     */
     region(const std::string& name,
            std::shared_ptr<material> mat,
            real x_start,
@@ -61,7 +69,7 @@ public:
     }
 
     /**
-     * Get region name.
+     * Gets region name.
      */
     const std::string& get_name() const
     {
@@ -69,7 +77,7 @@ public:
     }
 
     /**
-     * Get region length.
+     * Gets region length.
      */
     real get_length() const
     {
@@ -80,17 +88,17 @@ public:
     }
 
     /**
-     * Get region start position.
+     * Gets region start position.
      */
     real get_start() const { return m_x_start; }
 
     /**
-     * Get region end position.
+     * Gets region end position.
      */
     real get_end() const { return m_x_end; }
 
     /**
-     * Get material.
+     * Gets material.
      */
     std::shared_ptr<material> get_material() const { return m_mat; }
 
@@ -117,7 +125,11 @@ private:
     /* choices: periodic */
 
 public:
-
+    /**
+     * Constructs device.
+     *
+     * \param [in] name Name of the device.
+     */
     device(const std::string& name);
 
     device(const std::string& file, const std::vector<material *>& materials);
@@ -125,32 +137,32 @@ public:
     ~device();
 
     /**
-     * Add new region to device.
+     * Adds new region to device.
      */
     void add_region(std::shared_ptr<region> reg);
 
     /**
-     * Get all regions of device.
+     * Gets all regions of device.
      */
     const std::vector<std::shared_ptr<region> >& get_regions() const;
 
     /**
-     * Get IDs of used materials.
+     * Gets IDs of used materials.
      */
     const std::set<std::string>& get_used_materials() const;
 
     /**
-     * Get device name.
+     * Gets device name.
      */
     const std::string& get_name() const;
 
     /**
-     * Get device length.
+     * Gets device length.
      */
     real get_length() const;
 
     /**
-     * Get the minimum relative permittivity value.
+     * Gets the minimum relative permittivity value.
      */
     real get_minimum_permittivity() const;
 

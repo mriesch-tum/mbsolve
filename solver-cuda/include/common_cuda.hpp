@@ -19,6 +19,11 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
+/**
+ * \defgroup MBSOLVE_SOLVER_CUDA solver-cuda
+ * Different solvers that use NVDIA CUDA for parallelization.
+ */
+
 #ifndef MBSOLVE_SOLVER_CUDA_COMMON_H
 #define MBSOLVE_SOLVER_CUDA_COMMON_H
 

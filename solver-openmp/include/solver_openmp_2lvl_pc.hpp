@@ -29,11 +29,6 @@
 namespace mbsolve {
 
 /**
- * \defgroup MBSOLVE_SOLVER_OPENMP solver-openmp
- * Different solvers that use OpenMP for parallelization.
- */
-
-/**
  * OpenMP solver for 2-lvl systems using the predictor corrector approach.
  * \ingroup MBSOLVE_SOLVER_OPENMP
  */

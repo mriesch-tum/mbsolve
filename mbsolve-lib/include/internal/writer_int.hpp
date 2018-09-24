@@ -37,7 +37,7 @@ class writer_int;
 
 /**
  * Abstract writer factory class.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class writer_factory_int
 {
@@ -54,7 +54,7 @@ public:
 /**
  * This internal class provides the base class for the different writer
  * implementations and collects the corresponding factories in a static array.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class writer_int
 {
@@ -84,7 +84,7 @@ public:
 /*
  * Writer factory template. Every writer implementation T has to provide
  * a \ref writer_factory<T> to create an instance of the writer class.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 template<typename T>
 class writer_factory : public writer_factory_int

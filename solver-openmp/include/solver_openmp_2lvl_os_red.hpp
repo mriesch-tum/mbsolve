@@ -30,6 +30,11 @@
 
 namespace mbsolve {
 
+/**
+ * OpenMP solver for 2-lvl systems using the FDTD scheme and the operator
+ * splitting approach. Version with redundant calculations.
+ * \ingroup MBSOLVE_SOLVER_OPENMP
+ */
 class solver_openmp_2lvl_os_red : public solver_int
 {
 public:

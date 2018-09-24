@@ -29,6 +29,11 @@
 
 namespace mbsolve {
 
+/**
+ * CUDA solver for 2-lvl systems using the FDTD scheme and the predictor
+ * corrector approach. Version with redundant calculations.
+ * \ingroup MBSOLVE_SOLVER_CUDA
+ */
 class solver_cuda_2lvl_pc_red : public solver_int
 {
 public:

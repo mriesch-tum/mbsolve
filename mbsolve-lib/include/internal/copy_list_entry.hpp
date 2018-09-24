@@ -47,7 +47,7 @@ namespace mbsolve {
  * This internal class is the device-side equivalent to \ref copy_list_entry.
  * It stores all data required to copy result data from device-side
  * raw arrays to device-side scratchpad memory.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class copy_list_entry_dev
 {
@@ -122,7 +122,7 @@ public:
 /**
  * This internal class stores all data required to copy result data from
  * raw arrays to the \ref result class.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class copy_list_entry
 {

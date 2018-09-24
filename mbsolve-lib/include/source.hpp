@@ -58,7 +58,16 @@ protected:
     type m_type;
 
 public:
-
+    /**
+     * Constructs source.
+     *
+     * \param [in] name        Name of the source.
+     * \param [in] position    Position of the source (in meter).
+     * \param [in] source_type Source type.
+     * \param [in] ampl        Amplitude of the source.
+     * \param [in] freq        Frequency of the source.
+     * \param [in] phase       Phase of the source.
+     */
     source(const std::string& name, real position, type source_type,
            real ampl, real freq, real phase = 0) :
         m_name(name), m_position(position), m_type(source_type),
@@ -68,6 +77,12 @@ public:
 
     /* TODO: get_value/calc_value : simplify */
 
+    /**
+     * Gets source value at certain \p time value.
+     *
+     * \param [in] t             Time value.
+     * \param [in] current_value Reserved for later use.
+     */
     real get_value(real t, real current_value = 0.0) const
     {
         /* calculate source value */
@@ -88,10 +103,16 @@ public:
         return 0.0;
     }
 
+    /**
+     * Gets source position.
+     */
     real get_position() const {
         return m_position;
     }
 
+    /**
+     * Gets source type.
+     */
     type get_type() const {
         return m_type;
     }
@@ -124,6 +145,10 @@ public:
 
     };*/
 
+/**
+ * Sech pulse source.
+ * \ingroup MBSOLVE_LIB
+ */
 class sech_pulse : public source
 {
 private:
@@ -132,6 +157,20 @@ private:
     real m_phase_sin;
 
 public:
+    /**
+     * Constructs sech pulse source. The sech pulse is defined as
+     * \f[ E(t) = A \sin ( 2 \pi f t - \varphi_1) \mathrm{sech}
+     * (\beta t - \varphi_2). \f]
+     *
+     * \param [in] name        Name of the source.
+     * \param [in] position    Position of the source (in meter).
+     * \param [in] source_type Source type.
+     * \param [in] ampl        Amplitude \f$ A \f$ of the source.
+     * \param [in] freq        Frequency \f$ f \f$ of the source.
+     * \param [in] phase       Phase \f$ \varphi_2 \f$ of the source.
+     * \param [in] beta        Parameter \f$ \beta \f$.
+     * \param [in] phase_sin   Paramter \f$ \varphi_1 \f$.
+     */
     sech_pulse(const std::string& name, real position, type source_type,
                real ampl, real freq,
                real phase,
@@ -141,6 +180,11 @@ public:
     {
     }
 
+    /**
+     * Gets source value at certain \p time value.
+     *
+     * \param [in] t             Time value.
+     */
     real calc_value(real t) const
     {
         return 1/std::cosh(m_beta * t - m_phase) *
@@ -149,6 +193,7 @@ public:
 
 };
 
+/*
 class single_cycle_pulse : public source
 {
 private:
@@ -171,7 +216,7 @@ public:
     }
 
 };
-
+*/
 
 /* TODO: custom functor source / callback function? */
 

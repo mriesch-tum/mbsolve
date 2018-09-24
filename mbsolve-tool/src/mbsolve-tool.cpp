@@ -19,6 +19,11 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
+/**
+ * \defgroup MBSOLVE_TOOL mbsolve-tool
+ * Runs different simulation setups.
+ */
+
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -81,6 +86,16 @@ static void parse_args(int argc, char **argv)
     }
 }
 
+/**
+ * mbsolve-tool main function.
+ * \ingroup MBSOLVE_TOOL
+ *
+ * Specify the simulation setup using the -d parameter (The available setups
+ * are described below.) and the solver method using the -m parameter
+ * (Currently, the only option available is openmp-Xlvl-os-red. Replace X
+ * with the number of levels.) For the complete list of parameters, run
+ * mbsolve-tool -h.
+ */
 int main(int argc, char **argv)
 {
     /* parse command line arguments */
@@ -94,7 +109,16 @@ int main(int argc, char **argv)
         std::shared_ptr<mbsolve::scenario> scen;
 
         if (device_file == "song2005") {
-            /* Song setup */
+            /**
+             * The song2005 setup features a three-level active region which
+             * is excited by a sech pulse. For details see literature:
+             * Song X. et al., Propagation of a Few-Cycle Laser Pulse
+             * in a V-Type Three-Level System, Optics and Spectroscopy,
+             * Vol. 99, No. 4, 2005, pp. 517–521
+             * https://doi.org/10.1134/1.2113361
+             */
+
+            /* set up quantum mechanical description */
             std::vector<mbsolve::real> energies = {
                 0,
                 2.3717 * mbsolve::HBAR * 1e15,
@@ -164,8 +188,14 @@ int main(int argc, char **argv)
 
 
         } else if (device_file == "ziolkowski1995") {
-            /* set up quantum mechanical description */
+            /**
+             * The ziolkowski1995 setup is a self induced transparency (SIT)
+             * setup that consists of a two-level active region embedded in
+             * two vacuum section. For details see literature:
+             * https://doi.org/10.1103/PhysRevA.52.3082
+             */
 
+            /* set up quantum mechanical description */
             auto qm = std::make_shared<mbsolve::qm_desc_2lvl>
                 (1e24, 2 * M_PI * 2e14, 6.24e-11, 1.0e10, 1.0e10);
 
@@ -208,6 +238,15 @@ int main(int argc, char **argv)
             scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
 
         } else if (device_file == "tzenov2018-cpml") {
+            /**
+             * The tzenov2018-cpml setup consists of an absorber region
+             * embedded in two gain regions. Each region is modeled as a
+             * two-level system. The results show that short pulses are
+             * generated due to colliding pulse mode-locking (CPML).
+             * For details see literature:
+             * https://doi.org/10.1088/1367-2630/aac12a
+             */
+
             /* set up quantum mechanical descriptions */
             auto qm_gain = std::make_shared<mbsolve::qm_desc_2lvl>
                 (5e21, 2 * M_PI * 3.4e12, 2e-9, 1.0/10e-12, 1.0/200e-15, 1.0);

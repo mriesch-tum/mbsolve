@@ -50,13 +50,13 @@ private:
 
 public:
     /**
-     * Constructs quantum operator using two vectors
+     * Constructs quantum mechanical operator using two vectors.
      */
     explicit qm_operator(const std::vector<real>& main_diagonal,
-                         /**< [IN] Main diagonal entries (real) */
+                         /**< [in] Main diagonal entries (real) */
                          const std::vector<complex>& off_diagonal =
                          std::vector<complex>()
-                         /**< [IN] Top half of the off-diagonal entries
+                         /**< [in] Top half of the off-diagonal entries
                           *   (complex), arranged in column-major ordering */
                          ) :
         m_num_levels(main_diagonal.size()),
@@ -108,6 +108,11 @@ protected:
     unsigned int m_num_levels;
 
 public:
+    /**
+     * Constructs quantum mechanical superoperator.
+     *
+     * \param [in] num_levels Number of energy levels.
+     */
     explicit qm_superop(unsigned int num_levels) :
         m_num_levels(num_levels)
     {
@@ -119,9 +124,27 @@ public:
     }
 
     /**
-     * Superoperator function. Must be implemented by subclass.
+     * Executes the superoperator on the operator \p arg. Alias to \ref action.
+     *
+     * \param [in] arg Operator argument to the superoperator.
      */
-    virtual qm_operator operator()(const qm_operator& arg) const = 0;
+    qm_operator operator()(const qm_operator& arg) const
+    {
+        return this->action(arg);
+    }
+
+    /**
+     * Executes the superoperator on the operator \p arg. Must be
+     * implemented by subclass.
+     *
+     * \param [in] arg Operator argument to the superoperator.
+     */
+    virtual qm_operator action(const qm_operator& arg) const
+    {
+        /* return zero by default */
+        std::vector<real> zeros(m_num_levels, 0.0);
+        return qm_operator(zeros);
+    }
 
     /**
      * Get number of levels.
@@ -198,16 +221,6 @@ public:
     }
 
     /**
-     * Executes the superoperator on the operator \p arg. Alias to \ref action.
-     *
-     * \param [in] arg Operator argument to the superoperator.
-     */
-    qm_operator operator()(const qm_operator& arg) const
-    {
-        return this->action(arg);
-    }
-
-    /**
      * Executes the superoperator on the operator \p arg.
      *
      * \param [in] arg Operator argument to the superoperator.
@@ -273,6 +286,14 @@ protected:
     qm_operator m_rho_init;
 
 public:
+    /**
+     * Constructs quantum mechanical description.
+     *
+     * \param [in] carrier_density    Density of particles in the system.
+     * \param [in] hamiltonian        Hamiltonian operator.
+     * \param [in] dipole_operator    Dipole moment operator.
+     * \param [in] relaxation_superop Relaxation superoperator.
+     */
     explicit qm_description(real carrier_density,
                             const qm_operator& hamiltonian,
                             const qm_operator& dipole_operator,
@@ -411,6 +432,8 @@ public:
         /*
            const qm_operator& rho_init
         */
+
+        /* TODO exception if 2 * dephasing_rate - scattering_rate < 0 */
 
     }
 

@@ -30,6 +30,11 @@
 
 namespace mbsolve {
 
+/**
+ * OpenMP solver for 2-lvl systems using the predictor corrector approach.
+ * Version with redundant calculations.
+ * \ingroup MBSOLVE_SOLVER_OPENMP
+ */
 class solver_openmp_2lvl_pc_red : public solver_int
 {
 public:

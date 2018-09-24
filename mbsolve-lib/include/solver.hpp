@@ -27,8 +27,8 @@
 #include <string>
 #include <vector>
 #include <device.hpp>
+#include <internal/solver_int.hpp>
 #include <scenario.hpp>
-#include <solver_int.hpp>
 #include <types.hpp>
 
 namespace mbsolve {
@@ -45,19 +45,41 @@ private:
     std::shared_ptr<solver_int> m_solver;
 
 public:
+    /**
+     * Constructs solver with a given \p name.
+     *
+     * \param [in] name Name of the solver method.
+     * \param [in] dev  Specify the \ref device to be simulated.
+     * \param [in] scen Specify the \ref scenario.
+     */
     solver(const std::string& name, std::shared_ptr<const device> dev,
 	   std::shared_ptr<scenario> scen);
 
     ~solver();
 
+    /**
+     * Gets solver name.
+     */
     const std::string& get_name() const;
 
+    /**
+     * Gets scenario.
+     */
     const scenario& get_scenario() const { return m_solver->get_scenario(); }
 
+    /**
+     * Gets device.
+     */
     const device& get_device() const { return m_solver->get_device(); }
 
+    /**
+     * Executes the solver.
+     */
     void run() const;
 
+    /**
+     * Gets results.
+     */
     const std::vector<std::shared_ptr<result> >& get_results() const;
 
 };

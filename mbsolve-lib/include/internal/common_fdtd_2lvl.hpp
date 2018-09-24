@@ -68,7 +68,7 @@ public:
  * This class stores the material and simulation properties in concentrated
  * form.
  * Use only internally to implement solvers.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class sim_constants_2lvl
 {
@@ -126,7 +126,7 @@ public:
 /**
  * This class represents a source in concentrated form.
  * Use only internally to implement solvers.
- * \ingroup MBSOLVE_LIB
+ * \ingroup MBSOLVE_LIB_INT
  */
 class sim_source
 {
