@@ -50,11 +50,13 @@ dev.add_region(mb.region("Vacuum left", mat_vac, 0, 7.5e-6))
 dev.add_region(mb.region("Active region", mat_ar, 7.5e-6, 142.5e-6))
 dev.add_region(mb.region("Vacuum right", mat_vac, 142.5e-6, 150e-6))
 
+# initial density matrix
+rho_init = mb.qm_operator([ 1, 0 ])
+
 # scenario
-sce = mb.scenario("Basic", 32768, 200e-15)
+sce = mb.scenario("Basic", 32768, 200e-15, rho_init)
 sce.add_record(mb.record("inv12", 2.5e-15))
 sce.add_record(mb.record("e", 2.5e-15))
-sce.set_dm_init_type(mb.scenario.lower_full)
 
 # add source
 sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 4.2186e9,

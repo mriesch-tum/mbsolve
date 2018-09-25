@@ -52,7 +52,7 @@ relax_sop = mb.qm_lindblad_relaxation(rates)
 rho_init = mb.qm_operator([ 1, 0, 0 ])
 
 # quantum mechanical description
-qm = mb.qm_description(6e24, H, u, relax_sop, rho_init)
+qm = mb.qm_description(6e24, H, u, relax_sop)
 mat_ar = mb.material("AR_Song", qm)
 mb.material.add_to_library(mat_ar)
 
@@ -61,13 +61,11 @@ dev = mb.device("Song")
 dev.add_region(mb.region("Active region", mat_ar, 0, 150e-6))
 
 # scenario
-sce = mb.scenario("Basic", 32768, 80e-15)
+sce = mb.scenario("Basic", 32768, 80e-15, rho_init)
 sce.add_record(mb.record("e", 0.0, 0.0))
 sce.add_record(mb.record("d11", mb.record.density, 1, 1, 0.0, 0.0))
 sce.add_record(mb.record("d22", mb.record.density, 2, 2, 0.0, 0.0))
 sce.add_record(mb.record("d33", mb.record.density, 3, 3, 0.0, 0.0))
-
-#sce.set_dm_init_type(mb.scenario.lower_full)
 
 # add source
 sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 3.5471e9,

@@ -24,9 +24,9 @@
 namespace mbsolve {
 
 scenario::scenario(const std::string& name, unsigned int num_gridpoints,
-                   real endtime) :
+                   real endtime, const qm_operator& rho_init) :
     m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
-    m_dm_init_type(dm_init_type::lower_full)
+    m_rho_init(rho_init)
 {
 }
 
@@ -120,16 +120,21 @@ scenario::set_endtime(real value)
     m_endtime = value;
 }
 
-scenario::dm_init_type
-scenario::get_dm_init_type() const
+
+qm_operator
+scenario::get_rho_init() const
 {
-    return m_dm_init_type;
+    return m_rho_init;
 }
 
 void
-scenario::set_dm_init_type(scenario::dm_init_type type)
+scenario::set_rho_init(const qm_operator& rho_init)
 {
-    m_dm_init_type = type;
+    /* TODO check whether rho_init is a valid matrix */
+    /* possibly exceptions for zero matrix, indicating that random init
+     * is desired */
+
+    m_rho_init = rho_init;
 }
 
 }

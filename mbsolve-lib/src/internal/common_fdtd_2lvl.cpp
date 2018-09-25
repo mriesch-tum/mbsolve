@@ -67,13 +67,9 @@ init_sim_constants(std::shared_ptr<const device> dev,
             sc.gamma12 = qm->get_dephasing_rate();
             sc.equi_inv = qm->get_equilibrium_inversion();
 
-            if (scen->get_dm_init_type() == scenario::lower_full) {
-                sc.inversion_init = -1.0;
-            } else if (scen->get_dm_init_type() == scenario::upper_full) {
-                sc.inversion_init = 1.0;
-            } else {
-
-            }
+            std::vector<real> pop_init =
+                scen->get_rho_init().get_main_diagonal();
+            sc.inversion_init = pop_init[1] - pop_init[0];
         } else {
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;

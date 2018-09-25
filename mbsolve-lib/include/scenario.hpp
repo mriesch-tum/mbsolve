@@ -25,6 +25,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <qm_description.hpp>
 #include <record.hpp>
 #include <source.hpp>
 
@@ -37,9 +38,6 @@ namespace mbsolve {
  */
 class scenario
 {
-public:
-    enum dm_init_type { random, lower_full, upper_full };
-
 private:
     std::string m_name;
 
@@ -60,49 +58,105 @@ private:
     /* TODO: initial conditions fields */
     /* choice: random, zero */
 
-    /* TODO: initial conditions density matrix */
-    /* choice: equilibrium (all in lowest level), random population */
-    /* off-diagonal elements always zero? */
-    dm_init_type m_dm_init_type;
+    /* initial density matrix */
+    qm_operator m_rho_init;
 
 public:
-
+    /**
+     * Constructs scenario.
+     *
+     * \param [in] name           Name of the scenario.
+     * \param [in] num_gridpoints Number of spatial grid points.
+     * \param [in] endtime        Simulation end time.
+     * \param [in] rho_init       Initial density matrix.
+     */
     scenario(const std::string& name, unsigned int num_gridpoints,
-             real endtime);
+             real endtime, const qm_operator& rho_init);
 
+    /**
+     * Adds a record that specifies which data trace is collected.
+     */
     void add_record(std::shared_ptr<record> rec);
 
+    /**
+     * Gets all records of this scenario.
+     */
     const std::vector<std::shared_ptr<record> >& get_records() const;
 
+    /**
+     * Adds a source to the scenario.
+     */
     void add_source(std::shared_ptr<source> src);
 
+    /**
+     * Gets all sources of this scenario.
+     */
     const std::vector<std::shared_ptr<source> >& get_sources() const;
 
+    /**
+     * Returns name of the scenario.
+     */
     const std::string& get_name() const;
 
+    /**
+     * Gets number of time steps.
+     */
     unsigned int get_num_timesteps() const;
 
+    /**
+     * Sets the number of time steps manually. Use with care!
+     */
     void set_num_timesteps(unsigned int value);
 
+    /**
+     * Gets number of spatial grid points.
+     */
     unsigned int get_num_gridpoints() const;
 
+    /**
+     * Sets the number of grid points manually. Use with care!
+     */
     void set_num_gridpoints(unsigned int value);
 
+    /**
+     * Gets time step size.
+     */
     real get_timestep_size() const;
 
+    /**
+     * Sets the time step size manually. Use with care!
+     */
     void set_timestep_size(real value);
 
+    /**
+     * Gets grid point size.
+     */
     real get_gridpoint_size() const;
 
+    /**
+     * Sets the grid point size manually. Use with care!
+     */
     void set_gridpoint_size(real value);
 
+    /**
+     * Gets the simulation end time.
+     */
     real get_endtime() const;
 
+    /**
+     * Sets the simulation end time manually. Use with care!
+     */
     void set_endtime(real value);
 
-    dm_init_type get_dm_init_type() const;
+    /**
+     * Gets initial density matrix.
+     */
+    qm_operator get_rho_init() const;
 
-    void set_dm_init_type(dm_init_type type);
+    /**
+     * Sets initial density matrix.
+     */
+    void set_rho_init(const qm_operator& rho_init);
 
 };
 

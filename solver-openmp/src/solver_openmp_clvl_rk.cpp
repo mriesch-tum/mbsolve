@@ -217,7 +217,7 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
             sc.has_dipole = true;
 
             /* initial coherence vector */
-            sc.d_init = cvr.get_initial_vec();
+            sc.d_init = cvr.get_initial_vec(scen->get_rho_init());
 
             std::cout << "init: " << sc.d_init << std::endl;
 

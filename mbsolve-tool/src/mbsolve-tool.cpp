@@ -144,10 +144,8 @@ int main(int argc, char **argv)
             auto relax_sop = std::make_shared<mbsolve::qm_lindblad_relaxation>
                 (scattering_rates);
 
-            mbsolve::qm_operator rho_init({1, 0, 0});
-
             auto qm = std::make_shared<mbsolve::qm_description>
-                (6e24, H, u, relax_sop, rho_init);
+                (6e24, H, u, relax_sop);
 
             auto mat_vac = std::make_shared<mbsolve::material>("Vacuum");
             mbsolve::material::add_to_library(mat_vac);
@@ -166,9 +164,11 @@ int main(int argc, char **argv)
                 sim_endtime = 80e-15;
             }
 
+            mbsolve::qm_operator rho_init({1, 0, 0});
+
             /* Song basic scenario */
             scen = std::make_shared<mbsolve::scenario>
-                ("Basic", num_gridpoints, sim_endtime);
+                ("Basic", num_gridpoints, sim_endtime, rho_init);
 
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
                 ("sech", 0.0, mbsolve::source::hard_source, 3.5471e9,
@@ -223,9 +223,11 @@ int main(int argc, char **argv)
                 sim_endtime = 200e-15;
             }
 
+            mbsolve::qm_operator rho_init({1, 0, 0});
+
             /* Ziolkowski basic scenario */
             scen = std::make_shared<mbsolve::scenario>
-                ("Basic", num_gridpoints, sim_endtime);
+                ("Basic", num_gridpoints, sim_endtime, rho_init);
 
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
                 //("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2, 2e14,
@@ -254,12 +256,6 @@ int main(int argc, char **argv)
             auto qm_absorber = std::make_shared<mbsolve::qm_desc_2lvl>
                 (1e21, 2 * M_PI * 3.4e12, 6e-9, 1.0/3e-12, 1.0/160e-15);
 
-
-#if 0
-            /* initial value density matrix */
-            d_init << 0.5, 0.001,
-                0.001, 0.5;
-#endif
             /* materials */
             auto mat_absorber = std::make_shared<mbsolve::material>
                 ("Absorber", qm_absorber, 12.96, 1.0, 500);
@@ -285,9 +281,11 @@ int main(int argc, char **argv)
                 sim_endtime = 2e-9;
             }
 
+            mbsolve::qm_operator rho_init({0.5, 0.5}, {0.001});
+
             /* basic scenario */
             scen = std::make_shared<mbsolve::scenario>
-                ("basic", num_gridpoints, sim_endtime);
+                ("basic", num_gridpoints, sim_endtime, rho_init);
 
             scen->add_record(std::make_shared<mbsolve::record>
                              ("inv12", 1e-12));

@@ -282,9 +282,6 @@ protected:
     /* relaxation superoperator */
     std::shared_ptr<qm_superop> m_relax_superop;
 
-    /* initial density matrix */
-    qm_operator m_rho_init;
-
 public:
     /**
      * Constructs quantum mechanical description.
@@ -297,17 +294,14 @@ public:
     explicit qm_description(real carrier_density,
                             const qm_operator& hamiltonian,
                             const qm_operator& dipole_operator,
-                            std::shared_ptr<qm_superop> relaxation_superop,
-                            const qm_operator& rho_init) :
+                            std::shared_ptr<qm_superop> relaxation_superop) :
         m_num_levels(hamiltonian.get_num_levels()),
         m_carrier_density(carrier_density),
         m_hamiltonian(hamiltonian),
         m_dipole_op(dipole_operator),
-        m_relax_superop(relaxation_superop),
-        m_rho_init(rho_init)
+        m_relax_superop(relaxation_superop)
     {
         /* TODO: assert or exception: level count different? */
-        /* TODO: default argument rho_init? */
     }
 
     virtual ~qm_description()
@@ -351,14 +345,6 @@ public:
     std::shared_ptr<qm_superop> get_relaxation_superop() const
     {
         return m_relax_superop;
-    }
-
-    /**
-     * Gets initial density matrix.
-     */
-    const qm_operator& get_rho_init() const
-    {
-        return m_rho_init;
     }
 
 };
@@ -420,8 +406,7 @@ public:
                              scattering_rate * 0.5 *
                                    (1 - equilibrium_inversion)},
                            { scattering_rate * 0.5 *
-                                   (1 + equilibrium_inversion), 0 }}),
-                       qm_operator({1, 0})),
+                                   (1 + equilibrium_inversion), 0 }})),
         m_trans_freq(transition_freq),
         m_dipole_mom(dipole_moment),
         m_scattering(scattering_rate),

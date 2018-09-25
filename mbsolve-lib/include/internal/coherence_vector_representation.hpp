@@ -46,7 +46,6 @@ private:
     real_matrix_t m_dipole_op_vec;
     real_matrix_t m_relax_superop;
     real_matrix_t m_equi;
-    real_matrix_t m_d_init;
 
     std::vector<complex_matrix_t> m_generators;
 
@@ -99,7 +98,7 @@ private:
      * Transforms qm_operator to complex matrix.
      */
     complex_matrix_t
-    convert_qm_operator(const qm_operator& op)
+    convert_qm_operator(const qm_operator& op) const
     {
         complex_matrix_t op_mat =
             complex_matrix_t::Zero(m_num_levels, m_num_levels);
@@ -130,7 +129,7 @@ private:
     }
 
     qm_operator
-    convert_qm_operator(complex_matrix_t mat)
+    convert_qm_operator(complex_matrix_t mat) const
     {
         /* main diagonal elements */
         std::vector<real> main_diag;
@@ -151,7 +150,7 @@ private:
     }
 
     real_matrix_t
-    calc_liouvillian(const qm_operator& op)
+    calc_liouvillian(const qm_operator& op) const
     {
         complex_matrix_t op_mat = convert_qm_operator(op);
 
@@ -170,7 +169,7 @@ private:
     }
 
     real_matrix_t
-    calc_op_vec(const qm_operator& op)
+    calc_op_vec(const qm_operator& op) const
     {
         complex_matrix_t op_mat = convert_qm_operator(op);
         real_matrix_t ret(m_num_adj, 1);
@@ -184,7 +183,7 @@ private:
     }
 
     real_matrix_t
-    calc_relaxation_superop(std::shared_ptr<qm_superop> op)
+    calc_relaxation_superop(std::shared_ptr<qm_superop> op) const
     {
         real_matrix_t ret = real_matrix_t::Zero(m_num_adj, m_num_adj);
 
@@ -202,7 +201,7 @@ private:
     }
 
     real_matrix_t
-    calc_equi_vec(std::shared_ptr<qm_superop> op)
+    calc_equi_vec(std::shared_ptr<qm_superop> op) const
     {
         real_matrix_t ret = real_matrix_t::Zero(m_num_adj, 1);
         complex_matrix_t a =
@@ -226,8 +225,7 @@ public:
         m_dipole_op(m_num_adj, m_num_adj),
         m_dipole_op_vec(m_num_adj, 1),
         m_relax_superop(m_num_adj, m_num_adj),
-        m_equi(m_num_adj, 1),
-        m_d_init(m_num_adj, 1)
+        m_equi(m_num_adj, 1)
     {
         /* set up generators of Lie algebra su(num_levels) */
         setup_generators();
@@ -247,9 +245,6 @@ public:
 
         /* calculate equilibrium vector */
         m_equi = calc_equi_vec(qm_desc->get_relaxation_superop());
-
-        /* calculate inital vector */
-        m_d_init = calc_op_vec(qm_desc->get_rho_init());
     }
 
     /**
@@ -301,12 +296,12 @@ public:
     }
 
     /**
-     * Gets initial coherence vector.
+     * Calculates initial coherence vector.
      */
-    const real_matrix_t&
-    get_initial_vec() const
+    real_matrix_t
+    get_initial_vec(const qm_operator& rho_init) const
     {
-        return m_d_init;
+        return calc_op_vec(rho_init);
     }
 
     /**
