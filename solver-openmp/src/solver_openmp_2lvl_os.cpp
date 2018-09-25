@@ -123,7 +123,7 @@ solver_int(dev, scen)
         int idx = -1;
         real x = i * scen->get_gridpoint_size();
         for (const auto& reg : dev->get_regions()) {
-            if ((x >= reg->get_start()) && (x <= reg->get_end())) {
+            if ((x >= reg->get_x_start()) && (x <= reg->get_x_end())) {
                 idx = id_to_idx[reg->get_material()->get_id()];
                 break;
             }

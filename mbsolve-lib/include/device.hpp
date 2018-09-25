@@ -90,12 +90,12 @@ public:
     /**
      * Gets region start position.
      */
-    real get_start() const { return m_x_start; }
+    real get_x_start() const { return m_x_start; }
 
     /**
      * Gets region end position.
      */
-    real get_end() const { return m_x_end; }
+    real get_x_end() const { return m_x_end; }
 
     /**
      * Gets material.

@@ -281,7 +281,7 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
         real x = i * scen->get_gridpoint_size();
 
         for (const auto& reg : dev->get_regions()) {
-            if ((x >= reg->get_start()) && (x <= reg->get_end())) {
+            if ((x >= reg->get_x_start()) && (x <= reg->get_x_end())) {
                 mat_idx = id_to_idx[reg->get_material()->get_id()];
                 break;
             }
