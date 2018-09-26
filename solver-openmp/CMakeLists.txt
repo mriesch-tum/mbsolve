@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 project(solver-openmp)
 
 # specify matrix exponential method
-set(MAT_EXP_METHOD "DIAG" CACHE STRING "specify matrix exponential method")
+set(MAT_EXP_METHOD "RODR" CACHE STRING "specify matrix exponential method")
 set_property(CACHE MAT_EXP_METHOD PROPERTY STRINGS "PADE" "DIAG" "RODR")
 
 string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
