@@ -26,6 +26,9 @@ close all;
 %  choose hdf5 file
 [filename, folder] = uigetfile('../../*.hdf', 'Select result data');
 f = fullfile(folder, filename);
+if (filename == 0)
+   return;
+end
 
 [filename, folder] = uigetfile('../reference-data/*.csv', ...
     'Select compare trace');

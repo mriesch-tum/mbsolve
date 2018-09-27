@@ -26,11 +26,21 @@ close all;
 %  choose hdf5 file
 [filename, folder] = uigetfile('../../*.hdf', 'Select result data');
 f = fullfile(folder, filename);
+if (filename == 0)
+   return;
+end
 
+comp_data = {};
 [filenames, folder] = uigetfile('../reference-data/*.csv', ...
     'Select compare trace', 'MultiSelect', 'on');
-for i = 1:length(filenames)
-    comp_data{i} = csvread(fullfile(folder, filenames{i}));
+if iscell(filenames)
+    for i = 1:length(filenames)
+        comp_data{i} = csvread(fullfile(folder, filenames{i}));
+    end
+elseif (filenames == 0)
+    % noop
+else
+    comp_data{1} = csvread(fullfile(folder, filenames));
 end
 
 % read global attributes

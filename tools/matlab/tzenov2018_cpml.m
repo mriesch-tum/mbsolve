@@ -25,6 +25,9 @@ close all;
 %  choose hdf5 file
 [filename, folder] = uigetfile('../../*.hdf', 'Select result data');
 f = fullfile(folder, filename);
+if (filename == 0)
+   return;
+end
 
 % read global attributes
 d_x = h5readatt(f, '/', 'gridpoint_size');
