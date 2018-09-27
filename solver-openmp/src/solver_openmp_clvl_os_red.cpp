@@ -235,15 +235,6 @@ solver_openmp_clvl_os_red<num_lvl>::solver_openmp_clvl_os_red
 
             std::cout << "init: " << sc.d_init << std::endl;
 
-            /* TODO remove?
-            if (scen->get_dm_init_type() == scenario::lower_full) {
-
-            } else if (scen->get_dm_init_type() == scenario::upper_full) {
-                sc.d_init = Eigen::Matrix<real, num_adj, 1>::Zero();
-                sc.d_init(num_adj - 1) = 1;
-            } else {
-            }
-            */
         } else {
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;

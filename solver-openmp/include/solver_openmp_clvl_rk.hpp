@@ -19,8 +19,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOLVER_OPENMP_3LVL_RK_H
-#define MBSOLVE_SOLVER_OPENMP_3LVL_RK_H
+#ifndef MBSOLVE_SOLVER_OPENMP_CLVL_RK_H
+#define MBSOLVE_SOLVER_OPENMP_CLVL_RK_H
 
 #include <iostream>
 #include <omp.h>
@@ -47,21 +47,6 @@ public:
     bool has_qm;
     bool has_dipole;
 
-    /* analytic solution precalc */
-    real_matrix_t coeff_1[num_adj/2];
-    real_matrix_t coeff_2[num_adj/2];
-    real theta[num_adj/2];
-
-    /* rodrigues formula precalc */
-    real_matrix_t U2;
-    real theta_1;
-
-    /* constant propagator A_0 = exp(M dt/2) */
-    real_matrix_t A_0;
-
-    /* unitary transformation matrix */
-    complex_matrix_t B;
-
     /* required for polarization calc ? */
     real_matrix_t M;
     real_matrix_t U;
@@ -69,11 +54,6 @@ public:
 
     /* dipole moments */
     real_vector_t v;
-
-    /* diagonalized interaction propagator */
-    /* TODO: special type for diagonal matrix? */
-    /* TODO: vector would do, right? */
-    Eigen::Matrix<complex, num_adj, 1> L;
 
     /* electromagnetic constants */
     real M_CE;

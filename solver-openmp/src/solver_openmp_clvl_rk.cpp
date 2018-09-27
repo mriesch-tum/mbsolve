@@ -23,9 +23,6 @@
 #define EIGEN_NO_MALLOC
 
 #include <numeric>
-#include <Eigen/Eigenvalues>
-#include <Eigen/Sparse>
-#include <unsupported/Eigen/MatrixFunctions>
 #include <internal/coherence_vector_representation.hpp>
 #include <common_openmp.hpp>
 #include <solver_openmp_clvl_rk.hpp>
@@ -46,65 +43,6 @@ const unsigned int OL = 32;
 #endif
 
 const unsigned int VEC = 4;
-
-template<unsigned int num_lvl, unsigned int num_adj>
-void
-fill_rodr_coeff(const Eigen::Matrix<complex, num_adj, num_adj>& eigenvec,
-                const Eigen::Matrix<complex, num_adj, 1>& eigenval,
-                sim_constants_clvl_rk<num_lvl>& sc)
-{
-    /* creating sorting order (descending eigenvalues) */
-    std::vector<size_t> perm_idx(num_adj);
-    std::iota(perm_idx.begin(), perm_idx.end(), 0);
-    std::sort(perm_idx.begin(), perm_idx.end(),
-              [&eigenval](size_t i1, size_t i2) {
-                  return (std::abs(eigenval(i1)) > std::abs(eigenval(i2)));
-              });
-
-    /* sort eigenvectors */
-    Eigen::Matrix<real, num_adj, num_adj> Q =
-        Eigen::Matrix<real, num_adj, num_adj>::Zero();
-    for (int i = 0; i < num_adj/2; i++) {
-        unsigned int i1 = perm_idx[2 * i];
-        unsigned int i2 = perm_idx[2 * i + 1];
-
-        Q.col(2 * i) = 1.0/sqrt(2) *
-            (eigenvec.col(i1) + eigenvec.col(i2)).real();
-        Q.col(2 * i + 1) = 1.0/sqrt(2) *
-            (-eigenvec.col(i1) + eigenvec.col(i2)).imag();
-    }
-    if (num_adj % 2 != 0) {
-        Q(num_adj - 1, num_adj - 1) = 1.0;
-    }
-
-    /* TODO optimize
-     * ignore eigenvalues = 0
-     * group eigenvalues with multiplicity >= 2
-     */
-    for (int i = 0; i < num_adj/2; i++) {
-        unsigned int i1 = perm_idx[2 * i];
-        unsigned int i2 = perm_idx[2 * i + 1];
-        Eigen::Matrix<real, num_adj, num_adj> b =
-            Eigen::Matrix<real, num_adj, num_adj>::Zero();
-
-        /* give warning if eigenvalues do not match */
-        if (std::abs(eigenval(i1)) + std::abs(eigenval(i2)) > 1e-5) {
-            std::cout << "Warning: Eigenvalues not pairwise: " <<
-                eigenval(i1) << " and " << eigenval(i2) << std::endl;
-        }
-        sc.theta[i] = std::abs(eigenval(i1));
-
-        b(2 * i, 2 * i + 1) = -1.0;
-        b(2 * i + 1, 2 * i) = +1.0;
-
-        sc.coeff_1[i] = Q * b * Q.transpose();
-        sc.coeff_2[i] = Q * b * b * Q.transpose();
-
-        std::cout << "theta: "<< std::endl << sc.theta[i] << std::endl;
-        std::cout << "b = " << std::endl << b << std::endl;
-    }
-}
-
 
 template<unsigned int num_lvl>
 solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
@@ -192,28 +130,8 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
             U = -cvr.get_dipole_operator();
             std::cout << "U: " << std::endl << U << std::endl;
 
-            /* diagonalize dipole operator */
-            /* note: returned eigenvectors are normalized */
-            Eigen::EigenSolver<Eigen::Matrix<real, num_adj, num_adj> > es(U);
-
-            /* store propagators B1 and B2 */
-            //sc.B_1 = A_0 * es.eigenvectors();
-            //sc.B_2 = es.eigenvectors().adjoint() * A_0;
-
-            sc.A_0 = A_0;
-            sc.B = es.eigenvectors();
-
             sc.M = M;
             sc.U = U;
-
-            /* for Rodrigues formula */
-            sc.U2 = U * U;
-            sc.theta_1 = sqrt(pow(U(0, 1), 2) + pow(U(0, 2), 2)
-                              + pow(U(1, 2), 2));
-
-            /* for general analytic approach */
-            fill_rodr_coeff<num_lvl, num_adj>(es.eigenvectors(),
-                                              es.eigenvalues(), sc);
 
             /* TODO refine check? */
             sc.has_qm = true;
@@ -224,15 +142,6 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
 
             std::cout << "init: " << sc.d_init << std::endl;
 
-            /* TODO remove?
-            if (scen->get_dm_init_type() == scenario::lower_full) {
-
-            } else if (scen->get_dm_init_type() == scenario::upper_full) {
-                sc.d_init = Eigen::Matrix<real, num_adj, 1>::Zero();
-                sc.d_init(num_adj - 1) = 1;
-            } else {
-            }
-            */
         } else {
             /* set all qm-related factors to zero */
             sc.M_CP = 0.0;
@@ -242,15 +151,8 @@ solver_openmp_clvl_rk<num_lvl>::solver_openmp_clvl_rk
 
             sc.v = Eigen::Matrix<real, num_adj, 1>::Zero();
 
-            //sc.B_1 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
-            //sc.B_2 = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
-            sc.A_0 = Eigen::Matrix<real, num_adj, num_adj>::Zero();
-            sc.B = Eigen::Matrix<complex, num_adj, num_adj>::Zero();
-
             sc.M = Eigen::Matrix<real, num_adj, num_adj>::Zero();
             sc.U = Eigen::Matrix<real, num_adj, num_adj>::Zero();
-
-            sc.L = Eigen::Matrix<complex, num_adj, 1>::Zero();
 
             sc.d_eq = Eigen::Matrix<real, num_adj, 1>::Zero();
 
@@ -582,39 +484,6 @@ apply_sources_rk(real *t_e, real *source_data, unsigned int num_sources,
         }
     }
 }
-
-#if 0
-
-//
-    /* split A0 and P */
-    Eigen::Array<complex, num_adj, 1> B_I;
-    B_I = l_sim_consts[mat_idx].L * t_e[i];
-    B_I = B_I.exp();
-
-    Eigen::Matrix<real, num_adj, num_adj> B =
-        (l_sim_consts[mat_idx].B *
-         B_I.matrix().asDiagonal() *
-         l_sim_consts[mat_idx].B.adjoint()).real();
-
-    t_d[i] = l_sim_consts[mat_idx].A_0 * B *
-        l_sim_consts[mat_idx].A_0 * t_d[i];
-
-//#elif EXP_METHOD==3
-    /* analytic solution? */
-
-//#else
-    /* Eigen matrix exponential */
-    Eigen::Matrix<real, num_adj, num_adj> B =
-        (l_sim_consts[mat_idx].U * t_e[i] *
-         l_sim_consts[mat_idx].d_t).exp();
-
-    t_d[i] = l_sim_consts[mat_idx].A_0 * B *
-        l_sim_consts[mat_idx].A_0 * t_d[i];
-
-//#endif
-#endif
-
-
 
 template<unsigned int num_lvl, unsigned int num_adj>
 void
