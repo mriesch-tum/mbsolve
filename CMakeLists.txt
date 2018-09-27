@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 project(mbsolve)
 
 set(MBSOLVE_VERSION_MAJOR 0)
-set(MBSOLVE_VERSION_MINOR 1)
+set(MBSOLVE_VERSION_MINOR 2)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 
