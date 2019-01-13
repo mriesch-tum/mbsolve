@@ -1,0 +1,54 @@
+#!/bin/bash
+#SBATCH -o %x.%j.%N.out
+#SBATCH -J speedup_red_6lvl_16k
+#SBATCH --get-user-env
+#SBATCH --clusters=mpp2
+#SBATCH --nodes=1-1
+#SBATCH --cpus-per-task=28
+#SBATCH --export=NONE
+#SBATCH --time=08:00:00
+
+# check if mbsolve-tool application is available
+if [ -f ${SLURM_SUBMIT_DIR}/mbsolve-tool/mbsolve-tool ]; then
+    # valid working directory
+    cd ${SLURM_SUBMIT_DIR}
+else
+    # invalid working directory or mbsolve-tool not found, report error
+    echo "Could not find application mbsolve-tool in" \
+        "${SLURM_SUBMIT_DIR}/mbsolve-tool/. Make sure that mbsolve-tool was" \
+        "built and you submitted the job script from the build directory."
+    exit 1
+fi
+
+# create working directory
+work_dir=simulations/${SLURM_JOB_NAME}.${SLURM_JOB_ID}
+mkdir -p $work_dir
+cd $work_dir
+
+# load modules
+source /etc/profile.d/modules.sh
+module load hdf5/1.10.2-cxx
+module load gcc
+module load boost/1.68.0
+module load likwid
+
+# vary thread count
+thread_s=1
+thread_e=28
+for threads in `seq $thread_s $thread_e`; do
+
+let time_base=15
+let endtime=$threads*time_base
+
+export OMP_NUM_THREADS=$threads
+
+# reproducibility
+iterations=5
+for it in `seq 1 $iterations`; do
+
+likwid-pin ../../mbsolve-tool/mbsolve-tool -d marskar2011 \
+    -m openmp-fdtd-red-6lvl-cvr-rodr -w hdf5 -e `echo $endtime`e-15 -g 16384
+
+done
+
+done
