@@ -235,6 +235,22 @@ public:
 
         return qm_operator(populations, coherences);
     }
+
+    /**
+     * Gets the scattering rates.
+     */
+    const std::vector<std::vector<real> >& get_scattering_rates() const
+    {
+        return m_scattering;
+    }
+
+    /**
+     * Gets the dephasing rates.
+     */
+    const std::vector<real>& get_dephasing_rates() const
+    {
+        return m_dephasing;
+    }
 };
 
 /**

@@ -22,6 +22,7 @@
 #include <iostream>
 #include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
 #include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
+#include <mbsolve/lib/internal/algo_lindblad_reg_cayley.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_fdtd.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_fdtd_red.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_loader.hpp>
@@ -53,5 +54,29 @@ solver_cpu_loader::solver_cpu_loader()
         "cpu-fdtd-red-3lvl-cvr-rodr");
     solver::register_solver<solver_cpu_fdtd_red<6, lindblad_cvr_rodr> >(
         "cpu-fdtd-red-6lvl-cvr-rodr");
+
+    /* fdtd regular representation/cayley approximation */
+    solver::register_solver<solver_cpu_fdtd<2, lindblad_reg_cayley> >(
+        "cpu-fdtd-2lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd<3, lindblad_reg_cayley> >(
+        "cpu-fdtd-3lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd<4, lindblad_reg_cayley> >(
+        "cpu-fdtd-4lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd<5, lindblad_reg_cayley> >(
+        "cpu-fdtd-5lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd<6, lindblad_reg_cayley> >(
+        "cpu-fdtd-6lvl-reg-cayley");
+
+    /* fdtd-red regular representation/cayley approximation */
+    solver::register_solver<solver_cpu_fdtd_red<2, lindblad_reg_cayley> >(
+        "cpu-fdtd-red-2lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd_red<3, lindblad_reg_cayley> >(
+        "cpu-fdtd-red-3lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd_red<4, lindblad_reg_cayley> >(
+        "cpu-fdtd-red-4lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd_red<5, lindblad_reg_cayley> >(
+        "cpu-fdtd-red-5lvl-reg-cayley");
+    solver::register_solver<solver_cpu_fdtd_red<6, lindblad_reg_cayley> >(
+        "cpu-fdtd-red-6lvl-reg-cayley");
 }
 }
