@@ -28,6 +28,7 @@
 #include <omp.h>
 #include <solver_openmp_fdtd.hpp>
 #include <common_openmp.hpp>
+#include <internal/algo_lindblad_cvr_rodr.hpp>
 #include <internal/algo_lindblad_noop.hpp>
 
 namespace mbsolve {
@@ -36,6 +37,15 @@ namespace mbsolve {
 
 typedef solver_openmp_fdtd<2, lindblad_noop> fdtd_2lvl_noop;
 static solver_factory<fdtd_2lvl_noop> f2noop("openmp-fdtd-noop");
+
+typedef solver_openmp_fdtd<2, lindblad_cvr_rodr> fdtd_2lvl_cvr_rodr;
+static solver_factory<fdtd_2lvl_cvr_rodr> f2r("openmp-fdtd-2lvl-cvr-rodr");
+
+typedef solver_openmp_fdtd<3, lindblad_cvr_rodr> fdtd_3lvl_cvr_rodr;
+static solver_factory<fdtd_3lvl_cvr_rodr> f3r("openmp-fdtd-3lvl-cvr-rodr");
+
+typedef solver_openmp_fdtd<6, lindblad_cvr_rodr> fdtd_6lvl_cvr_rodr;
+static solver_factory<fdtd_6lvl_cvr_rodr> f6r("openmp-fdtd-6lvl-cvr-rodr");
 
 /* solver class member functions */
 

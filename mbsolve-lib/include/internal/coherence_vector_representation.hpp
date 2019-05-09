@@ -218,7 +218,7 @@ private:
     }
 
 public:
-    explicit cv_representation(std::shared_ptr<qm_description> qm_desc) :
+    explicit cv_representation(std::shared_ptr<const qm_description> qm_desc) :
         m_num_levels(qm_desc->get_num_levels()),
         m_num_adj(qm_desc->get_num_levels() * qm_desc->get_num_levels() - 1),
         m_hamiltonian(m_num_adj, m_num_adj),
@@ -356,8 +356,63 @@ public:
         }
     }
 
+    /**
+     * Determines coherence vector for given density matrix \param d.
+     */
+    template<unsigned int num_lvl, unsigned int num_adj>
+    static Eigen::Matrix<real, num_adj, 1>
+    coherence_vector(const qm_operator& d)
+    {
+        Eigen::Matrix<real, num_adj, 1> ret =
+            Eigen::Matrix<real, num_adj, 1>::Zero();
+        unsigned int i = 0;
 
+        /* real part terms */
+        for (int j = 0, row = 0, col = 1; j < d.get_off_diagonal().size();
+             j++) {
 
+            ret(i) = 2 * d.get_off_diagonal()[j].real();
+
+            if (row == col - 1) {
+                row = 0;
+                col++;
+            } else {
+                row++;
+            }
+        }
+
+        /* imag part terms */
+        i = (num_lvl * (num_lvl - 1))/2;
+        for (int j = 0, row = 0, col = 1; j < d.get_off_diagonal().size();
+             j++) {
+
+            ret(i) = -2 * d.get_off_diagonal()[j].imag();
+
+            if (row == col - 1) {
+                row = 0;
+                col++;
+            } else {
+                row++;
+            }
+        }
+
+        /* population terms */
+        i = num_lvl * (num_lvl - 1);
+        for (unsigned int l = 0; l < num_lvl - 1;  l++) {
+            int j = 0;
+            real entry = 0;
+
+            for (j = 0; j <= l; j++) {
+                entry += -1.0 * d.get_main_diagonal()[j];
+            }
+            entry += (l + 1) * d.get_main_diagonal()[j];
+
+            int k = ((l + 1) * (l + 2))/2;
+            ret(i + l) = entry/sqrt(k);
+        }
+
+        return ret;
+    }
 };
 
 }
