@@ -97,8 +97,8 @@ Tools
 - MATLAB scripts: The examples read the simulation results and plot them.
   See tools/matlab.
 
-- Loadleveler: Example scripts for the loadleveler batch scheduler.
-  See tools/loadleveler.
+- Slurm scripts: Example scripts for the Slurm Workload Manager.
+  See tools/slurm.
 
 Dependencies
 --------------------
