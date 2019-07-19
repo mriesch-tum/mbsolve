@@ -90,11 +90,9 @@ static void parse_args(int argc, char **argv)
  * mbsolve-tool main function.
  * \ingroup MBSOLVE_TOOL
  *
- * Specify the simulation setup using the -d parameter (The available setups
- * are described below.) and the solver method using the -m parameter
- * (Currently, the only option available is openmp-Xlvl-os-red. Replace X
- * with the number of levels.) For the complete list of parameters, run
- * mbsolve-tool -h.
+ * Specify the simulation setup using the -d parameter (the available setups
+ * are described below) and the solver method using the -m parameter
+ * For the complete list of parameters, run mbsolve-tool -h.
  */
 int main(int argc, char **argv)
 {

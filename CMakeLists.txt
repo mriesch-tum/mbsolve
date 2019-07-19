@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 # specify architecture
 set(ARCH "HOST" CACHE STRING "specify architecture")
-set_property(CACHE ARCH PROPERTY STRINGS "HOST" "PHI" "AVX2" "SSE3")
+set_property(CACHE ARCH PROPERTY STRINGS "HOST" "AVX2" "SSE3")
 
 # set a default build type if none was specified
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)

@@ -1,33 +1,15 @@
 cmake_minimum_required(VERSION 3.6)
 project(solver-openmp)
 
-# specify matrix exponential method
-set(MAT_EXP_METHOD "RODR" CACHE STRING "specify matrix exponential method")
-set_property(CACHE MAT_EXP_METHOD PROPERTY STRINGS "PADE" "DIAG" "RODR")
-
 string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-# solvers that support Xeon Phi offloading
-set(SOLVER_OPENMP_SRCS
-  src/solver_openmp_2lvl_pc.cpp
-  src/solver_openmp_2lvl_pc_red.cpp
-)
-
-# solvers without Xeon Phi support
-if(NOT ARCH STREQUAL "PHI")
-  list(APPEND SOLVER_OPENMP_SRCS
-    src/solver_openmp_2lvl_os.cpp
-    src/solver_openmp_clvl_rk.cpp
-    src/solver_openmp_2lvl_os_red.cpp
-    src/solver_openmp_clvl_os_red.cpp
-    src/solver_openmp_fdtd.cpp
-    src/solver_openmp_fdtd_red.cpp
-  )
-endif()
+list(APPEND SOLVER_OPENMP_SRCS
+  src/solver_openmp_fdtd.cpp
+  src/solver_openmp_fdtd_red.cpp)
 
 add_library(solver-openmp SHARED ${SOLVER_OPENMP_SRCS})
 
@@ -47,8 +29,6 @@ elseif(ARCH STREQUAL "SSE3")
     target_compile_options(solver-openmp PRIVATE "-xSSE3")
   else()
   endif()
-elseif(ARCH STREQUAL "PHI")
-  target_compile_definitions(solver-openmp PRIVATE XEON_PHI_OFFLOAD=1)
 else()
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
     target_compile_options(solver-openmp PRIVATE "-march=native")
@@ -56,13 +36,6 @@ else()
     target_compile_options(solver-openmp PRIVATE "-xHost")
   else()
   endif()
-endif()
-
-if(MAT_EXP_METHOD STREQUAL "DIAG")
-  target_compile_definitions(solver-openmp PRIVATE EXP_METHOD=1)
-elseif(MAT_EXP_METHOD STREQUAL "RODR")
-  target_compile_definitions(solver-openmp PRIVATE EXP_METHOD=2)
-else()
 endif()
 
 target_compile_options(solver-openmp PRIVATE ${OpenMP_CXX_FLAGS})

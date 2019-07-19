@@ -74,11 +74,6 @@ building for another machine the architecture can be set with e.g.
 
     $ cmake -DARCH=AVX2 ..
 
-In particular, building for Intel's Xeon Phi coprocessor is enabled with
-
-    $ CC=path_to_intel/icc CXX=path_to_intel/icpc cmake -DWITH_CUDA=OFF \
-      -DARCH=PHI ..
-
 The Doxygen documentation can be build with
 
     $ make doc

@@ -1,8 +1,5 @@
 %module pysolveropenmp
 %{
-#include "../include/solver_openmp_2lvl_pc.hpp"
-
-using namespace mbsolve;
 %}
 
 %import(module="pymbsolvelib") "../../mbsolve-lib/include/mbsolve.hpp"
@@ -21,7 +18,3 @@ using namespace mbsolve;
     SWIG_exception(SWIG_RuntimeError, e.what());
   }
 }
-
-%shared_ptr(mbsolve::solver_openmp_2lvl_pc)
-
-%include "../include/solver_openmp_2lvl_pc.hpp"

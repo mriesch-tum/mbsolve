@@ -63,7 +63,7 @@ sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 4.2186e9,
                              2e14, 10, 2e14))
 
 # run solver
-sol = mb.solver("openmp-2lvl-os-red", dev, sce)
+sol = mb.solver("openmp-fdtd-red-2lvl-cvr-rodr", dev, sce)
 print('Solver ' + sol.get_name() + ' started')
 tic = time.time()
 sol.run()
