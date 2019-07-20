@@ -77,7 +77,7 @@ endif(WITH_CPU)
 
 # C++ tool
 if(WITH_CPPTOOL)
-  find_package(Boost COMPONENTS program_options system timer)
+  find_package(Boost COMPONENTS program_options)
   if(Boost_FOUND)
     add_subdirectory(mbsolve-tool)
   endif(Boost_FOUND)

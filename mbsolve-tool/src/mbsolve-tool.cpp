@@ -24,16 +24,15 @@
  * Runs different simulation setups.
  */
 
+#include <chrono>
 #include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <boost/program_options.hpp>
-#include <boost/timer/timer.hpp>
 #include <mbsolve.hpp>
 
 namespace po = boost::program_options;
-namespace ti = boost::timer;
 
 static std::string device_file;
 static std::string output_file;
@@ -86,6 +85,29 @@ static void parse_args(int argc, char **argv)
     }
 }
 
+class wallclock
+{
+private:
+
+    typedef std::chrono::duration<double> duration;
+
+    std::chrono::time_point<std::chrono::steady_clock> start;
+
+public:
+    wallclock() {
+        tic();
+    }
+
+    void tic() {
+        start = std::chrono::steady_clock::now();
+    }
+
+    double toc() {
+        duration elapsed = std::chrono::steady_clock::now() - start;
+        return elapsed.count();
+    }
+};
+
 /**
  * mbsolve-tool main function.
  * \ingroup MBSOLVE_TOOL
@@ -100,7 +122,7 @@ int main(int argc, char **argv)
     parse_args(argc, argv);
 
     try {
-        ti::cpu_timer timer;
+        wallclock clock;
         double total_time = 0;
 
         std::shared_ptr<mbsolve::device> dev;
@@ -406,52 +428,46 @@ int main(int argc, char **argv)
             throw std::invalid_argument("Specified device not found!");
         }
         /* tic */
-        timer.start();
+        clock.tic();
 
         mbsolve::writer writer(writer_method);
         mbsolve::solver solver(solver_method, dev, scen);
 
         /* toc */
-        timer.stop();
-        ti::cpu_times times = timer.elapsed();
-        std::cout << "Time required (setup): " << 1e-9 * times.wall
-                  << std::endl;
-        total_time +=1e-9 * times.wall;
+        double setup_time = clock.toc();
+        std::cout << "Time required (setup): " << setup_time << std::endl;
+        total_time += setup_time;
 
         std::cout << solver.get_name() << std::endl;
 
         /* tic */
-        timer.start();
+        clock.tic();
 
         /* execute solver */
         solver.run();
 
         /* toc */
-        timer.stop();
-        times = timer.elapsed();
-        std::cout << "Time required (run): " << 1e-9 * times.wall << std::endl;
-        total_time +=1e-9 * times.wall;
+        double run_time = clock.toc();
+        std::cout << "Time required (run): " << run_time << std::endl;
+        total_time += run_time;
 
         /* grid point updates per second */
-        double gpups = 1e-6 * 1e9/times.wall * scen->get_num_gridpoints() *
+        double gpups = 1e-6/run_time * scen->get_num_gridpoints() *
             scen->get_endtime()/scen->get_timestep_size();
         std::cout << "Performance: " << gpups << " MGPU/s" << std::endl;
 
         /* tic */
-        timer.start();
+        clock.tic();
 
         /* write results */
         writer.write(output_file, solver.get_results(), dev, scen);
 
         /* toc */
-        timer.stop();
-        times = timer.elapsed();
-        std::cout << "Time required (write): " << 1e-9 * times.wall
-                  << std::endl;
-        total_time +=1e-9 * times.wall;
+        double write_time = clock.toc();
+        std::cout << "Time required (write): " << write_time << std::endl;
+        total_time += write_time;
 
         std::cout << "Time required (total): " << total_time << std::endl;
-
     } catch (std::exception& e) {
         std::cout << "Error: " << e.what() << std::endl;
         exit(1);
