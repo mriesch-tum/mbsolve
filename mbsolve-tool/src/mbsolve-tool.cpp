@@ -122,7 +122,7 @@ public:
  * \ingroup MBSOLVE_TOOL
  *
  * Specify the simulation setup using the -d parameter (the available setups
- * are described below) and the solver method using the -m parameter
+ * are described below) and the solver method using the -m parameter.
  * For the complete list of parameters, run mbsolve-tool -h.
  */
 int main(int argc, char **argv)
@@ -478,8 +478,8 @@ int main(int argc, char **argv)
         total_time += write_time;
 
         std::cout << "Time required (total): " << total_time << std::endl;
-    } catch (std::exception& e) {
-        std::cout << "Error: " << e.what() << std::endl;
+    } catch (const std::exception& ex) {
+        std::cout << "Error: " << ex.what() << std::endl;
         exit(1);
     }
 
