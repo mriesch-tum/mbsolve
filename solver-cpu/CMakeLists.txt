@@ -6,7 +6,7 @@ string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
 
-add_library(solver-cpu SHARED
+add_library(solver-cpu
   src/solver_cpu_fdtd.cpp
   src/solver_cpu_fdtd_red.cpp)
 

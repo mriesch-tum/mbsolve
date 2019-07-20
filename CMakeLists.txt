@@ -24,6 +24,9 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     "MinSizeRel" "RelWithDebInfo")
 endif()
 
+# build static libraries or dynamic libraries?
+option(BUILD_SHARED_LIBS "turn off to build static libraries" ON)
+
 # specify components
 option(WITH_HDF5 "with(out) HDF5 writer" ON)
 option(WITH_CPU "with(out) CPU solver" ON)
@@ -35,8 +38,8 @@ option(WITH_CPPTOOL "with(out) C++ tool" ON)
 # Eigen library
 find_package(Eigen3 3.3.4 REQUIRED NO_MODULE)
 
-# Python interface
-if(WITH_PYTHON)
+# Python interface (enabled only when shared libraries are build)
+if(WITH_PYTHON AND BUILD_SHARED_LIBS)
   find_package(SWIG 2.0)
   find_package(PythonInterp)
   find_package(PythonLibs)
@@ -44,7 +47,7 @@ if(WITH_PYTHON)
     include(${SWIG_USE_FILE})
     set(MBSOLVE_PYTHON TRUE)
   endif(SWIG_FOUND AND PythonLibs_FOUND AND PythonInterp_FOUND)
-endif(WITH_PYTHON)
+endif(WITH_PYTHON AND BUILD_SHARED_LIBS)
 
 # mbsolve library
 add_subdirectory(mbsolve-lib)

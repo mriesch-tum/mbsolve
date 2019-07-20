@@ -3,7 +3,7 @@ project(mbsolve-lib)
 
 include_directories(include/)
 
-add_library(mbsolve-lib SHARED
+add_library(mbsolve-lib
   src/device.cpp
   src/material.cpp
   src/record.cpp

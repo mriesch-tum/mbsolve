@@ -3,7 +3,8 @@ project(writer-hdf5)
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} ${HDF5_INCLUDE_DIRS} include/)
 
-add_library(writer-hdf5 SHARED src/writer_hdf5.cpp)
+add_library(writer-hdf5 src/writer_hdf5.cpp)
+
 set_property(TARGET writer-hdf5 PROPERTY CXX_STANDARD 11)
 
 target_include_directories(writer-hdf5 PUBLIC include/)
