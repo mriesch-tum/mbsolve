@@ -85,9 +85,6 @@ if(WITH_CPU)
   endif(OPENMP_FOUND)
 endif(WITH_CPU)
 
-# Generic support
-add_subdirectory(solver-generic)
-
 # C++ tool
 if(WITH_CPPTOOL)
   find_package(Boost COMPONENTS program_options system timer)

@@ -24,9 +24,6 @@ system on multi-core CPUs or Intel's Xeon Phi.
 system on graphics processing units (GPUs). Different solvers are implemented
 in this subproject.
 
-- solver-generic: A no-op test solver for testing purposes only. May be
-discarded in future.
-
 - tools: Various scripts in different scripting languages.
 
 - writer-hdf5: Writes the results into the HDF5 format.

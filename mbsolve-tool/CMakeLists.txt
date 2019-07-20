@@ -7,8 +7,7 @@ include_directories(${EIGEN3_INCLUDE_DIR})
 add_executable(mbsolve-tool src/mbsolve-tool.cpp)
 set_property(TARGET mbsolve-tool PROPERTY CXX_STANDARD 11)
 
-target_link_libraries(mbsolve-tool ${Boost_LIBRARIES} mbsolve-lib
-  solver-generic)
+target_link_libraries(mbsolve-tool ${Boost_LIBRARIES} mbsolve-lib)
 
 if(MBSOLVE_CPU)
   target_link_libraries(mbsolve-tool solver-cpu)
