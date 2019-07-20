@@ -78,10 +78,10 @@ endif(WITH_CPU)
 
 # C++ tool
 if(WITH_CPPTOOL)
-  find_package(Boost COMPONENTS program_options)
-  if(Boost_FOUND)
+  find_package(cxxopts NO_MODULE)
+  if(cxxopts_FOUND)
     add_subdirectory(mbsolve-tool)
-  endif(Boost_FOUND)
+  endif(cxxopts_FOUND)
 endif(WITH_CPPTOOL)
 
 # Doxygen documentation

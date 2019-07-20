@@ -29,10 +29,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <boost/program_options.hpp>
+#include <cxxopts.hpp>
 #include <mbsolve.hpp>
-
-namespace po = boost::program_options;
 
 static std::string device_file;
 static std::string output_file;
@@ -44,44 +42,55 @@ static unsigned int num_gridpoints;
 
 static void parse_args(int argc, char **argv)
 {
-    po::options_description desc("Allowed options");
-    desc.add_options()
-	("help,h", "Print usage")
-	("device,d", po::value<std::string>(&device_file)->required(),
-	 "Set device settings file")
-	("output,o", po::value<std::string>(&output_file), "Set output file")
-	("scenario,s", po::value<std::string>(&scenario_file),
-	 "Set scenario settings file")
-	("method,m", po::value<std::string>(&solver_method)->required(),
-	 "Set solver method")
-	("writer,w", po::value<std::string>(&writer_method)->required(),
-	 "Set writer")
-        ("endtime,e", po::value<mbsolve::real>(&sim_endtime),
-         "Set simulation end time")
-        ("gridpoints,g", po::value<unsigned int>(&num_gridpoints),
-         "Set number of spatial grid points");
+    /* set up program name and help one-liner */
+    cxxopts::Options options(argv[0], "mbsolve: An open-source solver "
+                             "tool for the Maxwell-Bloch equations.");
 
-    po::variables_map vm;
+    /* set up allowed options */
+    options.add_options()
+        ("h,help", "Print usage")
+	("d,device", "Specify device",
+         cxxopts::value<std::string>(device_file))
+        ("m,method", "Specify solver method",
+         cxxopts::value<std::string>(solver_method))
+        ("o,output", "Specify output file",
+         cxxopts::value<std::string>(output_file))
+        ("s,scenario", "Specify scenario",
+         cxxopts::value<std::string>(scenario_file))
+	("w,writer", "Specify writer",
+         cxxopts::value<std::string>(writer_method))
+	("e,endtime", "Specify simulation end time",
+         cxxopts::value<mbsolve::real>(sim_endtime))
+        ("g,gridpoints", "Specify number of spatial grid points",
+         cxxopts::value<unsigned int>(num_gridpoints));
+
     try {
-	po::store(po::parse_command_line(argc, argv, desc), vm);
-	if (vm.count("help")) {
-	    std::cout << desc;
-	    exit(0);
-	}
-	po::notify(vm);
-    } catch (po::error& e) {
-	std::cerr << "Error: " << e.what() << std::endl;
-	std::cerr << desc;
-	exit(1);
-    }
+        auto result = options.parse(argc, argv);
 
-    if (vm.count("device")) {
-	device_file = vm["device"].as<std::string>();
-	std::cout << "Using device file " << device_file << std::endl;
-    }
-    if (vm.count("scenario")) {
-	scenario_file = vm["scenario"].as<std::string>();
-	std::cout << "Using scenario file " << scenario_file << std::endl;
+        /* help request */
+        if (result.count("help")) {
+            std::cout << options.help();
+            exit(0);
+        }
+
+        /* mandatory arguments */
+        if (!result.count("device")) {
+            throw std::invalid_argument("No device specified");
+        } else {
+            std::cout << "Using device " << device_file << std::endl;
+        }
+
+        if (!result.count("method")) {
+            throw std::invalid_argument("No method specified");
+        }
+
+        if (!result.count("writer")) {
+            throw std::invalid_argument("No writer specified");
+        }
+    } catch (const std::exception& ex) {
+        std::cout << options.help();
+        std::cout << ex.what() << "." << std::endl;
+        exit(1);
     }
 }
 
@@ -427,6 +436,7 @@ int main(int argc, char **argv)
         } else {
             throw std::invalid_argument("Specified device not found!");
         }
+
         /* tic */
         clock.tic();
 

@@ -33,6 +33,19 @@ in this subproject.
 All libraries feature a Python interface and can be used conveniently from
 Python scripts, Jupyter notebooks etc. See tools/python for examples.
 
+Get the code
+--------------------
+
+Make sure to clone using
+
+    git clone --recurse-submodules [...]
+
+in order to clone third-party libraries recursively. Alternatively, issue
+
+    git submodule update --init --recursive
+
+in the repository if it already exists.
+
 Build instructions
 --------------------
 The project is built using the CMake build system. The typical commands under
@@ -96,12 +109,12 @@ If the required dependencies are not met, the components may be disabled by
 the build system. The dependencies are listed in the following with the
 minimum version given in brackets:
 
+- cxxopts (any recent version) for mbsolve-tool
 - CMake (3.6)
 - Eigen library (3.3.4)
 - Python (2.7) and SWIG (2.0) for Python support
 - CUDA (7.0) for solver-cuda
 - OpenMP (any recent version) for solver-cpu
-- Boost (any recent version) for mbsolve-tool
 - Doxygen (any recent version) for the documentation
 
 Contributing to mbsolve
