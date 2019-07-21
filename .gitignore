@@ -1,16 +1,14 @@
 # general
+.*
 *~
 *#
-*.o
-build*
-.project
+*.bak
 
+# build directories
+build*/
 
-# CMake related files
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Makefile
-cmake_install.cmake
-install_manifest.txt
-CTestTestfile.cmake
+# explicitly allow
+!.clang-format
+!.editorconfig
+!.gitignore
+!.gitlab-ci.yml
