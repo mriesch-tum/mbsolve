@@ -24,8 +24,10 @@
 namespace mbsolve {
 
 /* material properties in constant GPU memory */
+/*
 __device__ __constant__
 sim_constants_2lvl l_sim_consts[MB_CUDA_MAX_MATERIALS];
+*/
 
 /* source properties in constant GPU memory */
 __device__ __constant__ sim_source l_sim_sources[MB_CUDA_MAX_SOURCES];

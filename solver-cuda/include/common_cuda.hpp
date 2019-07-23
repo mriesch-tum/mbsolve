@@ -30,7 +30,7 @@
 #include <stdexcept>
 #include <string>
 #include <cuda.h>
-#include <internal/common_fdtd_2lvl.hpp>
+//#include <internal/common_fdtd_2lvl.hpp>
 #include <internal/copy_list_entry.hpp>
 
 namespace mbsolve {
@@ -42,8 +42,10 @@ const unsigned int MB_CUDA_MAX_MATERIALS = 32;
 const unsigned int MB_CUDA_MAX_SOURCES = 32;
 
 /* TODO split into different headers for different level types? */
+/*
 extern __device__ __constant__
 sim_constants_2lvl l_sim_consts[MB_CUDA_MAX_MATERIALS];
+*/
 
 extern __device__ __constant__
 sim_source l_sim_sources[MB_CUDA_MAX_SOURCES];

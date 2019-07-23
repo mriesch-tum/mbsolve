@@ -13,9 +13,6 @@ list(APPEND CUDA_NVCC_FLAGS --std=c++11; -Xcompiler -fPIC)
 set(CUDA_SEPARABLE_COMPILATION ON)
 
 cuda_add_library(solver-cuda SHARED
-  # src/CUDADensityMatrix.cu include/CUDADensityMatrix.hpp
-  src/solver_cuda_2lvl_pc.cu include/solver_cuda_2lvl_pc.hpp
-  src/solver_cuda_2lvl_pc_red.cu include/solver_cuda_2lvl_pc_red.hpp
   src/common_cuda.cu include/common_cuda.hpp)
 
 set_property(TARGET solver-cuda PROPERTY CXX_STANDARD 11)
