@@ -10,13 +10,13 @@ set_property(TARGET mbsolve-tool PROPERTY CXX_STANDARD 11)
 target_link_libraries(mbsolve-tool ${Boost_LIBRARIES} mbsolve-lib
   solver-generic)
 
+if(MBSOLVE_CPU)
+  target_link_libraries(mbsolve-tool solver-cpu)
+endif(MBSOLVE_CPU)
+
 if(MBSOLVE_CUDA)
   target_link_libraries(mbsolve-tool solver-cuda)
 endif(MBSOLVE_CUDA)
-
-if(MBSOLVE_OPENMP)
-  target_link_libraries(mbsolve-tool solver-openmp)
-endif(MBSOLVE_OPENMP)
 
 if(MBSOLVE_MATLAB)
   target_link_libraries(mbsolve-tool writer-matlab)

@@ -20,15 +20,15 @@
  */
 
 /**
- * \defgroup MBSOLVE_SOLVER_OPENMP solver-openmp
+ * \defgroup MBSOLVE_SOLVER_CPU solver-cpu
  * Different solvers that use OpenMP for parallelization.
  */
 
 #include <stdexcept>
 #include <stdlib.h>
 
-#ifndef MBSOLVE_SOLVER_OPENMP_COMMON
-#define MBSOLVE_SOLVER_OPENMP_COMMON
+#ifndef MBSOLVE_SOLVER_CPU_COMMON
+#define MBSOLVE_SOLVER_CPU_COMMON
 
 #define ALIGN 64
 

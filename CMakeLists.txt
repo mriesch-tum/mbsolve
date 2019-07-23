@@ -27,8 +27,8 @@ endif()
 # specify components
 option(WITH_MATLAB "with(out) MATLAB writer" OFF)
 option(WITH_HDF5 "with(out) HDF5 writer" ON)
+option(WITH_CPU "with(out) CPU solver" ON)
 option(WITH_CUDA "with(out) CUDA solver" OFF)
-option(WITH_OPENMP "with(out) OPENMP solver" ON)
 option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
 option(WITH_PYTHON "with(out) Python interface" ON)
 option(WITH_CPPTOOL "with(out) C++ tool" ON)
@@ -76,14 +76,14 @@ if(WITH_CUDA)
   endif(CUDA_FOUND)
 endif(WITH_CUDA)
 
-# OpenMP support?
-if(WITH_OPENMP)
+# CPU support?
+if(WITH_CPU)
   find_package(OpenMP)
   if(OPENMP_FOUND)
-    set(MBSOLVE_OPENMP TRUE)
-    add_subdirectory(solver-openmp)
+    set(MBSOLVE_CPU TRUE)
+    add_subdirectory(solver-cpu)
   endif(OPENMP_FOUND)
-endif(WITH_OPENMP)
+endif(WITH_CPU)
 
 # Generic support
 add_subdirectory(solver-generic)

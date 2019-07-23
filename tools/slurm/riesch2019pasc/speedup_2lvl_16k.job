@@ -47,7 +47,7 @@ iterations=5
 for it in `seq 1 $iterations`; do
 
 likwid-pin ../../mbsolve-tool/mbsolve-tool -d tzenov2018-cpml \
-    -m openmp-fdtd-2lvl-cvr-rodr -w hdf5 -e `echo $endtime`e-12 -g 16384
+    -m cpu-fdtd-2lvl-cvr-rodr -w hdf5 -e `echo $endtime`e-12 -g 16384
 
 done
 

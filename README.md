@@ -17,15 +17,15 @@ sources, ...).
 - mbsolve-tool: A C++ test application that implements various simulation
 setups.
 
+- solver-cpu: Uses the OpenMP standard to efficiently solve the equation
+system on multi-core CPUs or Intel's Xeon Phi.
+
 - solver-cuda: Uses NVIDIA's CUDA framework to efficiently solve the equation
 system on graphics processing units (GPUs). Different solvers are implemented
 in this subproject.
 
 - solver-generic: A no-op test solver for testing purposes only. May be
 discarded in future.
-
-- solver-openmp: Uses the OpenMP standard to efficiently solve the equation
-system on multi-core CPUs or Intel's Xeon Phi.
 
 - tools: Various scripts in different scripting languages.
 
@@ -106,7 +106,7 @@ minimum version given in brackets:
 - Python (2.7) and SWIG (2.0) for Python support
 - MATLAB (any recent version) for matlab-writer
 - CUDA (7.0) for solver-cuda
-- OpenMP (any recent version) for solver-openmp
+- OpenMP (any recent version) for solver-cpu
 - Boost (any recent version) for mbsolve-tool
 - Doxygen (any recent version) for the documentation
 

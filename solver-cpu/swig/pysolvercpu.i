@@ -1,4 +1,4 @@
-%module pysolveropenmp
+%module pysolvercpu
 %{
 %}
 

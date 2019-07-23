@@ -24,11 +24,11 @@
 
 import sys
 sys.path.append('./mbsolve-lib/')
-sys.path.append('./solver-openmp/')
+sys.path.append('./solver-cpu/')
 sys.path.append('./writer-hdf5/')
 
 import pymbsolvelib as mb
-import pysolveropenmp
+import pysolvercpu
 import pywriterhdf5
 
 import numpy as np
@@ -72,7 +72,7 @@ sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 3.5471e9,
                              3.8118e14, 17.248, 1.76/5e-15, -math.pi/2))
 
 # run solver
-sol = mb.solver("openmp-fdtd-red-3lvl-cvr-rodr", dev, sce)
+sol = mb.solver("cpu-fdtd-red-3lvl-cvr-rodr", dev, sce)
 print('Solver ' + sol.get_name() + ' started')
 tic = time.time()
 sol.run()

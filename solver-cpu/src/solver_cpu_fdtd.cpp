@@ -26,8 +26,8 @@
 #include <iostream>
 #include <random>
 #include <omp.h>
-#include <solver_openmp_fdtd.hpp>
-#include <common_openmp.hpp>
+#include <solver_cpu_fdtd.hpp>
+#include <common_cpu.hpp>
 #include <internal/algo_lindblad_cvr_rodr.hpp>
 #include <internal/algo_lindblad_noop.hpp>
 
@@ -35,26 +35,26 @@ namespace mbsolve {
 
 /* create combinations of number of levels and Lindblad algorithms */
 
-typedef solver_openmp_fdtd<2, lindblad_noop> fdtd_2lvl_noop;
-static solver_factory<fdtd_2lvl_noop> f2noop("openmp-fdtd-noop");
+typedef solver_cpu_fdtd<2, lindblad_noop> fdtd_2lvl_noop;
+static solver_factory<fdtd_2lvl_noop> f2noop("cpu-fdtd-noop");
 
-typedef solver_openmp_fdtd<2, lindblad_cvr_rodr> fdtd_2lvl_cvr_rodr;
-static solver_factory<fdtd_2lvl_cvr_rodr> f2r("openmp-fdtd-2lvl-cvr-rodr");
+typedef solver_cpu_fdtd<2, lindblad_cvr_rodr> fdtd_2lvl_cvr_rodr;
+static solver_factory<fdtd_2lvl_cvr_rodr> f2r("cpu-fdtd-2lvl-cvr-rodr");
 
-typedef solver_openmp_fdtd<3, lindblad_cvr_rodr> fdtd_3lvl_cvr_rodr;
-static solver_factory<fdtd_3lvl_cvr_rodr> f3r("openmp-fdtd-3lvl-cvr-rodr");
+typedef solver_cpu_fdtd<3, lindblad_cvr_rodr> fdtd_3lvl_cvr_rodr;
+static solver_factory<fdtd_3lvl_cvr_rodr> f3r("cpu-fdtd-3lvl-cvr-rodr");
 
-typedef solver_openmp_fdtd<6, lindblad_cvr_rodr> fdtd_6lvl_cvr_rodr;
-static solver_factory<fdtd_6lvl_cvr_rodr> f6r("openmp-fdtd-6lvl-cvr-rodr");
+typedef solver_cpu_fdtd<6, lindblad_cvr_rodr> fdtd_6lvl_cvr_rodr;
+static solver_factory<fdtd_6lvl_cvr_rodr> f6r("cpu-fdtd-6lvl-cvr-rodr");
 
 /* solver class member functions */
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
-solver_openmp_fdtd<num_lvl, density_algo>::
-solver_openmp_fdtd(std::shared_ptr<const device> dev,
-                   std::shared_ptr<scenario> scen) :
+solver_cpu_fdtd<num_lvl, density_algo>::
+solver_cpu_fdtd(std::shared_ptr<const device> dev,
+                std::shared_ptr<scenario> scen) :
     solver_int(dev, scen),
-    m_name("openmp-fdtd-" + std::to_string(num_lvl) + "lvl-" +
+    m_name("cpu-fdtd-" + std::to_string(num_lvl) + "lvl-" +
            density_algo<num_lvl>::name())
 {
     /* TODO: scenario, device sanity check */
@@ -219,7 +219,7 @@ solver_openmp_fdtd(std::shared_ptr<const device> dev,
 }
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
-solver_openmp_fdtd<num_lvl, density_algo>::~solver_openmp_fdtd()
+solver_cpu_fdtd<num_lvl, density_algo>::~solver_cpu_fdtd()
 {
     mb_aligned_free(m_fac_a);
     mb_aligned_free(m_fac_b);
@@ -238,14 +238,14 @@ solver_openmp_fdtd<num_lvl, density_algo>::~solver_openmp_fdtd()
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
 const std::string&
-solver_openmp_fdtd<num_lvl, density_algo>::get_name() const
+solver_cpu_fdtd<num_lvl, density_algo>::get_name() const
 {
     return m_name;
 }
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
 void
-solver_openmp_fdtd<num_lvl, density_algo>::run() const
+solver_cpu_fdtd<num_lvl, density_algo>::run() const
 {
 #pragma omp parallel
     {

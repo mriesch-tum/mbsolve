@@ -24,9 +24,9 @@ PROJECT_NAME = "mbsolve v@MBSOLVE_VERSION_MAJOR@.@MBSOLVE_VERSION_MINOR@"
 
 INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/internal/" \
+        "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/solver-cuda/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/solver-generic/include/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/solver-openmp/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-tool/src/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/writer-hdf5/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/writer-matlab/include/"
