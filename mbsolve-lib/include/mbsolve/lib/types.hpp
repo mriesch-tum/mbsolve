@@ -65,6 +65,12 @@ static const real EPS0 = 8.854187817e-12;
  * \ingroup MBSOLVE_LIB
  */
 static const real E0 = 1.60217733e-19;
+
+/**
+ * Boltzmann constant.
+ * \ingroup MBSOLVE_LIB
+ */
+static const real KB = 1.38064852e-23;
 }
 
 #endif
