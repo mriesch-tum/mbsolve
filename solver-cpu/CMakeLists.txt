@@ -5,7 +5,6 @@ string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} include/)
-include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_library(solver-cpu SHARED
   src/solver_cpu_fdtd.cpp
@@ -39,6 +38,7 @@ endif()
 target_compile_options(solver-cpu PRIVATE ${OpenMP_CXX_FLAGS})
 
 target_include_directories(solver-cpu PUBLIC include/)
+target_link_libraries(solver-cpu Eigen3::Eigen)
 target_link_libraries(solver-cpu ${OpenMP_CXX_FLAGS})
 target_link_libraries(solver-cpu mbsolve-lib)
 

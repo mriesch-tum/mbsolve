@@ -33,7 +33,7 @@ option(WITH_PYTHON "with(out) Python interface" ON)
 option(WITH_CPPTOOL "with(out) C++ tool" ON)
 
 # Eigen library
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 3.3.4 REQUIRED NO_MODULE)
 
 # Python interface
 if(WITH_PYTHON)

@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.6)
 project(writer-hdf5)
 
 include_directories(${mbsolve-lib_INCLUDE_DIR} ${HDF5_INCLUDE_DIRS} include/)
-include_directories(${EIGEN3_INCLUDE_DIR})
 
 add_library(writer-hdf5 SHARED src/writer_hdf5.cpp)
 set_property(TARGET writer-hdf5 PROPERTY CXX_STANDARD 11)
