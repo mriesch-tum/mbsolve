@@ -4,6 +4,8 @@ An open-source solver tool for the Maxwell-Bloch equations.
 Overview
 --------------------
 
+![mbsolve overview](doc/mbsolve_overview.png)
+
 The project consists of the following components:
 
 - mbsolve-lib: Contains the common base classes for solvers and writers (which
@@ -27,8 +29,6 @@ in this subproject.
 - tools: Various scripts in different scripting languages.
 
 - writer-hdf5: Writes the results into the HDF5 format.
-
-<img src="doc/svg/mbsolve_overview.png" alt="mbsolve overview" width="500"/>
 
 All libraries feature a Python interface and can be used conveniently from
 Python scripts, Jupyter notebooks etc. See tools/python for examples.
