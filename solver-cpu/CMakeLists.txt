@@ -25,8 +25,11 @@ string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
 add_library(solver-cpu
-  src/solver_cpu_fdtd.cpp
-  src/solver_cpu_fdtd_red.cpp)
+  src/solver_cpu_fdtd_noop.cpp
+  src/solver_cpu_fdtd_red_noop.cpp
+  src/solver_cpu_fdtd_cvr_rodr.cpp
+  src/solver_cpu_fdtd_red_cvr_rodr.cpp
+  src/solver_cpu_loader.cpp)
 set_target_properties(solver-cpu PROPERTIES
   CXX_STANDARD 11
   VERSION ${VERSION_CORE}

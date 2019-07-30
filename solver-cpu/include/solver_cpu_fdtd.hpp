@@ -35,15 +35,13 @@ namespace mbsolve {
  * \ingroup MBSOLVE_SOLVER_CPU
  */
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
-class solver_cpu_fdtd : public solver_int
+class solver_cpu_fdtd : public solver
 {
 public:
     solver_cpu_fdtd(std::shared_ptr<const device> dev,
                     std::shared_ptr<scenario> scen);
 
     ~solver_cpu_fdtd();
-
-    const std::string& get_name() const;
 
     void run() const;
 

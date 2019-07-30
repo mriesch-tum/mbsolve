@@ -1,5 +1,11 @@
 %module solvercpu
 %{
+#include <solver_cpu_loader.hpp>
+%}
+
+%init
+%{
+    mbsolve::solver_cpu_loader cpu_load;
 %}
 
 %import(module="mbsolve.lib") "../../mbsolve-lib/include/mbsolve.hpp"

@@ -19,53 +19,25 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef WRITER_HDF5_H
-#define WRITER_HDF5_H
+/**
+ * \defgroup MBSOLVE_SOLVER_OPENMP solver-openmp
+ * Different solvers that use OpenMP for parallelization.
+ */
 
-#include <writer.hpp>
+#ifndef MBSOLVE_SOLVER_CPU_LOADER
+#define MBSOLVE_SOLVER_CPU_LOADER
 
 namespace mbsolve {
 
-/**
- * \defgroup MBSOLVE_WRITER_HDF5 writer-hdf5
- * Writer for Hierarchic Data Format (HDF) 5 format.
- */
-
-/**
- * Writer class for Hierarchic Data Format (HDF) 5 format.
- * \ingroup MBSOLVE_WRITER_HDF5
- */
-class writer_hdf5 : public writer
+class solver_cpu_loader
 {
+private:
+
 public:
-    /**
-     * Constructs writer for Hierarchic Data Format (HDF) 5 format.
-     */
-    writer_hdf5();
 
-    /**
-     * Destructs writer for Hierarchic Data Format (HDF) 5 format.
-     */
-    ~writer_hdf5();
-
-    /**
-     * Writes results to HDF5 file.
-     */
-    void write(
-        const std::string& file,
-        const std::vector<std::shared_ptr<result> >& results,
-        std::shared_ptr<const device> dev,
-        std::shared_ptr<const scenario> scen) const;
+    solver_cpu_loader();
 };
 
-/**
- * Helper class that enables usage of the HDF5 writer.
- */
-class writer_hdf5_loader
-{
-public:
-    writer_hdf5_loader();
-};
 }
 
 #endif

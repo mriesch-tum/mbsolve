@@ -24,9 +24,7 @@
 
 namespace mbsolve {
 
-static writer_factory<writer_hdf5> factory("hdf5");
-
-writer_hdf5::writer_hdf5() : m_ext("hdf")
+writer_hdf5::writer_hdf5() : writer("hdf5", "hdf")
 {
 }
 
@@ -34,17 +32,12 @@ writer_hdf5::~writer_hdf5()
 {
 }
 
-const std::string&
-writer_hdf5::get_name() const
-{
-    return factory.get_name();
-}
-
 void
-writer_hdf5::write(const std::string& filename,
-                   const std::vector<std::shared_ptr<result> >& results,
-                   std::shared_ptr<const device> dev,
-                   std::shared_ptr<const scenario> scen) const
+writer_hdf5::write(
+    const std::string& filename,
+    const std::vector<std::shared_ptr<result> >& results,
+    std::shared_ptr<const device> dev,
+    std::shared_ptr<const scenario> scen) const
 {
     auto h5_dbl = H5::PredType::NATIVE_DOUBLE;
     auto h5_bool = H5::PredType::NATIVE_HBOOL;
@@ -56,26 +49,26 @@ writer_hdf5::write(const std::string& filename,
     H5::DataSpace space_scalar;
 
     /* attribute time step size -- global */
-    H5::Attribute a_timestep = file.createAttribute("timestep_size", h5_dbl,
-                                                    space_scalar);
+    H5::Attribute a_timestep =
+        file.createAttribute("timestep_size", h5_dbl, space_scalar);
     double timestep = scen->get_timestep_size();
     a_timestep.write(h5_dbl, &timestep);
 
     /* attribute grid point size -- global */
-    H5::Attribute a_gridpoint = file.createAttribute("gridpoint_size", h5_dbl,
-                                                     space_scalar);
+    H5::Attribute a_gridpoint =
+        file.createAttribute("gridpoint_size", h5_dbl, space_scalar);
     double gridpoint = scen->get_gridpoint_size();
     a_gridpoint.write(h5_dbl, &gridpoint);
 
     /* attribute simulation end time -- global */
-    H5::Attribute a_endtime = file.createAttribute("sim_endtime", h5_dbl,
-                                                   space_scalar);
+    H5::Attribute a_endtime =
+        file.createAttribute("sim_endtime", h5_dbl, space_scalar);
     double endtime = scen->get_endtime();
     a_endtime.write(h5_dbl, &endtime);
 
     /* attribute grid point size -- global */
-    H5::Attribute a_dev_length = file.createAttribute("dev_length", h5_dbl,
-                                                      space_scalar);
+    H5::Attribute a_dev_length =
+        file.createAttribute("dev_length", h5_dbl, space_scalar);
     double dev_length = dev->get_length();
     a_dev_length.write(h5_dbl, &dev_length);
 
@@ -96,8 +89,8 @@ writer_hdf5::write(const std::string& filename,
         /* TODO */
 
         /* attribute is complex ? -- per result */
-        H5::Attribute a_is_complex = g.createAttribute("is_complex", h5_bool,
-                                                       space_scalar);
+        H5::Attribute a_is_complex =
+            g.createAttribute("is_complex", h5_bool, space_scalar);
         hbool_t is_complex = result->is_complex();
         a_is_complex.write(h5_bool, &is_complex);
 
@@ -120,10 +113,8 @@ writer_hdf5::write(const std::string& filename,
     }
 }
 
-const std::string&
-writer_hdf5::get_extension() const
+writer_hdf5_loader::writer_hdf5_loader()
 {
-    return m_ext;
+    writer::register_writer<writer_hdf5>("hdf5");
 }
-
 }

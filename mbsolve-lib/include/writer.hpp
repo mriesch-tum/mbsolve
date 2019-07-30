@@ -22,33 +22,87 @@
 #ifndef MBSOLVE_WRITER_H
 #define MBSOLVE_WRITER_H
 
+#include <functional>
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
 #include <device.hpp>
-#include <internal/writer_int.hpp>
+#include <result.hpp>
 #include <scenario.hpp>
 #include <types.hpp>
 
 namespace mbsolve {
 
 /**
- * This class provides the interface to create an instance of a writer
- * implementation. Each implementation is a subclass of \ref writer_int and
- * is created internally.
+ * This class provides the static interface to create an instance of a writer
+ * implementation and the base class fo each writer implementation.
  * \ingroup MBSOLVE_LIB
  */
 class writer
 {
+public:
+    typedef std::function<std::shared_ptr<writer>()> bootstrap_t;
+
 private:
-    std::shared_ptr<writer_int> m_writer;
+    static std::map<std::string, bootstrap_t> m_bootstraps;
+
+protected:
+    /**
+     * Constructs writer (only available for derived classes).
+     *
+     * \param [in] name      Name of the writer method.
+     * \param [in] extension File extension used by writer.
+     */
+    writer(const std::string& name, const std::string& extension);
+
+    /* writer name, set during registration */
+    std::string m_name;
+
+    /* file extension, set by derived class */
+    std::string m_ext;
 
 public:
     /**
-     * Constructs writer of a given \p name.
+     * Destructs writer.
      */
-    writer(const std::string& name);
+    virtual ~writer();
 
-    ~writer();
+    /**
+     * Gets available writers.
+     */
+    static std::vector<std::string> get_avail_writers();
+
+    /**
+     * Registers writer bootstrap.
+     */
+    static void register_bootstrap(const std::string& name, bootstrap_t b);
+
+    /**
+     * Provides a shortcut function to register a writer of given type T.
+     */
+    template<typename T>
+    static void register_writer(const std::string& name)
+    {
+        register_bootstrap(name, []() { return std::make_shared<T>(); });
+    }
+
+    /**
+     * Constructs writer with a given \p name.
+     *
+     * \param [in] name Name of the writer method.
+     */
+    static std::shared_ptr<writer> create_instance(const std::string& name);
+
+    /**
+     * Gets writer name.
+     */
+    const std::string& get_name() const;
+
+    /**
+     * Gets file extension.
+     */
+    const std::string& get_extension() const;
 
     /**
      * Writes results to a \p file.
@@ -58,18 +112,12 @@ public:
      * \param [in] dev      Device that was simulated.
      * \param [in] scenario Scenario that was used.
      */
-    void write(const std::string& file,
-               const std::vector<std::shared_ptr<result> >& results,
-               std::shared_ptr<const device> dev,
-               std::shared_ptr<const scenario> scen) const;
-
-    /**
-     * Gets file extension.
-     */
-    const std::string& get_extension() const;
+    virtual void write(
+        const std::string& file,
+        const std::vector<std::shared_ptr<result> >& results,
+        std::shared_ptr<const device> dev,
+        std::shared_ptr<const scenario> scen) const = 0;
 };
-
-
 }
 
 #endif

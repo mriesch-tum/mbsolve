@@ -22,29 +22,87 @@
 #ifndef MBSOLVE_SOLVER_H
 #define MBSOLVE_SOLVER_H
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
 #include <vector>
 #include <device.hpp>
-#include <internal/solver_int.hpp>
+#include <result.hpp>
 #include <scenario.hpp>
 #include <types.hpp>
 
 namespace mbsolve {
 
 /**
- * This class provides the interface to create an instance of a solver
- * implementation. Each implementation is a subclass of \ref solver_int and
- * is created internally.
+ * This class provides the static interface to create an instance of a solver
+ * implementation and the base class fo each solver implementation.
  * \ingroup MBSOLVE_LIB
  */
 class solver
 {
+public:
+    typedef std::function<std::shared_ptr<solver>(
+        std::shared_ptr<const device> dev,
+        std::shared_ptr<scenario> scen)>
+        bootstrap_t;
+
 private:
-    std::shared_ptr<solver_int> m_solver;
+    static std::map<std::string, bootstrap_t> m_bootstraps;
+
+protected:
+    /**
+     * Constructs solver (only available for derived classes).
+     *
+     * \param [in] name      Name of the writer method.
+     */
+    solver(
+        const std::string& name,
+        std::shared_ptr<const device> dev,
+        std::shared_ptr<scenario> scen);
+
+    /* solver name, set during registration */
+    std::string m_name;
+
+    /* device to be simulated */
+    std::shared_ptr<const device> m_device;
+
+    /* simulation scenario */
+    std::shared_ptr<scenario> m_scenario;
+
+    /* simulation results */
+    std::vector<std::shared_ptr<result> > m_results;
 
 public:
+    /**
+     * Destructs solver.
+     */
+    virtual ~solver();
+
+    /**
+     * Gets available solvers.
+     */
+    static std::vector<std::string> get_avail_solvers();
+
+    /**
+     * Registers solver bootstrap.
+     */
+    static void register_bootstrap(const std::string& name, bootstrap_t b);
+
+    /**
+     * Provides a shortcut function to register a solver of given type T.
+     */
+    template<typename T>
+    static void register_solver(const std::string& name)
+    {
+        register_bootstrap(
+            name,
+            [](std::shared_ptr<const device> dev,
+               std::shared_ptr<scenario> scen) {
+                return std::make_shared<T>(dev, scen);
+            });
+    }
+
     /**
      * Constructs solver with a given \p name.
      *
@@ -52,10 +110,10 @@ public:
      * \param [in] dev  Specify the \ref device to be simulated.
      * \param [in] scen Specify the \ref scenario.
      */
-    solver(const std::string& name, std::shared_ptr<const device> dev,
-	   std::shared_ptr<scenario> scen);
-
-    ~solver();
+    static std::shared_ptr<solver> create_instance(
+        const std::string& name,
+        std::shared_ptr<const device> dev,
+        std::shared_ptr<scenario> scen);
 
     /**
      * Gets solver name.
@@ -65,25 +123,23 @@ public:
     /**
      * Gets scenario.
      */
-    const scenario& get_scenario() const { return m_solver->get_scenario(); }
+    const scenario& get_scenario() const;
 
     /**
      * Gets device.
      */
-    const device& get_device() const { return m_solver->get_device(); }
+    const device& get_device() const;
 
     /**
-     * Executes the solver.
+     * Executes solver (empty).
      */
-    void run() const;
+    virtual void run() const = 0;
 
     /**
      * Gets results.
      */
     const std::vector<std::shared_ptr<result> >& get_results() const;
-
 };
-
 }
 
 #endif

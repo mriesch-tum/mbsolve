@@ -26,7 +26,6 @@
  * vector<real>, vector<complex<real> >
  * real type
 
-
  */
 
 %shared_ptr(mbsolve::device)
@@ -52,6 +51,7 @@
 
 %include "../include/types.hpp"
 
+%template(vector_string) std::vector<std::string>;
 %template(vector_real) std::vector<mbsolve::real>;
 %template(vector_complex) std::vector<mbsolve::complex>;
 %template(vector_result) std::vector<std::shared_ptr<mbsolve::result> >;

@@ -1,8 +1,11 @@
 %module writerhdf5
 %{
-#include "../include/writer_hdf5.hpp"
+#include <writer_hdf5.hpp>
+%}
 
-using namespace mbsolve;
+%init
+%{
+    mbsolve::writer_hdf5_loader hdf5_load;
 %}
 
 %import(module="mbsolve.lib") "../../mbsolve-lib/include/mbsolve.hpp"
@@ -21,8 +24,3 @@ using namespace mbsolve;
     SWIG_exception(SWIG_RuntimeError, e.what());
   }
 }
-
-%shared_ptr(mbsolve::device)
-%shared_ptr(mbsolve::scenario)
-
-%include "../include/writer_hdf5.hpp"

@@ -19,50 +19,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <stdexcept>
-#include <stdlib.h>
+#include <iostream>
+#include <solver_cpu_fdtd_red.hpp>
+#include <internal/algo_lindblad_cvr_rodr.hpp>
 
-#ifndef MBSOLVE_SOLVER_CPU_COMMON
-#define MBSOLVE_SOLVER_CPU_COMMON
+namespace mbsolve {
 
-#define ALIGN 64
-
-#ifdef __INTEL_COMPILER
-__mb_on_device inline void *mb_aligned_alloc(size_t size)
-{
-    return _mm_malloc(size, ALIGN);
+template class solver_cpu_fdtd_red<2, lindblad_cvr_rodr>;
+template class solver_cpu_fdtd_red<3, lindblad_cvr_rodr>;
+template class solver_cpu_fdtd_red<6, lindblad_cvr_rodr>;
 }
 
-__mb_on_device inline void mb_aligned_free(void *ptr)
-{
-    _mm_free(ptr);
-}
-
-#define __mb_assume_aligned(ptr) __assume_aligned((ptr), ALIGN)
-
-#else
-
-inline void *mb_aligned_alloc(size_t size)
-{
-    void *addr;
-    int ret;
-
-    ret = posix_memalign(&addr, ALIGN, size);
-
-    if (ret != 0) {
-        throw std::invalid_argument("posix_memalign failed.");
-    }
-
-    return addr;
-}
-
-inline void mb_aligned_free(void *ptr)
-{
-    free(ptr);
-}
-
-#define __mb_assume_aligned(ptr) __builtin_assume_aligned(ptr, ALIGN)
-
-#endif
-
-#endif
+#include <solver_cpu_fdtd_red.tpp>

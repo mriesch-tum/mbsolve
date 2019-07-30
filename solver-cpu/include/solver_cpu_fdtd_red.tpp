@@ -19,6 +19,9 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
+#ifndef MBSOLVE_SOLVER_CPU_FDTD_RED_TPP
+#define MBSOLVE_SOLVER_CPU_FDTD_RED_TPP
+
 #define EIGEN_DONT_PARALLELIZE
 #define EIGEN_NO_MALLOC
 #define EIGEN_STRONG_INLINE inline
@@ -33,34 +36,18 @@
 
 namespace mbsolve {
 
-/* create combinations of number of levels and Lindblad algorithms */
-
-typedef solver_cpu_fdtd_red<2, lindblad_noop> fdtd_red_2lvl_noop;
-static solver_factory<fdtd_red_2lvl_noop> fr2noop("cpu-fdtd-red-noop");
-
-typedef solver_cpu_fdtd_red<2, lindblad_cvr_rodr> fdtd_red_2lvl_cvr_rodr;
-static solver_factory<fdtd_red_2lvl_cvr_rodr> fr2r("cpu-fdtd-red-2lvl-"
-                                                   "cvr-rodr");
-
-typedef solver_cpu_fdtd_red<3, lindblad_cvr_rodr> fdtd_red_3lvl_cvr_rodr;
-static solver_factory<fdtd_red_3lvl_cvr_rodr> fr3r("cpu-fdtd-red-3lvl-"
-                                                   "cvr-rodr");
-
-typedef solver_cpu_fdtd_red<6, lindblad_cvr_rodr> fdtd_red_6lvl_cvr_rodr;
-static solver_factory<fdtd_red_6lvl_cvr_rodr> fr6r("cpu-fdtd-red-6lvl-"
-                                                   "cvr-rodr");
-
 /* TODO make this flexible and useful */
 const unsigned int VEC = 4;
 
-/* solver class member functions */
-
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
-solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red
-(std::shared_ptr<const device> dev, std::shared_ptr<scenario> scen) :
-    solver_int(dev, scen),
-    m_name("cpu-fdtd-red-" + std::to_string(num_lvl) + "lvl-" +
-           density_algo<num_lvl>::name()),
+solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
+    std::shared_ptr<const device> dev,
+    std::shared_ptr<scenario> scen)
+  : solver(
+        "cpu-fdtd-red-" + std::to_string(num_lvl) + "lvl-" +
+            density_algo<num_lvl>::name(),
+        dev,
+        scen),
     OL((num_lvl == 6) ? 1 : 8)
 {
     /* TODO: scenario, device sanity check */
@@ -301,13 +288,6 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::~solver_cpu_fdtd_red()
     delete[] m_fac_c;
     delete[] m_gamma;
     delete[] m_mat_indices;
-}
-
-template<unsigned int num_lvl, template<unsigned int> class density_algo>
-const std::string&
-solver_cpu_fdtd_red<num_lvl, density_algo>::get_name() const
-{
-    return m_name;
 }
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
@@ -566,3 +546,5 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
 }
 
 }
+
+#endif

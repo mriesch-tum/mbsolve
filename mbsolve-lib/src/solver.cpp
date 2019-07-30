@@ -23,45 +23,36 @@
 
 namespace mbsolve {
 
-std::map<std::string, solver_factory_int *>
-solver_int::m_factories;
+std::map<std::string, solver::bootstrap_t> solver::m_bootstraps;
 
-solver_int::solver_int(std::shared_ptr<const device> dev,
-                       std::shared_ptr<scenario> scen) :
-    m_device(dev), m_scenario(scen)
+std::shared_ptr<solver>
+solver::create_instance(
+    const std::string& name,
+    std::shared_ptr<const device> dev,
+    std::shared_ptr<scenario> scen)
 {
-}
-
-solver_int::~solver_int()
-{
+    auto it = m_bootstraps.find(name);
+    if (it == m_bootstraps.end()) {
+        throw std::invalid_argument("Unknown solver " + name);
+    }
+    return it->second(dev, scen);
 }
 
 void
-solver_int::register_factory(const std::string& name,
-                             solver_factory_int *factory)
+solver::register_bootstrap(const std::string& name, bootstrap_t b)
 {
-    if (m_factories[name]) {
-	throw std::invalid_argument("Solver already registered.");
+    if (m_bootstraps[name]) {
+        throw std::invalid_argument("Solver already registered.");
     }
-    m_factories[name] = factory;
+    m_bootstraps[name] = b;
 }
 
-solver_factory_int *
-solver_int::find_factory(const std::string& name)
+solver::solver(
+    const std::string& name,
+    std::shared_ptr<const device> dev,
+    std::shared_ptr<scenario> scen)
+  : m_name(name), m_device(dev), m_scenario(scen)
 {
-    auto it = m_factories.find(name);
-    if (it == m_factories.end()) {
-        throw std::invalid_argument("Unknown solver " + name);
-    }
-    return it->second;
-}
-
-solver::solver(const std::string& name, std::shared_ptr<const device> dev,
-	       std::shared_ptr<scenario> scen)
-{
-    /* create solver */
-    solver_factory_int *factory = solver_int::find_factory(name);
-    m_solver = factory->create_instance(dev, scen);
 }
 
 solver::~solver()
@@ -71,19 +62,36 @@ solver::~solver()
 const std::string&
 solver::get_name() const
 {
-    return m_solver->get_name();
+    return m_name;
 }
 
-void
-solver::run() const
+const scenario&
+solver::get_scenario() const
 {
-    m_solver->run();
+    return *m_scenario;
+}
+
+const device&
+solver::get_device() const
+{
+    return *m_device;
 }
 
 const std::vector<std::shared_ptr<result> >&
 solver::get_results() const
 {
-    return m_solver->get_results();
+    return m_results;
 }
 
+std::vector<std::string>
+solver::get_avail_solvers()
+{
+    std::vector<std::string> solvers;
+
+    for (const auto& s : m_bootstraps) {
+        solvers.push_back(s.first);
+    }
+
+    return solvers;
+}
 }

@@ -32,6 +32,14 @@
 #include <cxxopts.hpp>
 #include <mbsolve.hpp>
 
+#if USE_CPU
+#include <solver_cpu_loader.hpp>
+#endif
+
+#if USE_HDF5
+#include <writer_hdf5.hpp>
+#endif
+
 static std::string device_file;
 static std::string output_file;
 static std::string scenario_file;
@@ -131,6 +139,14 @@ int main(int argc, char **argv)
     parse_args(argc, argv);
 
     try {
+#if USE_CPU
+        mbsolve::solver_cpu_loader cpu_load;
+#endif
+
+#if USE_HDF5
+        mbsolve::writer_hdf5_loader hdf5_load;
+#endif
+
         wallclock clock;
         double total_time = 0;
 
@@ -440,21 +456,24 @@ int main(int argc, char **argv)
         /* tic */
         clock.tic();
 
-        mbsolve::writer writer(writer_method);
-        mbsolve::solver solver(solver_method, dev, scen);
+        std::shared_ptr<mbsolve::writer> writer =
+            mbsolve::writer::create_instance(writer_method);
+
+        std::shared_ptr<mbsolve::solver> solver =
+            mbsolve::solver::create_instance(solver_method, dev, scen);
 
         /* toc */
         double setup_time = clock.toc();
         std::cout << "Time required (setup): " << setup_time << std::endl;
         total_time += setup_time;
 
-        std::cout << solver.get_name() << std::endl;
+        std::cout << solver->get_name() << std::endl;
 
         /* tic */
         clock.tic();
 
         /* execute solver */
-        solver.run();
+        solver->run();
 
         /* toc */
         double run_time = clock.toc();
@@ -470,7 +489,13 @@ int main(int argc, char **argv)
         clock.tic();
 
         /* write results */
-        writer.write(output_file, solver.get_results(), dev, scen);
+        std::string default_file = dev->get_name() + "_" + scen->get_name() +
+            "." + writer->get_extension();
+        writer->write(
+            output_file.empty() ? default_file : output_file,
+            solver->get_results(),
+            dev,
+            scen);
 
         /* toc */
         double write_time = clock.toc();

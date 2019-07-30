@@ -29,14 +29,17 @@ target_link_libraries(mbsolve-tool mbsolve-lib)
 
 if(MBSOLVE_CPU)
   target_link_libraries(mbsolve-tool solver-cpu)
+  target_compile_definitions(mbsolve-tool PRIVATE "-DUSE_CPU=1")
 endif(MBSOLVE_CPU)
 
 if(MBSOLVE_CUDA)
   target_link_libraries(mbsolve-tool solver-cuda)
+  target_compile_definitions(mbsolve-tool PRIVATE "-DUSE_CUDA=1")
 endif(MBSOLVE_CUDA)
 
 if(MBSOLVE_HDF5)
   target_link_libraries(mbsolve-tool writer-hdf5)
+  target_compile_definitions(mbsolve-tool PRIVATE "-DUSE_HDF5=1")
 endif(MBSOLVE_HDF5)
 
 install(TARGETS mbsolve-tool RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

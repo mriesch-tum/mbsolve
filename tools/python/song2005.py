@@ -66,7 +66,7 @@ sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 3.5471e9,
                              3.8118e14, 17.248, 1.76/5e-15, -math.pi/2))
 
 # run solver
-sol = mb.solver("cpu-fdtd-red-3lvl-cvr-rodr", dev, sce)
+sol = mb.solver.create_instance("cpu-fdtd-red-3lvl-cvr-rodr", dev, sce)
 print('Solver ' + sol.get_name() + ' started')
 tic = time.time()
 sol.run()
@@ -74,7 +74,7 @@ toc = time.time()
 print('Solver ' + sol.get_name() + ' finished in ' + str(toc - tic) + ' sec')
 
 # write results
-wri = mb.writer("hdf5")
+wri = mb.writer.create_instance("hdf5")
 outfile = dev.get_name() + "_" + sce.get_name() + "." + wri.get_extension()
 results = sol.get_results()
 wri.write(outfile, sol.get_results(), dev, sce)
