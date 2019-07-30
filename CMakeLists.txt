@@ -25,7 +25,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # specify components
-option(WITH_MATLAB "with(out) MATLAB writer" OFF)
 option(WITH_HDF5 "with(out) HDF5 writer" ON)
 option(WITH_CPU "with(out) CPU solver" ON)
 option(WITH_CUDA "with(out) CUDA solver" OFF)
@@ -48,15 +47,6 @@ endif(WITH_PYTHON)
 
 # mbsolve library
 add_subdirectory(mbsolve-lib)
-
-# MATLAB support?
-if(WITH_MATLAB)
-  find_package(MATLAB)
-  if(MATLAB_FOUND)
-    set(MBSOLVE_MATLAB TRUE)
-    add_subdirectory(writer-matlab)
-  endif(MATLAB_FOUND)
-endif(WITH_MATLAB)
 
 # HDF support?
 if(WITH_HDF5)

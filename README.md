@@ -28,8 +28,6 @@ in this subproject.
 
 - writer-hdf5: Writes the results into the HDF5 format.
 
-- writer-matlab: Writes the results into the MATLAB file format (deprecated).
-
 <img src="doc/svg/mbsolve_overview.png" alt="mbsolve overview" width="500"/>
 
 All libraries feature a Python interface and can be used conveniently from
@@ -101,7 +99,6 @@ minimum version given in brackets:
 - CMake (3.6)
 - Eigen library (3.3.4)
 - Python (2.7) and SWIG (2.0) for Python support
-- MATLAB (any recent version) for matlab-writer
 - CUDA (7.0) for solver-cuda
 - OpenMP (any recent version) for solver-cpu
 - Boost (any recent version) for mbsolve-tool

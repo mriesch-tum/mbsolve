@@ -17,10 +17,6 @@ if(MBSOLVE_CUDA)
   target_link_libraries(mbsolve-tool solver-cuda)
 endif(MBSOLVE_CUDA)
 
-if(MBSOLVE_MATLAB)
-  target_link_libraries(mbsolve-tool writer-matlab)
-endif(MBSOLVE_MATLAB)
-
 if(MBSOLVE_HDF5)
   target_link_libraries(mbsolve-tool writer-hdf5)
 endif(MBSOLVE_HDF5)

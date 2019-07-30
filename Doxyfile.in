@@ -27,7 +27,6 @@ INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/solver-cuda/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-tool/src/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/writer-hdf5/include/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/writer-matlab/include/"
+        "@CMAKE_CURRENT_SOURCE_DIR@/writer-hdf5/include/"
 
 EXTRA_PACKAGES = amsmath
