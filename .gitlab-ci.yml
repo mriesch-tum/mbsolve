@@ -1,0 +1,51 @@
+stages:
+ - build
+ - test
+
+.build_image_debian_docker: &build_image_debian_docker_definition
+  tags:
+   - docker
+   - linux
+  before_script:
+   - ./tools/ci/setup_buildenv_debian.sh
+
+.runtime_image_debian_docker: &runtime_image_debian_docker_definition
+  tags:
+   - docker
+   - linux
+  before_script:
+   - ./tools/ci/setup_runtime_debian.sh
+
+.build_template_make: &build_definition_make
+  stage: build
+  script:
+   - mkdir -p build
+   - cd build
+   - cmake ..
+   - make -j 4
+  artifacts:
+    paths:
+     - "build/"
+
+.test_template_minimal: &test_definition_minimal
+  stage: test
+  script:
+   - cd build
+   - mbsolve-tool/mbsolve-tool -d ziolkowski1995
+       -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
+   - python3 ../tools/python/ziolkowski1995.py
+  artifacts:
+    paths:
+     - "build/"
+
+build-debian-8:
+  image: debian:8
+  <<: *build_image_debian_docker_definition
+  <<: *build_definition_make
+
+test-debian-8:
+  image: debian:8
+  <<: *runtime_image_debian_docker_definition
+  dependencies:
+   - build-debian-8
+  <<: *test_definition_minimal
