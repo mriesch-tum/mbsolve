@@ -38,11 +38,12 @@ find_package(Eigen3 3.3.4 REQUIRED NO_MODULE)
 # Python interface
 if(WITH_PYTHON)
   find_package(SWIG 2.0)
+  find_package(PythonInterp)
   find_package(PythonLibs)
-  if(SWIG_FOUND AND PythonLibs_FOUND)
+  if(SWIG_FOUND AND PythonLibs_FOUND AND PythonInterp_FOUND)
     include(${SWIG_USE_FILE})
     set(MBSOLVE_PYTHON TRUE)
-  endif(SWIG_FOUND AND PythonLibs_FOUND)
+  endif(SWIG_FOUND AND PythonLibs_FOUND AND PythonInterp_FOUND)
 endif(WITH_PYTHON)
 
 # mbsolve library
