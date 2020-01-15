@@ -17,6 +17,8 @@ if(MBSOLVE_PYTHON)
   swig_add_module(pywriterhdf5 python swig/pywriterhdf5.i)
   set_property(TARGET ${SWIG_MODULE_pywriterhdf5_REAL_NAME} PROPERTY
     CXX_STANDARD 11)
-  swig_link_libraries(pywriterhdf5 ${PYTHON_LIBRARIES} mbsolve-lib
-    writer-hdf5)
+  swig_link_libraries(pywriterhdf5 mbsolve-lib writer-hdf5)
+  if(WIN32)
+    swig_link_libraries(pywriterhdf5 ${PYTHON_LIBRARIES})
+  endif(WIN32)
 endif(MBSOLVE_PYTHON)

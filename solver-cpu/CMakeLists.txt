@@ -49,6 +49,8 @@ if(MBSOLVE_PYTHON)
   swig_add_module(pysolvercpu python swig/pysolvercpu.i)
   set_property(TARGET ${SWIG_MODULE_pysolvercpu_REAL_NAME} PROPERTY
     CXX_STANDARD 11)
-  swig_link_libraries(pysolvercpu ${PYTHON_LIBRARIES} mbsolve-lib
-    solver-cpu)
+  swig_link_libraries(pysolvercpu mbsolve-lib solver-cpu)
+  if(WIN32)
+    swig_link_libraries(pysolvercpu ${PYTHON_LIBRARIES})
+  endif(WIN32)
 endif(MBSOLVE_PYTHON)
