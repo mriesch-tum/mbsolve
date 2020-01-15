@@ -31,7 +31,6 @@ import pymbsolvelib as mb
 import pysolvercpu
 import pywriterhdf5
 
-import numpy as np
 import math
 import time
 
