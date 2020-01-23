@@ -1,3 +1,23 @@
+#
+# mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
+#
+# Copyright (c) 2016, Computational Photonics Group, Technical University of
+# Munich.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
+
 cmake_minimum_required(VERSION 3.6)
 
 # project information
@@ -13,10 +33,19 @@ set(VERSION_CORE "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 set(VERSION_FULL "${VERSION_CORE}${VERSION_PRRLS}")
 project(${PROJECT} VERSION ${VERSION_CORE})
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
+# is python installation prefix set?
+if(DEFINED ENV{PREFIX})
+  set(PREFIX_SETUPPY "--prefix $ENV{PREFIX}")
+endif()
+
+# require CMake GNUInstallDirs package
+include(GNUInstallDirs)
 
 # CXX_STANDARD is required
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
+# export shared library symbols on Windows
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # specify architecture
 set(ARCH "HOST" CACHE STRING "specify architecture")
@@ -49,12 +78,13 @@ find_package(Eigen3 3.3.4 REQUIRED NO_MODULE)
 
 # Python interface (enabled only when shared libraries are build)
 if(WITH_PYTHON AND BUILD_SHARED_LIBS)
-  find_package(SWIG 2.0)
-  find_package(PythonInterp)
+  find_package(SWIG 2.0.12)
   find_package(PythonLibs)
+  find_package(PythonInterp)
   if(SWIG_FOUND AND PythonLibs_FOUND AND PythonInterp_FOUND)
     include(${SWIG_USE_FILE})
     set(MBSOLVE_PYTHON TRUE)
+    set(PYTHON_IFACE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}")
   endif(SWIG_FOUND AND PythonLibs_FOUND AND PythonInterp_FOUND)
 endif(WITH_PYTHON AND BUILD_SHARED_LIBS)
 
@@ -108,3 +138,19 @@ if(WITH_DOXYGEN)
       COMMENT "Generating API documentation with Doxygen" VERBATIM)
   endif(DOXYGEN_FOUND)
 endif(WITH_DOXYGEN)
+
+# install Python interface
+if(MBSOLVE_PYTHON)
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/python/setup.py.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/setup.py.inc")
+  file(GENERATE
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/setup.py"
+    INPUT "${CMAKE_CURRENT_BINARY_DIR}/setup.py.inc")
+  file(GENERATE
+    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}/__init__.py"
+    INPUT "${CMAKE_CURRENT_SOURCE_DIR}/python/__init__.py.in")
+  install(CODE
+    "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m pip install . \
+     ${PREFIX_SETUPPY} \
+     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+endif(MBSOLVE_PYTHON)

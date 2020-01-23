@@ -33,7 +33,7 @@ stages:
    - cd build
    - mbsolve-tool/mbsolve-tool -d ziolkowski1995
        -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
-   - python3 ../tools/python/ziolkowski1995.py
+   - PYTHONPATH=.:$PYTHONPATH python3 ../tools/python/ziolkowski1995.py
   artifacts:
     paths:
      - "build/"

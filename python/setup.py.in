@@ -18,25 +18,34 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-cmake_minimum_required(VERSION 3.6)
-project(mbsolve-tool)
+from setuptools import setup, dist
+from setuptools.command.install import install
 
-add_executable(mbsolve-tool src/mbsolve-tool.cpp)
-set_property(TARGET mbsolve-tool PROPERTY CXX_STANDARD 11)
-target_include_directories(mbsolve-tool PRIVATE ${mbsolve-lib_INCLUDE_DIR})
-target_link_libraries(mbsolve-tool cxxopts::cxxopts)
-target_link_libraries(mbsolve-tool mbsolve-lib)
+class BinaryDistribution(dist.Distribution):
+    def has_ext_modules(foo):
+        return True
 
-if(MBSOLVE_CPU)
-  target_link_libraries(mbsolve-tool solver-cpu)
-endif(MBSOLVE_CPU)
+setup(
+    # package name
+    name = '${PROJECT}',
 
-if(MBSOLVE_CUDA)
-  target_link_libraries(mbsolve-tool solver-cuda)
-endif(MBSOLVE_CUDA)
+    # package contents
+    packages = ['${PROJECT}'],
 
-if(MBSOLVE_HDF5)
-  target_link_libraries(mbsolve-tool writer-hdf5)
-endif(MBSOLVE_HDF5)
+    # make sure the shared library is included
+    package_data = {
+        '${PROJECT}': [
+            '$<TARGET_FILE_NAME:${SWIG_MODULE_lib_REAL_NAME}>',
+            '$<TARGET_FILE_NAME:${SWIG_MODULE_solvercpu_REAL_NAME}>',
+            '$<TARGET_FILE_NAME:${SWIG_MODULE_writerhdf5_REAL_NAME}>'
+        ]
+    },
+    include_package_data = True,
+    distclass = BinaryDistribution,
 
-install(TARGETS mbsolve-tool RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    # package information
+    version = '${VERSION_CORE}',
+    url = '${PROJECT_URL}',
+    author = '${PROJECT_AUTHOR}',
+    author_email = '${PROJECT_EMAIL}'
+)

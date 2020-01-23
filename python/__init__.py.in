@@ -17,26 +17,3 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
-
-cmake_minimum_required(VERSION 3.6)
-project(mbsolve-tool)
-
-add_executable(mbsolve-tool src/mbsolve-tool.cpp)
-set_property(TARGET mbsolve-tool PROPERTY CXX_STANDARD 11)
-target_include_directories(mbsolve-tool PRIVATE ${mbsolve-lib_INCLUDE_DIR})
-target_link_libraries(mbsolve-tool cxxopts::cxxopts)
-target_link_libraries(mbsolve-tool mbsolve-lib)
-
-if(MBSOLVE_CPU)
-  target_link_libraries(mbsolve-tool solver-cpu)
-endif(MBSOLVE_CPU)
-
-if(MBSOLVE_CUDA)
-  target_link_libraries(mbsolve-tool solver-cuda)
-endif(MBSOLVE_CUDA)
-
-if(MBSOLVE_HDF5)
-  target_link_libraries(mbsolve-tool writer-hdf5)
-endif(MBSOLVE_HDF5)
-
-install(TARGETS mbsolve-tool RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

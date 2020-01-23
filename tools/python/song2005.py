@@ -3,7 +3,7 @@
 
 """ song2005.py: Runs song2005 three-level V-type setup."""
 
-# mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+# mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
 #
 # Copyright (c) 2016, Computational Photonics Group, Technical University
 # of Munich.
@@ -22,14 +22,9 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-import sys
-sys.path.append('./mbsolve-lib/')
-sys.path.append('./solver-cpu/')
-sys.path.append('./writer-hdf5/')
-
-import pymbsolvelib as mb
-import pysolvercpu
-import pywriterhdf5
+import mbsolve.lib as mb
+import mbsolve.solvercpu
+import mbsolve.writerhdf5
 
 import math
 import time

@@ -1,4 +1,4 @@
-%module pymbsolvelib
+%module lib
 %{
 #include "../include/mbsolve.hpp"
 %}

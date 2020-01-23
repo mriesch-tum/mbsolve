@@ -2,7 +2,8 @@
 
 # Debian packages
 apt update && apt install --no-install-recommends -y ca-certificates \
-  doxygen g++ git libhdf5-dev make python3-dev python3-setuptools swig wget
+  doxygen g++ git libhdf5-dev make python3-dev python3-pip \
+  python3-setuptools swig wget
 
 # CMake
 apt install --no-install-recommends -y lsb-release

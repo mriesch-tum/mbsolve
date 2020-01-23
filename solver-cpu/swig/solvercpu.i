@@ -1,11 +1,8 @@
-%module pywriterhdf5
+%module solvercpu
 %{
-#include "../include/writer_hdf5.hpp"
-
-using namespace mbsolve;
 %}
 
-%import(module="pymbsolvelib") "../../mbsolve-lib/include/mbsolve.hpp"
+%import(module="mbsolve.lib") "../../mbsolve-lib/include/mbsolve.hpp"
 
 %include "exception.i"
 %include "std_except.i"
@@ -21,8 +18,3 @@ using namespace mbsolve;
     SWIG_exception(SWIG_RuntimeError, e.what());
   }
 }
-
-%shared_ptr(mbsolve::device)
-%shared_ptr(mbsolve::scenario)
-
-%include "../include/writer_hdf5.hpp"
