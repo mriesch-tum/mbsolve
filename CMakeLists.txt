@@ -1,8 +1,17 @@
 cmake_minimum_required(VERSION 3.6)
-project(mbsolve)
 
-set(MBSOLVE_VERSION_MAJOR 0)
-set(MBSOLVE_VERSION_MINOR 2)
+# project information
+set(PROJECT "mbsolve")
+set(PROJECT_AUTHOR "Michael Riesch")
+set(PROJECT_EMAIL "michael.riesch@tum.de")
+set(PROJECT_URL "https://www.github.com/mriesch-tum/mbsolve")
+set(VERSION_MAJOR 0)
+set(VERSION_MINOR 3)
+set(VERSION_PATCH 0)
+set(VERSION_PRRLS "rc1")
+set(VERSION_CORE "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set(VERSION_FULL "${VERSION_CORE}${VERSION_PRRLS}")
+project(${PROJECT} VERSION ${VERSION_CORE})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules")
 
