@@ -91,3 +91,41 @@ format-cpp:
     paths:
      - "build/format_check_revisionlist.txt"
   allow_failure: true
+
+build-debian-9:
+  image: debian:9
+  <<: *build_image_debian_docker_definition
+  <<: *build_definition_make
+
+test-cpp-examples-debian-9:
+  image: debian:9
+  <<: *runtime_image_debian_docker_definition
+  dependencies:
+   - build-debian-9
+  <<: *test_definition_cpp_examples
+
+test-py-examples-debian-9:
+  image: debian:9
+  <<: *runtime_image_debian_docker_definition
+  dependencies:
+   - build-debian-9
+  <<: *test_definition_python_examples
+
+build-debian-10:
+  image: debian:10
+  <<: *build_image_debian_docker_definition
+  <<: *build_definition_make
+
+test-cpp-examples-debian-10:
+  image: debian:10
+  <<: *runtime_image_debian_docker_definition
+  dependencies:
+   - build-debian-10
+  <<: *test_definition_cpp_examples
+
+test-py-examples-debian-10:
+  image: debian:10
+  <<: *runtime_image_debian_docker_definition
+  dependencies:
+   - build-debian-10
+  <<: *test_definition_python_examples

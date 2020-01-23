@@ -1,13 +1,21 @@
 #!/bin/bash
 
-# Debian packages
+# packages from distribution repositories
 apt update && apt install --no-install-recommends -y ca-certificates \
-  clang-format-6.0 doxygen g++ git libhdf5-dev make python3-dev python3-pip \
-  python3-setuptools swig wget
+  doxygen g++ git libhdf5-dev make python3-dev python3-pip \
+  python3-setuptools python3-wheel swig wget
+
+# distribution specialization
+apt install --no-install-recommends -y lsb-release
+codename=`lsb_release -cs`
+
+# clang-format
+if [ "$codename" == "jessie" ]; then
+    apt-get install --no-install-recommends -y clang-format-6.0
+fi
 
 # CMake
-apt install --no-install-recommends -y lsb-release
-if [ "`lsb_release -cs`" == "jessie" ]; then
+if [ "$codename" == "jessie" ] || [ "$codename" == "xenial" ]; then
     # Debian jessie comes with CMake 3.0, we need >= 3.6
     wget https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2-Linux-x86_64.sh
     chmod +x cmake-3.16.2-Linux-x86_64.sh
