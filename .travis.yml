@@ -1,0 +1,132 @@
+notifications:
+  email: false
+
+language: cpp
+
+jobs:
+  include:
+   - os: linux
+     dist: bionic
+     addons:
+       apt:
+         packages:
+          - ca-certificates
+          - cmake
+          - clang-format-6.0
+          - doxygen
+          - g++
+          - gcovr
+          - git
+          - graphviz
+          - lcov
+          - libhdf5-dev
+          - make
+          - python3-dev
+          - python3-pip
+          - python3-setuptools
+          - swig
+         update: true
+     env:
+      - LD_LIBRARY_PATH=/usr/local/lib/
+     install:
+      - sudo python -m pip install coverxygen
+      - git clone https://github.com/catchorg/Catch2.git && cd Catch2 &&
+          cmake -Bbuild -H. -DBUILD_TESTING=OFF &&
+          sudo cmake --build build/ --target install && cd ..
+      - git clone https://github.com/jarro2783/cxxopts.git && cd cxxopts &&
+          cmake -Bbuild -H. -DCXXOPTS_BUILD_EXAMPLES=OFF
+            -DCXXOPTS_BUILD_TESTS=OFF &&
+          sudo cmake --build build/ --target install && cd ..
+      - git clone https://gitlab.com/libeigen/eigen.git && cd eigen &&
+          git checkout 3.3.7 && cmake -Bbuild -H. -DBUILD_TESTING=OFF &&
+          sudo cmake --build build/ --target install && cd ..
+     script:
+      - mkdir -p build
+      - cd build
+      - cmake ..
+      - cmake --build .
+      - cmake --build . --target doc
+      - sudo cmake --build . --target install
+      - cd ..
+      - mbsolve-tool -d ziolkowski1995 -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
+          -e 100e-15
+      - mbsolve-tool -d song2005 -m cpu-fdtd-red-3lvl-cvr-rodr -w hdf5
+          -e 16e-15
+      - mbsolve-tool -d marskar2011 -m cpu-fdtd-red-6lvl-cvr-rodr -w hdf5
+          -e 40e-15
+      - python tools/python/ziolkowski1995.py
+      - python tools/python/song2005.py
+     deploy:
+       provider: pages
+       skip_cleanup: true
+       local_dir: build/html
+       github_token: $GITHUB_TOKEN
+       keep_history: true
+       on:
+         branch: master
+         tags: true
+   - os: osx
+     env:
+      - CC=/usr/local/opt/llvm/bin/clang
+      - CXX=/usr/local/opt/llvm/bin/clang++
+      - PATH=/usr/local/opt/llvm/bin:$PATH
+     addons:
+       homebrew:
+         packages:
+          - catch2
+          - cmake
+          - cxxopts
+          - doxygen
+          - eigen
+          - llvm
+          - libomp
+          - git
+          - hdf5
+          - make
+          - python
+          - swig
+     script:
+      - mkdir -p build
+      - cd build
+      - cmake ..
+      - cmake --build .
+      - cmake --build . --target doc
+      - sudo cmake --build . --target install
+      - cd ..
+      - mbsolve-tool -d ziolkowski1995 -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
+          -e 100e-15
+      - mbsolve-tool -d song2005 -m cpu-fdtd-red-3lvl-cvr-rodr -w hdf5
+          -e 16e-15
+      - mbsolve-tool -d marskar2011 -m cpu-fdtd-red-6lvl-cvr-rodr -w hdf5
+          -e 40e-15
+      - python tools/python/ziolkowski1995.py
+      - python tools/python/song2005.py
+   - os: windows
+     env:
+      - LIBRARY_PREFIX="C:/Tools/miniconda3/envs/mbsolve/Library"
+      - PATH="/c/Tools/miniconda3:/c/Tools/miniconda3/Scripts:$PATH"
+     install:
+      - choco install openssl.light
+      - choco install miniconda3
+      - conda create -y -n mbsolve
+      - source activate mbsolve
+      - conda install -y -c conda-forge catch2 cmake cxxopts doxygen eigen
+          hdf5 ninja swig
+     script:
+      - mkdir -p build
+      - cd build
+      - cmake -G "Visual Studio 15 2017" -A x64
+          -DCMAKE_PREFIX_PATH="${LIBRARY_PREFIX}"
+          -DCMAKE_INSTALL_PREFIX="${LIBRARY_PREFIX}"
+          -DCMAKE_BUILD_TYPE=Release ..
+      - cmake --build . --config Release
+      - cmake --build . --config Release --target install
+      - cd ..
+      - mbsolve-tool -d ziolkowski1995 -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
+          -e 100e-15
+      - mbsolve-tool -d song2005 -m cpu-fdtd-red-3lvl-cvr-rodr -w hdf5
+          -e 16e-15
+      - mbsolve-tool -d marskar2011 -m cpu-fdtd-red-6lvl-cvr-rodr -w hdf5
+          -e 40e-15
+      - python tools/python/ziolkowski1995.py
+      - python tools/python/song2005.py
