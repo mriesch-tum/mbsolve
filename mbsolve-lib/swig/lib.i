@@ -20,22 +20,12 @@
   }
 %}
 
-/* TODO:
- *
- * bad_alloc?
- * vector<real>, vector<complex<real> >
- * real type
-
- */
-
 %shared_ptr(mbsolve::device)
 %shared_ptr(mbsolve::qm_operator)
 %shared_ptr(mbsolve::qm_superop)
 %shared_ptr(mbsolve::qm_lindblad_relaxation)
 %shared_ptr(mbsolve::qm_description)
 %shared_ptr(mbsolve::qm_desc_2lvl)
-%shared_ptr(mbsolve::qm_desc_3lvl)
-%shared_ptr(mbsolve::qm_desc_nlvl)
 %shared_ptr(mbsolve::material)
 %shared_ptr(mbsolve::record)
 %shared_ptr(mbsolve::region)
@@ -52,10 +42,13 @@
 %include "../include/types.hpp"
 
 %template(vector_string) std::vector<std::string>;
-%template(vector_real) std::vector<mbsolve::real>;
-%template(vector_complex) std::vector<mbsolve::complex>;
+%template(vector_real_d) std::vector<double>;
+%template(vector_real_f) std::vector<float>;
+%template(vector_complex_d) std::vector<std::complex<double> >;
+%template(vector_complex_f) std::vector<std::complex<float> >;
 %template(vector_result) std::vector<std::shared_ptr<mbsolve::result> >;
-%template(matrix_real) std::vector<std::vector<mbsolve::real> >;
+%template(matrix_real_d) std::vector<std::vector<double> >;
+%template(matrix_real_f) std::vector<std::vector<float> >;
 
 %include "../include/qm_description.hpp"
 %include "../include/material.hpp"

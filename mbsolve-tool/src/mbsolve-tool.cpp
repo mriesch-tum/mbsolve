@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 
             mbsolve::qm_operator H(energies);
 
-            std::vector<mbsolve::complex> dipoles = {
+            std::vector<std::complex<mbsolve::real> > dipoles = {
                 mbsolve::E0 * 9.2374e-11,
                 mbsolve::E0 * 9.2374e-11 * sqrt(2),
                 0
@@ -360,7 +360,7 @@ int main(int argc, char **argv)
             mbsolve::qm_operator H(energies);
 
             mbsolve::real dipole = 1e-29;
-            std::vector<mbsolve::complex> dipoles = {
+            std::vector<std::complex<mbsolve::real> > dipoles = {
                 dipole,
                 0, dipole,
                 0, 0, dipole,

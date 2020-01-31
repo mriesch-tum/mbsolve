@@ -46,7 +46,7 @@ private:
     std::vector<real> m_main_diag;
 
     /* off-diagonal entries */
-    std::vector<complex> m_off_diag;
+    std::vector<std::complex<real> > m_off_diag;
 
 public:
     /**
@@ -54,8 +54,8 @@ public:
      */
     explicit qm_operator(const std::vector<real>& main_diagonal,
                          /**< [in] Main diagonal entries (real) */
-                         const std::vector<complex>& off_diagonal =
-                         std::vector<complex>()
+                         const std::vector<std::complex<real> >& off_diagonal =
+                         std::vector<std::complex<real> >()
                          /**< [in] Top half of the off-diagonal entries
                           *   (complex), arranged in column-major ordering */
                          ) :
@@ -88,7 +88,7 @@ public:
     /**
      * Gets off-diagonal entries (top half, column major ordering)
      */
-    const std::vector<complex>& get_off_diagonal() const
+    const std::vector<std::complex<real> >& get_off_diagonal() const
     {
         return m_off_diag;
     }
@@ -244,7 +244,7 @@ public:
             populations[m] = pop;
         }
 
-        std::vector<complex> coherences = arg.get_off_diagonal();
+        std::vector<std::complex<real> > coherences = arg.get_off_diagonal();
         for (int i = 0; i < coherences.size(); i++) {
             coherences[i] *= m_dephasing[i];
         }

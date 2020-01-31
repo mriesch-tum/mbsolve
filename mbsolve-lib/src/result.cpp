@@ -24,15 +24,15 @@
 
 namespace mbsolve {
 
-std::vector<complex>
+std::vector<std::complex<real> >
 result::get_data_complex() const {
-    std::vector<complex> res;
+    std::vector<std::complex<real> > res;
 
     res.reserve(m_rows * m_cols);
 
     std::transform(m_real.begin(), m_real.end(), m_imag.begin(),
                    std::back_inserter(res), [](double r, double i) {
-                       return complex(r, i);
+                       return std::complex<real>(r, i);
                    });
 
     return res;

@@ -38,7 +38,7 @@ private:
     const unsigned int m_num_adj;
 
     typedef Eigen::Matrix<real, Eigen::Dynamic, Eigen::Dynamic> real_matrix_t;
-    typedef Eigen::Matrix<complex, Eigen::Dynamic, Eigen::Dynamic>
+    typedef Eigen::Matrix<std::complex<real>, Eigen::Dynamic, Eigen::Dynamic>
     complex_matrix_t;
 
     real_matrix_t m_hamiltonian;
@@ -70,8 +70,8 @@ private:
             for (int j = 0; j < k; j++) {
                 complex_matrix_t g =
                     complex_matrix_t::Zero(m_num_levels, m_num_levels);
-                g(j, k) = complex(0, -1);
-                g(k, j) = complex(0, +1);
+                g(j, k) = std::complex<real>(0, -1);
+                g(k, j) = std::complex<real>(0, +1);
                 m_generators.push_back(g);
             }
         }
@@ -139,7 +139,7 @@ private:
 
         /* TODO: hermiticity check? */
         /* off-diagonal elements */
-        std::vector<complex> off_diag;
+        std::vector<std::complex<real> > off_diag;
         for (int i = 1; i < m_num_levels; i++) {
             for (int j = 0; j < i; j++) {
                 off_diag.push_back(mat(j, i));
@@ -161,7 +161,8 @@ private:
                 complex_matrix_t result = op_mat *
                     (m_generators[i] * m_generators[j] -
                      m_generators[j] * m_generators[i]);
-                complex c = complex(0, 1) * 0.5 * result.trace();
+                std::complex<real> c =
+                    std::complex<real>(0, 1) * 0.5 * result.trace();
                 ret(i, j) = c.real() * 1.0/HBAR;
             }
         }
@@ -193,7 +194,7 @@ private:
                 qm_operator b = (*op)(a);
                 complex_matrix_t c = convert_qm_operator(b);
                 complex_matrix_t d = c * m_generators[i];
-                complex e = 0.5 * d.trace();
+                std::complex<real> e = 0.5 * d.trace();
                 ret(i, j) = e.real();
             }
         }

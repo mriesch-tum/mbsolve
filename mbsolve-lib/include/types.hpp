@@ -37,12 +37,6 @@ typedef double real;
 //typedef float real;
 
 /**
- * May be set to single or double precision.
- * \ingroup MBSOLVE_LIB
- */
-typedef std::complex<real> complex;
-
-/**
  * Reduced Planck's constant.
  * \ingroup MBSOLVE_LIB
  */

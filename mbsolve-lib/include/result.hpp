@@ -105,7 +105,7 @@ public:
      */
     const std::vector<real>& get_data_imag() const { return m_imag; }
 
-    std::vector<complex> get_data_complex() const;
+    std::vector<std::complex<real> > get_data_complex() const;
 
 };
 
