@@ -133,7 +133,7 @@ private:
 
     real calc_value(real t) const
     {
-        return sin(2 * M_PI * m_freq * t + m_phase);
+        return sin(2 * PI * m_freq * t + m_phase);
     }
 
 public:
@@ -190,7 +190,7 @@ public:
     real calc_value(real t) const
     {
         return 1 / std::cosh(m_beta * t - m_phase) *
-            sin(2 * M_PI * m_freq * t - m_phase_sin);
+            sin(2 * PI * m_freq * t - m_phase_sin);
     }
 };
 
@@ -213,7 +213,7 @@ public:
     real calc_value(real t) const
     {
         return 1/std::cosh(m_beta * (t - m_phase)) *
-            sin(2 * M_PI * m_freq * (t - m_phase - 1/(m_freq * 4)));
+            sin(2 * PI * m_freq * (t - m_phase - 1/(m_freq * 4)));
     }
 
 };
@@ -256,7 +256,7 @@ public:
     real calc_value(real t) const
     {
         return exp(-(t - m_phase) * (t - m_phase) / (m_tau * m_tau)) *
-            sin(2 * M_PI * m_freq * t);
+            sin(2 * PI * m_freq * t);
     }
 };
 
