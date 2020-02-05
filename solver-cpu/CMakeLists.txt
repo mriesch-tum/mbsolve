@@ -78,9 +78,11 @@ if(MBSOLVE_PYTHON)
     PARENT_SCOPE)
   target_link_libraries(${SWIG_MODULE_solvercpu_REAL_NAME} PRIVATE
     mbsolve-lib solver-cpu)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND APPLE)
-    target_link_libraries(${SWIG_MODULE_solvercpu_REAL_NAME} PRIVATE
-      "-undefined dynamic_lookup")
+  if(APPLE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_link_libraries(${SWIG_MODULE_solvercpu_REAL_NAME} PRIVATE
+        "-undefined dynamic_lookup")
+    endif()
   endif()
   if(WIN32)
     target_link_libraries(${SWIG_MODULE_solvercpu_REAL_NAME} PRIVATE

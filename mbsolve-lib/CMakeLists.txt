@@ -46,9 +46,11 @@ if(MBSOLVE_PYTHON)
     LIBRARY_OUTPUT_DIRECTORY ${PYTHON_IFACE_PATH})
   set(SWIG_MODULE_lib_REAL_NAME ${SWIG_MODULE_lib_REAL_NAME} PARENT_SCOPE)
   target_link_libraries(${SWIG_MODULE_lib_REAL_NAME} PRIVATE mbsolve-lib)
-  if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND APPLE)
-    target_link_libraries(${SWIG_MODULE_lib_REAL_NAME} PRIVATE
-      "-undefined dynamic_lookup")
+  if(APPLE)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      target_link_libraries(${SWIG_MODULE_lib_REAL_NAME} PRIVATE
+        "-undefined dynamic_lookup")
+    endif()
   endif()
   if(WIN32)
     target_link_libraries(${SWIG_MODULE_lib_REAL_NAME} PRIVATE
