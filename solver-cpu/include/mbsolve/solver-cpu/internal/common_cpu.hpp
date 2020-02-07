@@ -44,6 +44,24 @@ mb_aligned_free(void* ptr)
 
 #else
 
+#ifdef _WIN32
+
+inline void*
+mb_aligned_alloc(size_t size)
+{
+    return _aligned_malloc(size, ALIGN);
+}
+
+inline void
+mb_aligned_free(void* ptr)
+{
+    _aligned_free(ptr);
+}
+
+#define __mb_assume_aligned(ptr)
+
+#else
+
 inline void*
 mb_aligned_alloc(size_t size)
 {
@@ -66,6 +84,8 @@ mb_aligned_free(void* ptr)
 }
 
 #define __mb_assume_aligned(ptr) __builtin_assume_aligned(ptr, ALIGN)
+
+#endif
 
 #endif
 
