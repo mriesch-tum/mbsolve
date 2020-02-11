@@ -34,10 +34,7 @@ setup(
 
     # make sure the shared library is included
     package_data = {
-        '${PROJECT}': [
-            '$<TARGET_FILE_NAME:${SWIG_MODULE_lib_REAL_NAME}>',
-            '$<TARGET_FILE_NAME:${SWIG_MODULE_solvercpu_REAL_NAME}>',
-            '$<TARGET_FILE_NAME:${SWIG_MODULE_writerhdf5_REAL_NAME}>'
+        '${PROJECT}': [ ${PYTHON_MOD_STRING}
         ]
     },
     include_package_data = True,
