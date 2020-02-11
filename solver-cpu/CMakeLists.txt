@@ -59,15 +59,15 @@ else()
 endif()
 
 target_compile_options(solver-cpu PRIVATE ${OpenMP_CXX_FLAGS})
-target_include_directories(solver-cpu PRIVATE ${mbsolve-lib_INCLUDE_DIR})
-target_include_directories(solver-cpu PUBLIC "include")
-target_link_libraries(solver-cpu Eigen3::Eigen)
-target_link_libraries(solver-cpu ${OpenMP_CXX_FLAGS})
-target_link_libraries(solver-cpu mbsolve-lib)
+target_include_directories(solver-cpu PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(solver-cpu
+  PRIVATE Eigen3::Eigen ${OpenMP_CXX_FLAGS}
+  PUBLIC mbsolve-lib)
 
 if(MBSOLVE_PYTHON)
-  include_directories("include" ${PYTHON_INCLUDE_DIRS}
-    ${mbsolve-lib_INCLUDE_DIR})
+  include_directories(${PYTHON_INCLUDE_DIRS})
   set_source_files_properties(swig/solvercpu.i PROPERTIES CPLUSPLUS ON)
   set(CMAKE_SWIG_OUTDIR ${PYTHON_IFACE_PATH})
   swig_add_module(solvercpu python swig/solvercpu.i)
@@ -98,9 +98,15 @@ endif(MBSOLVE_PYTHON)
 
 # install library
 install(TARGETS solver-cpu
+  EXPORT ${PROJECT}-solver-cpu-targets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# install CMake targets
+install(EXPORT ${PROJECT}-solver-cpu-targets
+  NAMESPACE ${PROJECT}::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
 
 # install public header files
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

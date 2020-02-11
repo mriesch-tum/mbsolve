@@ -34,7 +34,9 @@ set_target_properties(mbsolve-lib PROPERTIES
   CXX_STANDARD 11
   VERSION ${VERSION_CORE}
   SOVERSION ${VERSION_MAJOR})
-target_include_directories(mbsolve-lib PUBLIC "include")
+target_include_directories(mbsolve-lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
 
 if(MBSOLVE_PYTHON)
   include_directories(${PYTHON_INCLUDE_DIRS})
@@ -67,9 +69,15 @@ endif(MBSOLVE_PYTHON)
 
 # install library
 install(TARGETS mbsolve-lib
+  EXPORT ${PROJECT}-lib-targets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# install CMake targets
+install(EXPORT ${PROJECT}-lib-targets
+  NAMESPACE ${PROJECT}::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
 
 # install public header files
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

@@ -23,22 +23,20 @@ project(mbsolve-tool)
 
 add_executable(mbsolve-tool src/mbsolve-tool.cpp)
 set_property(TARGET mbsolve-tool PROPERTY CXX_STANDARD 11)
-target_include_directories(mbsolve-tool PRIVATE ${mbsolve-lib_INCLUDE_DIR})
-target_link_libraries(mbsolve-tool cxxopts::cxxopts)
-target_link_libraries(mbsolve-tool mbsolve-lib)
+target_link_libraries(mbsolve-tool PRIVATE cxxopts::cxxopts mbsolve-lib)
 
 if(MBSOLVE_CPU)
-  target_link_libraries(mbsolve-tool solver-cpu)
+  target_link_libraries(mbsolve-tool PRIVATE solver-cpu)
   target_compile_definitions(mbsolve-tool PRIVATE "-DUSE_CPU=1")
 endif(MBSOLVE_CPU)
 
 if(MBSOLVE_CUDA)
-  target_link_libraries(mbsolve-tool solver-cuda)
+  target_link_libraries(mbsolve-tool PRIVATE solver-cuda)
   target_compile_definitions(mbsolve-tool PRIVATE "-DUSE_CUDA=1")
 endif(MBSOLVE_CUDA)
 
 if(MBSOLVE_HDF5)
-  target_link_libraries(mbsolve-tool writer-hdf5)
+  target_link_libraries(mbsolve-tool PRIVATE writer-hdf5)
   target_compile_definitions(mbsolve-tool PRIVATE "-DUSE_HDF5=1")
 endif(MBSOLVE_HDF5)
 

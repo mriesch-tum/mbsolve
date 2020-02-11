@@ -21,20 +21,19 @@
 cmake_minimum_required(VERSION 3.6)
 project(writer-hdf5)
 
-include_directories(${mbsolve-lib_INCLUDE_DIR} ${HDF5_INCLUDE_DIRS} include/)
-
 add_library(writer-hdf5 src/writer_hdf5.cpp)
 set_target_properties(writer-hdf5 PROPERTIES
   CXX_STANDARD 11
   VERSION ${VERSION_CORE}
   SOVERSION ${VERSION_MAJOR})
-target_include_directories(writer-hdf5 PUBLIC "include")
-target_link_libraries(writer-hdf5 mbsolve-lib)
-target_link_libraries(writer-hdf5 ${HDF5_LIBRARIES})
+target_include_directories(writer-hdf5 PRIVATE ${HDF5_INCLUDE_DIRS})
+target_include_directories(writer-hdf5 PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+target_link_libraries(writer-hdf5 PUBLIC mbsolve-lib ${HDF5_LIBRARIES})
 
 if(MBSOLVE_PYTHON)
-  include_directories("include" ${PYTHON_INCLUDE_DIRS}
-    ${mbsolve-lib_INCLUDE_DIR})
+  include_directories(${PYTHON_INCLUDE_DIRS})
   set_source_files_properties(swig/writerhdf5.i PROPERTIES CPLUSPLUS ON)
   set(CMAKE_SWIG_OUTDIR ${PYTHON_IFACE_PATH})
   swig_add_module(writerhdf5 python swig/writerhdf5.i)
@@ -65,9 +64,15 @@ endif(MBSOLVE_PYTHON)
 
 # install library
 install(TARGETS writer-hdf5
+  EXPORT ${PROJECT}-writer-hdf5-targets
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+# install CMake targets
+install(EXPORT ${PROJECT}-writer-hdf5-targets
+  NAMESPACE ${PROJECT}::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
 
 # install public header files
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

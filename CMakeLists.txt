@@ -41,6 +41,9 @@ endif()
 # require CMake GNUInstallDirs package
 include(GNUInstallDirs)
 
+# require CMake helper package for CMake configuration files
+include(CMakePackageConfigHelpers)
+
 # CXX_STANDARD is required
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
@@ -155,3 +158,17 @@ if(MBSOLVE_PYTHON)
      ${PREFIX_SETUPPY} \
      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
 endif(MBSOLVE_PYTHON)
+
+# install CMake configuration files
+configure_package_config_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/CMakeConfig.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config.cmake
+  INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config-version.cmake
+  VERSION ${VERSION_CORE}
+  COMPATIBILITY SameMajorVersion)
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config-version.cmake
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
