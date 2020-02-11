@@ -10,5 +10,7 @@ build*/
 # explicitly allow
 !.clang-format
 !.editorconfig
+!.github/
 !.gitignore
+!.gitlab/
 !.gitlab-ci.yml
