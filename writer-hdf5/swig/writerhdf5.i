@@ -8,7 +8,7 @@
     mbsolve::writer_hdf5_loader hdf5_load;
 %}
 
-%import(module="mbsolve.lib") "../../mbsolve-lib/include/mbsolve.hpp"
+%import(module="mbsolve.lib") "../../mbsolve-lib/include/mbsolve/lib.hpp"
 
 %include "exception.i"
 %include "std_except.i"

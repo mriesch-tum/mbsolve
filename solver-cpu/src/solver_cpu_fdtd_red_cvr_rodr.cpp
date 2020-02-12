@@ -21,7 +21,7 @@
 
 #include <iostream>
 #include <solver_cpu_fdtd_red.hpp>
-#include <internal/algo_lindblad_cvr_rodr.hpp>
+#include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
 
 namespace mbsolve {
 

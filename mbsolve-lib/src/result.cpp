@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -20,23 +20,24 @@
  */
 
 #include <algorithm>
-#include <result.hpp>
+#include <mbsolve/lib/result.hpp>
 
 namespace mbsolve {
 
 std::vector<std::complex<real> >
-result::get_data_complex() const {
+result::get_data_complex() const
+{
     std::vector<std::complex<real> > res;
 
     res.reserve(m_rows * m_cols);
 
-    std::transform(m_real.begin(), m_real.end(), m_imag.begin(),
-                   std::back_inserter(res), [](double r, double i) {
-                       return std::complex<real>(r, i);
-                   });
+    std::transform(
+        m_real.begin(),
+        m_real.end(),
+        m_imag.begin(),
+        std::back_inserter(res),
+        [](double r, double i) { return std::complex<real>(r, i); });
 
     return res;
 }
-
-
 }

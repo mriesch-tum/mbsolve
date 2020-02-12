@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -20,12 +20,11 @@
  */
 
 #include <stdexcept>
-#include <material.hpp>
+#include <mbsolve/lib/material.hpp>
 
 namespace mbsolve {
 
-std::map<std::string, std::shared_ptr<material> >
-material::m_materials;
+std::map<std::string, std::shared_ptr<material> > material::m_materials;
 
 void
 material::add_to_library(std::shared_ptr<material> mat)
@@ -60,5 +59,4 @@ material::add_to_library() const
 {
 
 }*/
-
 }

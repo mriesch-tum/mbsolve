@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,15 +19,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_DEVICE_H
-#define MBSOLVE_DEVICE_H
+#ifndef MBSOLVE_LIB_DEVICE_H
+#define MBSOLVE_LIB_DEVICE_H
 
+#include <memory>
 #include <set>
 #include <string>
-#include <memory>
 #include <vector>
-#include <material.hpp>
-#include <types.hpp>
+#include <mbsolve/lib/material.hpp>
+#include <mbsolve/lib/types.hpp>
 
 namespace mbsolve {
 
@@ -57,24 +57,18 @@ public:
      * \param [in] x_start Start position in x-direction.
      * \param [in] x_end   End position in x-direction.
      */
-    region(const std::string& name,
-           std::shared_ptr<material> mat,
-           real x_start,
-           real x_end) :
-        m_name(name),
-        m_mat(mat),
-        m_x_start(x_start),
-        m_x_end(x_end)
-    {
-    }
+    region(
+        const std::string& name,
+        std::shared_ptr<material> mat,
+        real x_start,
+        real x_end)
+      : m_name(name), m_mat(mat), m_x_start(x_start), m_x_end(x_end)
+    {}
 
     /**
      * Gets region name.
      */
-    const std::string& get_name() const
-    {
-        return m_name;
-    }
+    const std::string& get_name() const { return m_name; }
 
     /**
      * Gets region length.
@@ -101,7 +95,6 @@ public:
      * Gets material.
      */
     std::shared_ptr<material> get_material() const { return m_mat; }
-
 };
 
 /**
@@ -132,7 +125,7 @@ public:
      */
     device(const std::string& name);
 
-    device(const std::string& file, const std::vector<material *>& materials);
+    device(const std::string& file, const std::vector<material*>& materials);
 
     ~device();
 
@@ -165,9 +158,7 @@ public:
      * Gets the minimum relative permittivity value.
      */
     real get_minimum_permittivity() const;
-
 };
-
 }
 
 #endif

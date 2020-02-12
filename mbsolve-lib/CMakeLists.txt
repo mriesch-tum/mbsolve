@@ -23,13 +23,23 @@ project(mbsolve-lib)
 
 # library
 add_library(mbsolve-lib
-  src/device.cpp
-  src/material.cpp
-  src/record.cpp
-  src/result.cpp
-  src/scenario.cpp
-  src/solver.cpp
-  src/writer.cpp)
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/device.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/material.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/qm_description.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/record.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/result.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/scenario.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/solver.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/source.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/types.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/lib/writer.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/device.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/material.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/record.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/result.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/scenario.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/solver.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/writer.cpp)
 set_target_properties(mbsolve-lib PROPERTIES
   CXX_STANDARD 11
   VERSION ${VERSION_CORE}

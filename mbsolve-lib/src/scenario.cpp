@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,16 +19,18 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <scenario.hpp>
+#include <mbsolve/lib/scenario.hpp>
 
 namespace mbsolve {
 
-scenario::scenario(const std::string& name, unsigned int num_gridpoints,
-                   real endtime, const qm_operator& rho_init) :
-    m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
+scenario::scenario(
+    const std::string& name,
+    unsigned int num_gridpoints,
+    real endtime,
+    const qm_operator& rho_init)
+  : m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
     m_rho_init(rho_init)
-{
-}
+{}
 
 void
 scenario::add_record(std::shared_ptr<record> rec)
@@ -120,7 +122,6 @@ scenario::set_endtime(real value)
     m_endtime = value;
 }
 
-
 qm_operator
 scenario::get_rho_init() const
 {
@@ -136,5 +137,4 @@ scenario::set_rho_init(const qm_operator& rho_init)
 
     m_rho_init = rho_init;
 }
-
 }

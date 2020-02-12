@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,14 +19,14 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_H
-#define MBSOLVE_H
+#ifndef MBSOLVE_LIB_H
+#define MBSOLVE_LIB_H
 
 /**
-\mainpage
-
-The mbsolve project provides a framework for solving the Maxwell-Bloch (or Maxwell-Liouville-von Neumann) equations.
-
+ * \mainpage
+ *
+ * The mbsolve project provides an open-source solver tool for the
+ * Maxwell-Bloch equations.
  */
 
 /**
@@ -34,16 +34,16 @@ The mbsolve project provides a framework for solving the Maxwell-Bloch (or Maxwe
  * Provides data types and base classes.
  */
 
-#include <device.hpp>
-#include <material.hpp>
-#include <qm_description.hpp>
-#include <record.hpp>
-#include <result.hpp>
-#include <scenario.hpp>
-#include <solver.hpp>
-#include <source.hpp>
-#include <types.hpp>
-#include <writer.hpp>
+#include <mbsolve/lib/device.hpp>
+#include <mbsolve/lib/material.hpp>
+#include <mbsolve/lib/qm_description.hpp>
+#include <mbsolve/lib/record.hpp>
+#include <mbsolve/lib/result.hpp>
+#include <mbsolve/lib/scenario.hpp>
+#include <mbsolve/lib/solver.hpp>
+#include <mbsolve/lib/source.hpp>
+#include <mbsolve/lib/types.hpp>
+#include <mbsolve/lib/writer.hpp>
 
 /**
  * \defgroup MBSOLVE_LIB_INT mbsolve-lib-internal

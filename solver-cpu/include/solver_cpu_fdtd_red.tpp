@@ -31,8 +31,8 @@
 #include <omp.h>
 #include <common_cpu.hpp>
 #include <solver_cpu_fdtd_red.hpp>
-#include <internal/algo_lindblad_cvr_rodr.hpp>
-#include <internal/algo_lindblad_noop.hpp>
+#include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
+#include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
 
 namespace mbsolve {
 

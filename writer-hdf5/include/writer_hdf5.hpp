@@ -22,7 +22,7 @@
 #ifndef WRITER_HDF5_H
 #define WRITER_HDF5_H
 
-#include <writer.hpp>
+#include <mbsolve/lib/writer.hpp>
 
 namespace mbsolve {
 

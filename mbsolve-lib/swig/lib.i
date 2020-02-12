@@ -1,6 +1,6 @@
 %module lib
 %{
-#include "../include/mbsolve.hpp"
+#include <mbsolve/lib.hpp>
 %}
 
 %include "stl.i"
@@ -39,7 +39,7 @@
 %shared_ptr(mbsolve::source)
 %shared_ptr(mbsolve::writer)
 
-%include "../include/types.hpp"
+%include "../include/mbsolve/lib/types.hpp"
 
 %template(vector_string) std::vector<std::string>;
 %template(vector_real_d) std::vector<double>;
@@ -50,12 +50,12 @@
 %template(matrix_real_d) std::vector<std::vector<double> >;
 %template(matrix_real_f) std::vector<std::vector<float> >;
 
-%include "../include/qm_description.hpp"
-%include "../include/material.hpp"
-%include "../include/device.hpp"
-%include "../include/record.hpp"
-%include "../include/result.hpp"
-%include "../include/source.hpp"
-%include "../include/scenario.hpp"
-%include "../include/solver.hpp"
-%include "../include/writer.hpp"
+%include "../include/mbsolve/lib/qm_description.hpp"
+%include "../include/mbsolve/lib/material.hpp"
+%include "../include/mbsolve/lib/device.hpp"
+%include "../include/mbsolve/lib/record.hpp"
+%include "../include/mbsolve/lib/result.hpp"
+%include "../include/mbsolve/lib/source.hpp"
+%include "../include/mbsolve/lib/scenario.hpp"
+%include "../include/mbsolve/lib/solver.hpp"
+%include "../include/mbsolve/lib/writer.hpp"

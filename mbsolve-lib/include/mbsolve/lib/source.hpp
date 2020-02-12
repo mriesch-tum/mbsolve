@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,12 +19,12 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SOURCE_H
-#define MBSOLVE_SOURCE_H
+#ifndef MBSOLVE_LIB_SOURCE_H
+#define MBSOLVE_LIB_SOURCE_H
 
 #include <string>
 #include <vector>
-#include <types.hpp>
+#include <mbsolve/lib/types.hpp>
 
 namespace mbsolve {
 
@@ -35,7 +35,11 @@ namespace mbsolve {
 class source
 {
 public:
-    enum type { hard_source, soft_source };
+    enum type
+    {
+        hard_source,
+        soft_source
+    };
 
 protected:
     std::string m_name;
@@ -68,12 +72,16 @@ public:
      * \param [in] freq        Frequency of the source.
      * \param [in] phase       Phase of the source.
      */
-    source(const std::string& name, real position, type source_type,
-           real ampl, real freq, real phase = 0) :
-        m_name(name), m_position(position), m_type(source_type),
-        m_ampl(ampl), m_freq(freq), m_phase(phase)
-    {
-    }
+    source(
+        const std::string& name,
+        real position,
+        type source_type,
+        real ampl,
+        real freq,
+        real phase = 0)
+      : m_name(name), m_position(position), m_type(source_type), m_ampl(ampl),
+        m_freq(freq), m_phase(phase)
+    {}
 
     /* TODO: get_value/calc_value : simplify */
 
@@ -91,41 +99,32 @@ public:
         /* if type == thevenin, consider internal resistance */
 
         /* else if soft source */
-        //return current_value + val;
+        // return current_value + val;
 
         /* else -> hard source */
         return val;
     }
 
     /* calculate new value */
-    virtual real calc_value(real /* t */) const
-    {
-        return 0.0;
-    }
+    virtual real calc_value(real /* t */) const { return 0.0; }
 
     /**
      * Gets source position.
      */
-    real get_position() const {
-        return m_position;
-    }
+    real get_position() const { return m_position; }
 
     /**
      * Gets source type.
      */
-    type get_type() const {
-        return m_type;
-    }
+    type get_type() const { return m_type; }
 
     /* TODO: specify dm entry/field etc? */
 
     /* TODO: add position. how?
-	   virtual const Quantity& position
+           virtual const Quantity& position
     */
     /* TODO: add source type: hard, soft, thevenin */
     /* TODO: for thevenin: add internal resistance */
-
-
 };
 /*
 class sine_source : public source
@@ -152,7 +151,6 @@ public:
 class sech_pulse : public source
 {
 private:
-
     real m_beta;
     real m_phase_sin;
 
@@ -171,14 +169,18 @@ public:
      * \param [in] beta        Parameter \f$ \beta \f$.
      * \param [in] phase_sin   Paramter \f$ \varphi_1 \f$.
      */
-    sech_pulse(const std::string& name, real position, type source_type,
-               real ampl, real freq,
-               real phase,
-               real beta, real phase_sin = 0.0) :
-        source(name, position, source_type, ampl, freq, phase), m_beta(beta),
+    sech_pulse(
+        const std::string& name,
+        real position,
+        type source_type,
+        real ampl,
+        real freq,
+        real phase,
+        real beta,
+        real phase_sin = 0.0)
+      : source(name, position, source_type, ampl, freq, phase), m_beta(beta),
         m_phase_sin(phase_sin)
-    {
-    }
+    {}
 
     /**
      * Gets source value at certain \p time value.
@@ -187,10 +189,9 @@ public:
      */
     real calc_value(real t) const
     {
-        return 1/std::cosh(m_beta * t - m_phase) *
+        return 1 / std::cosh(m_beta * t - m_phase) *
             sin(2 * M_PI * m_freq * t - m_phase_sin);
     }
-
 };
 
 /*
@@ -241,27 +242,25 @@ public:
      * \param [in] phase       Phase \f$ t_0 \f$ of the source.
      * \param [in] tau         Parameter \f$ \tau \f$.
      */
-    gaussian_pulse(const std::string& name,
-                   real position,
-                   type source_type,
-                   real ampl,
-                   real freq,
-                   real phase,
-                   real tau) :
-        source(name, position, source_type, ampl, freq, phase), m_tau(tau)
-    {
-    }
+    gaussian_pulse(
+        const std::string& name,
+        real position,
+        type source_type,
+        real ampl,
+        real freq,
+        real phase,
+        real tau)
+      : source(name, position, source_type, ampl, freq, phase), m_tau(tau)
+    {}
 
     real calc_value(real t) const
     {
-        return exp( - (t - m_phase) * (t - m_phase) / (m_tau * m_tau)) *
+        return exp(-(t - m_phase) * (t - m_phase) / (m_tau * m_tau)) *
             sin(2 * M_PI * m_freq * t);
     }
 };
 
-
 /* TODO: custom functor source / callback function? */
-
 }
 
 #endif

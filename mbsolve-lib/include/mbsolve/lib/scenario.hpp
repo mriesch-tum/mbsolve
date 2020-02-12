@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,15 +19,15 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_SCENARIO_H
-#define MBSOLVE_SCENARIO_H
+#ifndef MBSOLVE_LIB_SCENARIO_H
+#define MBSOLVE_LIB_SCENARIO_H
 
 #include <memory>
 #include <string>
 #include <vector>
-#include <qm_description.hpp>
-#include <record.hpp>
-#include <source.hpp>
+#include <mbsolve/lib/qm_description.hpp>
+#include <mbsolve/lib/record.hpp>
+#include <mbsolve/lib/source.hpp>
 
 namespace mbsolve {
 
@@ -70,8 +70,11 @@ public:
      * \param [in] endtime        Simulation end time.
      * \param [in] rho_init       Initial density matrix.
      */
-    scenario(const std::string& name, unsigned int num_gridpoints,
-             real endtime, const qm_operator& rho_init);
+    scenario(
+        const std::string& name,
+        unsigned int num_gridpoints,
+        real endtime,
+        const qm_operator& rho_init);
 
     /**
      * Adds a record that specifies which data trace is collected.
@@ -157,9 +160,7 @@ public:
      * Sets initial density matrix.
      */
     void set_rho_init(const qm_operator& rho_init);
-
 };
-
 }
 
 #endif

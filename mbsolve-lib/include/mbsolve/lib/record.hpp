@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,11 +19,11 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_RECORD_H
-#define MBSOLVE_RECORD_H
+#ifndef MBSOLVE_LIB_RECORD_H
+#define MBSOLVE_LIB_RECORD_H
 
 #include <string>
-#include <types.hpp>
+#include <mbsolve/lib/types.hpp>
 
 namespace mbsolve {
 
@@ -35,7 +35,13 @@ namespace mbsolve {
 class record
 {
 public:
-    enum type { electric, magnetic, density, inversion };
+    enum type
+    {
+        electric,
+        magnetic,
+        density,
+        inversion
+    };
 
 private:
     std::string m_name;
@@ -61,7 +67,10 @@ public:
      * \param [in] position Sampling position in meter. If set to -1.0,
                             the complete grid is stored.
      */
-    record(const std::string& name, real interval = 0.0, real position = -1.0);
+    record(
+        const std::string& name,
+        real interval = 0.0,
+        real position = -1.0);
 
     /**
      * Constructs record.
@@ -75,8 +84,13 @@ public:
      * \param [in] position    Sampling position in meter. If set to -1.0,
                                the complete grid is stored.
     */
-    record(const std::string& name, type record_type, unsigned int row_idx,
-           unsigned int col_idx, real interval = 0.0, real position = -1.0);
+    record(
+        const std::string& name,
+        type record_type,
+        unsigned int row_idx,
+        unsigned int col_idx,
+        real interval = 0.0,
+        real position = -1.0);
 
     /**
      * Gets name of the record.
@@ -113,7 +127,6 @@ public:
      */
     bool is_complex() const { return m_is_complex; }
 };
-
 }
 
 #endif

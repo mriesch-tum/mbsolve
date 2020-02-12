@@ -22,8 +22,9 @@ PROJECT_NAME = "@PROJECT@ v@VERSION_FULL@"
 
 # input files
 
-INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/internal/" \
+INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/" \
+        "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/lib" \
+        "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/lib/internal" \
         "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/solver-cuda/include/" \
         "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-tool/src/" \

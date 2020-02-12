@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,7 +19,7 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <writer.hpp>
+#include <mbsolve/lib/writer.hpp>
 
 namespace mbsolve {
 
@@ -46,12 +46,9 @@ writer::register_bootstrap(const std::string& name, bootstrap_t b)
 
 writer::writer(const std::string& name, const std::string& extension)
   : m_name(name), m_ext(extension)
-{
-}
+{}
 
-writer::~writer()
-{
-}
+writer::~writer() {}
 
 const std::string&
 writer::get_name() const

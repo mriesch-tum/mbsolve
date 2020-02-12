@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -23,10 +23,10 @@
 #define MBSOLVE_COMMON_FDTD_H
 
 #include <memory>
-#include <types.hpp>
-#include <device.hpp>
-#include <scenario.hpp>
-#include <source.hpp>
+#include <mbsolve/lib/device.hpp>
+#include <mbsolve/lib/scenario.hpp>
+#include <mbsolve/lib/source.hpp>
+#include <mbsolve/lib/types.hpp>
 
 namespace mbsolve {
 
@@ -49,30 +49,32 @@ public:
  * \ingroup MBSOLVE_LIB_INT
  */
 static void
-init_fdtd_simulation(std::shared_ptr<const device> dev,
-                     std::shared_ptr<scenario> scen,
-                     real courant = 1)
+init_fdtd_simulation(
+    std::shared_ptr<const device> dev,
+    std::shared_ptr<scenario> scen,
+    real courant = 1)
 {
     if (scen->get_num_gridpoints() > 0) {
         /* speed of light (use smallest value of relative permittivities) */
-        real velocity = 1.0/sqrt(MU0 * EPS0 * dev->get_minimum_permittivity());
+        real velocity =
+            1.0 / sqrt(MU0 * EPS0 * dev->get_minimum_permittivity());
 
         /* get number of grid points */
         unsigned int n_x = scen->get_num_gridpoints();
 
         /* grid point size */
-        real d_x = dev->get_length()/(n_x - 1);
+        real d_x = dev->get_length() / (n_x - 1);
         scen->set_gridpoint_size(d_x);
 
         /* time step size */
-        real d_t = courant * d_x/velocity;
+        real d_t = courant * d_x / velocity;
 
         /* number of time steps */
-        unsigned int n_t = ceil(scen->get_endtime()/d_t) + 1;
+        unsigned int n_t = ceil(scen->get_endtime() / d_t) + 1;
         scen->set_num_timesteps(n_t);
 
         /* re-adjust time step size in order to fit number of time steps */
-        d_t = scen->get_endtime()/(n_t - 1);
+        d_t = scen->get_endtime() / (n_t - 1);
         scen->set_timestep_size(d_t);
 
     } else {
@@ -114,37 +116,38 @@ public:
  * \ingroup MBSOLVE_LIB_INT
  */
 static sim_constants_fdtd
-get_fdtd_constants(std::shared_ptr<const device> dev,
-                   std::shared_ptr<const scenario> scen,
-                   std::shared_ptr<const material> mat)
+get_fdtd_constants(
+    std::shared_ptr<const device> dev,
+    std::shared_ptr<const scenario> scen,
+    std::shared_ptr<const material> mat)
 {
     sim_constants_fdtd sc;
 
     /* convert loss term to conductivity */
-    real sigma = sqrt(EPS0 * mat->get_rel_permittivity()/
-                      (MU0 * mat->get_rel_permeability()))
-        * mat->get_losses() * 2.0;
+    real sigma = sqrt(
+                     EPS0 * mat->get_rel_permittivity() /
+                     (MU0 * mat->get_rel_permeability())) *
+        mat->get_losses() * 2.0;
 
     real dt = scen->get_timestep_size();
     real epsilon = EPS0 * mat->get_rel_permittivity();
-    real x = (sigma * dt)/(2.0 * epsilon);
+    real x = (sigma * dt) / (2.0 * epsilon);
 
     /* prefactor a */
-    sc.fac_a = (1.0 - x)/(1.0 + x);
+    sc.fac_a = (1.0 - x) / (1.0 + x);
 
     /* prefactor b */
-    sc.fac_b = dt/epsilon/(1.0 + x);
+    sc.fac_b = dt / epsilon / (1.0 + x);
 
     /* prefactor c */
-    sc.fac_c = dt/(MU0 * mat->get_rel_permeability() *
-                   scen->get_gridpoint_size());
+    sc.fac_c =
+        dt / (MU0 * mat->get_rel_permeability() * scen->get_gridpoint_size());
 
     /* overlap factor */
     sc.gamma = mat->get_overlap_factor();
 
     return sc;
 }
-
 }
 
 #endif

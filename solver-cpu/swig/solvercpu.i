@@ -8,7 +8,7 @@
     mbsolve::solver_cpu_loader cpu_load;
 %}
 
-%import(module="mbsolve.lib") "../../mbsolve-lib/include/mbsolve.hpp"
+%import(module="mbsolve.lib") "../../mbsolve-lib/include/mbsolve/lib.hpp"
 
 %include "exception.i"
 %include "std_except.i"

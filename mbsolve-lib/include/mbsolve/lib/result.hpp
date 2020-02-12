@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,18 +19,18 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_RESULT_H
-#define MBSOLVE_RESULT_H
+#ifndef MBSOLVE_LIB_RESULT_H
+#define MBSOLVE_LIB_RESULT_H
 
 #include <stdexcept>
 #include <vector>
-#include <types.hpp>
+#include <mbsolve/lib/types.hpp>
 
 namespace mbsolve {
 
 /**
  * Represents a simulation result trace requested with a corresponding
- * \ref Record.
+ * \ref record.
  *
  * \ingroup MBSOLVE_LIB
  */
@@ -56,15 +56,16 @@ public:
      * \param [in] rows       Number of rows (corresponds to time steps).
      * \param [in] is_complex Is result complex-valued?
      */
-    explicit result(const std::string& name, unsigned int cols,
-		    unsigned int rows, bool is_complex = false) :
-	m_name(name), m_cols(cols), m_rows(rows), m_count(cols * rows),
+    explicit result(
+        const std::string& name,
+        unsigned int cols,
+        unsigned int rows,
+        bool is_complex = false)
+      : m_name(name), m_cols(cols), m_rows(rows), m_count(cols * rows),
         m_real(cols * rows), m_imag(cols * rows), m_is_complex(is_complex)
-    {
-    }
+    {}
 
-    ~result() {
-    }
+    ~result() {}
 
     /**
      * Gets result name.
@@ -79,21 +80,26 @@ public:
 
     bool is_complex() const { return m_is_complex; }
 
-    //   complex *get_data(unsigned int row = 0) { return &m_values[row * m_cols]; }
+    //   complex *get_data(unsigned int row = 0) { return &m_values[row *
+    //   m_cols]; }
 
-    std::vector<real>::iterator get_data_real(unsigned int row,
-                                              unsigned int col) {
+    std::vector<real>::iterator get_data_real(
+        unsigned int row,
+        unsigned int col)
+    {
         return m_real.begin() + row * m_cols + col;
     }
 
-    std::vector<real>::iterator get_data_imag(unsigned int row,
-                                              unsigned int col) {
+    std::vector<real>::iterator get_data_imag(
+        unsigned int row,
+        unsigned int col)
+    {
         return m_imag.begin() + row * m_cols + col;
     }
 
-    real *get_data_real_raw() { return m_real.data(); }
+    real* get_data_real_raw() { return m_real.data(); }
 
-    real *get_data_imag_raw() { return m_imag.data(); }
+    real* get_data_imag_raw() { return m_imag.data(); }
 
     /**
      * Gets result data (real part).
@@ -106,9 +112,7 @@ public:
     const std::vector<real>& get_data_imag() const { return m_imag; }
 
     std::vector<std::complex<real> > get_data_complex() const;
-
 };
-
 }
 
 #endif

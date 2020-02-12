@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,14 +19,14 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_MATERIAL_H
-#define MBSOLVE_MATERIAL_H
+#ifndef MBSOLVE_LIB_MATERIAL_H
+#define MBSOLVE_LIB_MATERIAL_H
 
 #include <map>
 #include <memory>
 #include <string>
-#include <qm_description.hpp>
-#include <types.hpp>
+#include <mbsolve/lib/qm_description.hpp>
+#include <mbsolve/lib/types.hpp>
 
 namespace mbsolve {
 
@@ -66,24 +66,19 @@ public:
      * \param [in] losses           Optical losses.
      * \param [in] rel_permeabiliy  Relative Permeability.
      */
-    explicit material(const std::string& id,
-                      std::shared_ptr<qm_description> qm = nullptr,
-                      real rel_permittivity = 1.0,
-                      real overlap_factor = 1.0,
-                      real losses = 0.0,
-                      real rel_permeability = 1.0) :
-        m_id(id),
-        m_qm(qm),
-        m_rel_permittivity(rel_permittivity),
-        m_rel_permeability(rel_permeability),
-        m_losses(losses),
+    explicit material(
+        const std::string& id,
+        std::shared_ptr<qm_description> qm = nullptr,
+        real rel_permittivity = 1.0,
+        real overlap_factor = 1.0,
+        real losses = 0.0,
+        real rel_permeability = 1.0)
+      : m_id(id), m_qm(qm), m_rel_permittivity(rel_permittivity),
+        m_rel_permeability(rel_permeability), m_losses(losses),
         m_overlap_factor(overlap_factor)
-    {
-    }
+    {}
 
-    ~material()
-    {
-    }
+    ~material() {}
 
     /* TODO copy constructor */
 
@@ -140,7 +135,6 @@ public:
      */
     static std::shared_ptr<material> get_from_library(const std::string& id);
 };
-
 }
 
 #endif

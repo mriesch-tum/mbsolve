@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -28,7 +28,7 @@
 #include <Eigen/Sparse>
 #include <Eigen/StdVector>
 #include <unsupported/Eigen/MatrixFunctions>
-#include <internal/coherence_vector_representation.hpp>
+#include <mbsolve/lib/internal/coherence_vector_representation.hpp>
 
 namespace mbsolve {
 
@@ -52,7 +52,8 @@ public:
     /* TODO outsource to cvr class */
     typedef Eigen::Matrix<real, vec_len, 1> density;
 
-    class sim_constants {
+    class sim_constants
+    {
     public:
         EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
@@ -76,9 +77,9 @@ public:
         real_matrix_t U2;
 
         /* rodrigues formula precalc (generalized case) */
-        real_matrix_t coeff_1[vec_len/2];
-        real_matrix_t coeff_2[vec_len/2];
-        real theta[vec_len/2];
+        real_matrix_t coeff_1[vec_len / 2];
+        real_matrix_t coeff_2[vec_len / 2];
+        real theta[vec_len / 2];
 
         /* time-independent propagator ( contains time-independent part of
          * Hamiltonian plus dissipation superoperator contribution)
@@ -97,8 +98,7 @@ public:
     typedef Eigen::aligned_allocator<sim_constants> allocator;
 
 private:
-    static inline void
-    fill_coefficients(sim_constants& sc)
+    static inline void fill_coefficients(sim_constants& sc)
     {
         /* get eigenvalues and eigenvectors in real form */
         Eigen::RealSchur<real_matrix_t> schur(sc.U);
@@ -108,17 +108,19 @@ private:
         /* creating sorting order (descending eigenvalues) */
         std::vector<size_t> perm_idx(vec_len - 1);
         std::iota(perm_idx.begin(), perm_idx.end(), 1);
-        std::sort(perm_idx.begin(), perm_idx.end(),
-                  [&eigenval](size_t i1, size_t i2) {
-                      return std::abs(eigenval(i1, i1 - 1)) >
-                          std::abs(eigenval(i2, i2 - 1));
-                  });
+        std::sort(
+            perm_idx.begin(),
+            perm_idx.end(),
+            [&eigenval](size_t i1, size_t i2) {
+                return std::abs(eigenval(i1, i1 - 1)) >
+                    std::abs(eigenval(i2, i2 - 1));
+            });
 
         /* TODO optimize
          * ignore eigenvalues = 0
          * group eigenvalues with multiplicity >= 2
          */
-        for (int i = 0; i < vec_len/2; i++) {
+        for (int i = 0; i < vec_len / 2; i++) {
             unsigned int i1 = perm_idx[i];
 
             real_matrix_t b = real_matrix_t::Zero();
@@ -128,7 +130,7 @@ private:
             sc.coeff_1[i] = eigenvec * b * eigenvec.transpose();
             sc.coeff_2[i] = eigenvec * b * b * eigenvec.transpose();
             sc.theta[i] = eigenval(i1, i1 - 1);
-            std::cout << "theta: "<< std::endl << sc.theta[i] << std::endl;
+            std::cout << "theta: " << std::endl << sc.theta[i] << std::endl;
         }
         std::cout << "eigenval: " << eigenval << std::endl;
     }
@@ -138,9 +140,10 @@ public:
      * Determines the simulation constants of the quantum mechanical
      * description for the generalized Rodrigues formula.
      */
-    static sim_constants
-    get_qm_constants(std::shared_ptr<const qm_description> qm,
-                     real time_step) {
+    static sim_constants get_qm_constants(
+        std::shared_ptr<const qm_description> qm,
+        real time_step)
+    {
         sim_constants sc;
 
         if (qm) {
@@ -149,8 +152,9 @@ public:
 
             /* check whether number of levels matches solver */
             if (qm->get_num_levels() != num_lvl) {
-                throw std::invalid_argument("Number of energy levels does not "
-                                            "match selected solver!");
+                throw std::invalid_argument(
+                    "Number of energy levels does not "
+                    "match selected solver!");
             }
 
             /* create coherence vector representation */
@@ -174,11 +178,11 @@ public:
             /* dipole moment Liouvillian in cvr form (matrix) + squared */
             sc.U = -cvr.get_dipole_operator();
             sc.U2 = sc.U * sc.U;
-            sc.theta_1 = sqrt(pow(sc.U(0, 1), 2) + pow(sc.U(0, 2), 2)
-                              + pow(sc.U(1, 2), 2));
+            sc.theta_1 = sqrt(
+                pow(sc.U(0, 1), 2) + pow(sc.U(0, 2), 2) + pow(sc.U(1, 2), 2));
 
             /* time-independent propagator, half step */
-            sc.A1 = (sc.M * time_step/2).exp();
+            sc.A1 = (sc.M * time_step / 2).exp();
 
             /* prepare time-dependent propagator */
             fill_coefficients(sc);
@@ -194,7 +198,7 @@ public:
             } else {
                 /* solve equation system M * d_in = d_eq */
                 sc.d_in = sc.M.fullPivLu().solve(sc.d_eq);
-                real err = (sc.M * sc.d_in - sc.d_eq).norm()/sc.d_eq.norm();
+                real err = (sc.M * sc.d_in - sc.d_eq).norm() / sc.d_eq.norm();
                 if (err > 1e-3) {
                     throw std::invalid_argument("Time-indepent matrix not "
                                                 "invertible!");
@@ -228,7 +232,8 @@ public:
      * Updates the density matrix and the derivative of the polarization.
      */
     static inline void
-    update(const sim_constants &sc, density& d, real e, real *p_t) {
+    update(const sim_constants& sc, density& d, real e, real* p_t)
+    {
         if (sc.has_qm) {
             /* time-indepedent half step */
             density d1 = sc.A1 * (d + sc.d_in) - sc.d_in;
@@ -238,17 +243,16 @@ public:
 
             if (num_lvl == 2) {
                 /* original Rodrigues' formula */
-                A2 = sin(sc.theta_1 * e * sc.d_t)/sc.theta_1 * sc.U
-                    + (1 - cos(sc.theta_1 * e * sc.d_t))/
-                    (sc.theta_1 * sc.theta_1) * sc.U2
-                    + real_matrix_t::Identity();
+                A2 = sin(sc.theta_1 * e * sc.d_t) / sc.theta_1 * sc.U +
+                    (1 - cos(sc.theta_1 * e * sc.d_t)) /
+                        (sc.theta_1 * sc.theta_1) * sc.U2 +
+                    real_matrix_t::Identity();
             } else {
                 A2 = real_matrix_t::Identity();
-                for (int i = 0; i < vec_len/2; i++) {
+                for (int i = 0; i < vec_len / 2; i++) {
                     /* TODO nolias()? */
-                    A2 += sin(sc.theta[i] * e * sc.d_t) * sc.coeff_1[i]
-                        + (1 - cos(sc.theta[i] * e * sc.d_t)) *
-                        sc.coeff_2[i];
+                    A2 += sin(sc.theta[i] * e * sc.d_t) * sc.coeff_1[i] +
+                        (1 - cos(sc.theta[i] * e * sc.d_t)) * sc.coeff_2[i];
                 }
             }
 
@@ -267,16 +271,16 @@ public:
      * Returns the population inversion (which is the difference
      * \f$ \rho_{22} - \rho_{11} \f$).
      */
-    static inline real
-    calc_inversion(const density& d) {
+    static inline real calc_inversion(const density& d)
+    {
         return d(num_lvl * (num_lvl - 1));
     }
 
     /*
      * Returns the population specified by \param idx (zero-based).
      */
-    static inline real
-    calc_population(const density& d, unsigned int idx) {
+    static inline real calc_population(const density& d, unsigned int idx)
+    {
         return cv_representation::calc_population<num_lvl, vec_len>(d, idx);
     }
 
@@ -284,20 +288,16 @@ public:
      * Converts the density matrix \param op into the coherence vector
      * representation.
      */
-    static inline density
-    get_density(const qm_operator& op) {
+    static inline density get_density(const qm_operator& op)
+    {
         return cv_representation::coherence_vector<num_lvl, vec_len>(op);
     }
 
     /*
      * Returns a zero coherence vector (for initialization purposes only).
      */
-    static inline density
-    get_density() {
-        return density::Zero();
-    }
+    static inline density get_density() { return density::Zero(); }
 };
-
 }
 
 #endif

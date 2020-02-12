@@ -183,7 +183,8 @@ install(FILES
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
 
 # get all source files
-list(APPEND ALL_SOURCE_FILES)
+get_target_property(LIB_SOURCE_FILES mbsolve-lib SOURCES)
+list(APPEND ALL_SOURCE_FILES ${LIB_SOURCE_FILES})
 
 # code formatting check
 if(MBSOLVE_FORMAT)

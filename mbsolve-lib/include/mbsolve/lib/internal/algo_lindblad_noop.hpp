@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -22,7 +22,7 @@
 #ifndef MBSOLVE_ALGO_LINDBLAD_NOOP_H
 #define MBSOLVE_ALGO_LINDBLAD_NOOP_H
 
-#include <qm_description.hpp>
+#include <mbsolve/lib/qm_description.hpp>
 
 namespace mbsolve {
 
@@ -36,17 +36,13 @@ template<unsigned int num_lvl = 0>
 class lindblad_noop
 {
 private:
-    class dummy {
+    class dummy
+    {
     public:
-        void *operator new[](std::size_t count) {
-            return new char;
-        }
+        void* operator new[](std::size_t count) { return new char; }
 
-        void operator delete[](void *ptr) {
-            delete(ptr);
-        }
+        void operator delete[](void* ptr) { delete (ptr); }
     };
-
 
 public:
     static std::string name() { return "noop"; }
@@ -57,39 +53,37 @@ public:
 
     typedef std::allocator<sim_constants> allocator;
 
-    static inline sim_constants
-    get_qm_constants(std::shared_ptr<const qm_description> qm,
-                     real time_step) {
+    static inline sim_constants get_qm_constants(
+        std::shared_ptr<const qm_description> qm,
+        real time_step)
+    {
         return 0;
     }
 
     static inline void
-    update(const sim_constants& sc, density& d, real e, real *p_t) {
+    update(const sim_constants& sc, density& d, real e, real* p_t)
+    {
         /* no-op */
     }
 
-    static inline real
-    calc_inversion(const density& d) {
+    static inline real calc_inversion(const density& d) { return 0; }
+
+    static inline real calc_population(const density& d, unsigned int idx)
+    {
         return 0;
     }
 
-    static inline real
-    calc_population(const density& d, unsigned int idx) {
-        return 0;
-    }
-
-    static inline density
-    get_density() {
+    static inline density get_density()
+    {
         /* return empty density */
-        return 0; //density();
+        return 0; // density();
     }
 
-    static inline density
-    get_density(const qm_operator& /* op -- unused*/) {
+    static inline density get_density(const qm_operator& /* op -- unused*/)
+    {
         return get_density();
     }
 };
-
 }
 
 #endif

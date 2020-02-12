@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,8 +19,8 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#ifndef MBSOLVE_TYPES_H
-#define MBSOLVE_TYPES_H
+#ifndef MBSOLVE_LIB_TYPES_H
+#define MBSOLVE_LIB_TYPES_H
 
 #include <complex>
 #include <string>
@@ -34,7 +34,7 @@ namespace mbsolve {
  * \ingroup MBSOLVE_LIB
  */
 typedef double real;
-//typedef float real;
+// typedef float real;
 
 /**
  * Reduced Planck's constant.
@@ -59,7 +59,6 @@ static const real EPS0 = 8.854187817e-12;
  * \ingroup MBSOLVE_LIB
  */
 static const real E0 = 1.60217733e-19;
-
 }
 
 #endif

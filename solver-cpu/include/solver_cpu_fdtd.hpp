@@ -22,9 +22,9 @@
 #ifndef MBSOLVE_SOLVER_CPU_FDTD_H
 #define MBSOLVE_SOLVER_CPU_FDTD_H
 
-#include <solver.hpp>
-#include <internal/common_fdtd.hpp>
-#include <internal/copy_list_entry.hpp>
+#include <mbsolve/lib/internal/common_fdtd.hpp>
+#include <mbsolve/lib/internal/copy_list_entry.hpp>
+#include <mbsolve/lib/solver.hpp>
 
 namespace mbsolve {
 

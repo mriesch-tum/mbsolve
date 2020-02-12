@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -23,7 +23,7 @@
 #define MBSOLVE_COHERENCE_VECTOR_REPRESENTATION_H
 
 #include <Eigen/Dense>
-#include <qm_description.hpp>
+#include <mbsolve/lib/qm_description.hpp>
 
 namespace mbsolve {
 
@@ -39,7 +39,7 @@ private:
 
     typedef Eigen::Matrix<real, Eigen::Dynamic, Eigen::Dynamic> real_matrix_t;
     typedef Eigen::Matrix<std::complex<real>, Eigen::Dynamic, Eigen::Dynamic>
-    complex_matrix_t;
+        complex_matrix_t;
 
     real_matrix_t m_hamiltonian;
     real_matrix_t m_dipole_op;
@@ -49,8 +49,7 @@ private:
 
     std::vector<complex_matrix_t> m_generators;
 
-    void
-    setup_generators()
+    void setup_generators()
     {
         m_generators.clear();
 
@@ -87,7 +86,7 @@ private:
             }
             g(j, j) = (l + 1);
 
-            int k = ((l + 1) * (l + 2))/2;
+            int k = ((l + 1) * (l + 2)) / 2;
             g /= sqrt(k);
             m_generators.push_back(g);
         }
@@ -97,8 +96,7 @@ private:
     /**
      * Transforms qm_operator to complex matrix.
      */
-    complex_matrix_t
-    convert_qm_operator(const qm_operator& op) const
+    complex_matrix_t convert_qm_operator(const qm_operator& op) const
     {
         complex_matrix_t op_mat =
             complex_matrix_t::Zero(m_num_levels, m_num_levels);
@@ -128,8 +126,7 @@ private:
         return op_mat;
     }
 
-    qm_operator
-    convert_qm_operator(complex_matrix_t mat) const
+    qm_operator convert_qm_operator(complex_matrix_t mat) const
     {
         /* main diagonal elements */
         std::vector<real> main_diag;
@@ -149,8 +146,7 @@ private:
         return qm_operator(main_diag, off_diag);
     }
 
-    real_matrix_t
-    calc_liouvillian(const qm_operator& op) const
+    real_matrix_t calc_liouvillian(const qm_operator& op) const
     {
         complex_matrix_t op_mat = convert_qm_operator(op);
 
@@ -163,14 +159,13 @@ private:
                      m_generators[j] * m_generators[i]);
                 std::complex<real> c =
                     std::complex<real>(0, 1) * 0.5 * result.trace();
-                ret(i, j) = c.real() * 1.0/HBAR;
+                ret(i, j) = c.real() * 1.0 / HBAR;
             }
         }
         return ret;
     }
 
-    real_matrix_t
-    calc_op_vec(const qm_operator& op) const
+    real_matrix_t calc_op_vec(const qm_operator& op) const
     {
         complex_matrix_t op_mat = convert_qm_operator(op);
         real_matrix_t ret(m_num_adj, 1);
@@ -183,8 +178,8 @@ private:
         return ret;
     }
 
-    real_matrix_t
-    calc_relaxation_superop(std::shared_ptr<qm_superop> op) const
+    real_matrix_t calc_relaxation_superop(
+        std::shared_ptr<qm_superop> op) const
     {
         real_matrix_t ret = real_matrix_t::Zero(m_num_adj, m_num_adj);
 
@@ -201,8 +196,7 @@ private:
         return ret;
     }
 
-    real_matrix_t
-    calc_equi_vec(std::shared_ptr<qm_superop> op) const
+    real_matrix_t calc_equi_vec(std::shared_ptr<qm_superop> op) const
     {
         real_matrix_t ret = real_matrix_t::Zero(m_num_adj, 1);
         complex_matrix_t a =
@@ -213,20 +207,18 @@ private:
 
         for (int i = 0; i < m_num_adj; i++) {
             complex_matrix_t m = d * m_generators[i];
-            ret(i) = m.real().trace() * 1.0/m_num_levels;
+            ret(i) = m.real().trace() * 1.0 / m_num_levels;
         }
         return ret;
     }
 
 public:
-    explicit cv_representation(std::shared_ptr<const qm_description> qm_desc) :
-        m_num_levels(qm_desc->get_num_levels()),
+    explicit cv_representation(std::shared_ptr<const qm_description> qm_desc)
+      : m_num_levels(qm_desc->get_num_levels()),
         m_num_adj(qm_desc->get_num_levels() * qm_desc->get_num_levels() - 1),
         m_hamiltonian(m_num_adj, m_num_adj),
-        m_dipole_op(m_num_adj, m_num_adj),
-        m_dipole_op_vec(m_num_adj, 1),
-        m_relax_superop(m_num_adj, m_num_adj),
-        m_equi(m_num_adj, 1)
+        m_dipole_op(m_num_adj, m_num_adj), m_dipole_op_vec(m_num_adj, 1),
+        m_relax_superop(m_num_adj, m_num_adj), m_equi(m_num_adj, 1)
     {
         /* set up generators of Lie algebra su(num_levels) */
         setup_generators();
@@ -252,28 +244,19 @@ public:
      * Gets the contribution of the Hamiltonian to the Liouvillian
      * \f$ \mathcal{L} = -\mathrm{i}\hbar^{-1} \left[ H, \cdot \right] \f$.
      */
-    const real_matrix_t&
-    get_hamiltonian() const
-    {
-        return m_hamiltonian;
-    }
+    const real_matrix_t& get_hamiltonian() const { return m_hamiltonian; }
 
     /**
      * Gets the contribution of the dipole moment operator to the
      * Liouvillian
      * \f$ \mathcal{L} = -\mathrm{i}\hbar^{-1} \left[ \mu, \cdot \right] \f$.
      */
-    const real_matrix_t&
-    get_dipole_operator() const
-    {
-        return m_dipole_op;
-    }
+    const real_matrix_t& get_dipole_operator() const { return m_dipole_op; }
 
     /**
      * Gets the dipole moment operator in vector form.
      */
-    const real_matrix_t&
-    get_dipole_operator_vec() const
+    const real_matrix_t& get_dipole_operator_vec() const
     {
         return m_dipole_op_vec;
     }
@@ -281,8 +264,7 @@ public:
     /**
      * Gets relaxation superoperator in coherence vector representation.
      */
-    const real_matrix_t&
-    get_relaxation_superop() const
+    const real_matrix_t& get_relaxation_superop() const
     {
         return m_relax_superop;
     }
@@ -290,17 +272,12 @@ public:
     /**
      * Gets equilibrium vector.
      */
-    const real_matrix_t&
-    get_equilibrium_vec() const
-    {
-        return m_equi;
-    }
+    const real_matrix_t& get_equilibrium_vec() const { return m_equi; }
 
     /**
      * Calculates initial coherence vector.
      */
-    real_matrix_t
-    get_initial_vec(const qm_operator& rho_init) const
+    real_matrix_t get_initial_vec(const qm_operator& rho_init) const
     {
         return calc_op_vec(rho_init);
     }
@@ -310,8 +287,9 @@ public:
      * \param d and index \param m.
      */
     template<unsigned int num_lvl, unsigned int num_adj>
-    static real
-    calc_population(const Eigen::Matrix<real, num_adj, 1>& d, unsigned int m)
+    static real calc_population(
+        const Eigen::Matrix<real, num_adj, 1>& d,
+        unsigned int m)
     {
         /* TODO d.size() instead of template param? */
 
@@ -326,11 +304,11 @@ public:
         } else if (num_lvl == 3) {
             switch (m) {
             case 0:
-                return 1.0/3 + 0.5 * (-1.0 * d(6) - 1.0/sqrt(3) * d(7));
+                return 1.0 / 3 + 0.5 * (-1.0 * d(6) - 1.0 / sqrt(3) * d(7));
             case 1:
-                return 1.0/3 + 0.5 * (+1.0 * d(6) - 1.0/sqrt(3) * d(7));
+                return 1.0 / 3 + 0.5 * (+1.0 * d(6) - 1.0 / sqrt(3) * d(7));
             case 2:
-                return 1.0/3 + 0.5 * (+2.0/sqrt(3) * d(7));
+                return 1.0 / 3 + 0.5 * (+2.0 / sqrt(3) * d(7));
             default:
                 return 0.0;
             }
@@ -348,12 +326,12 @@ public:
                     factor = 0.0;
                 }
 
-                int k = ((i + 1) * (i + 2))/2;
+                int k = ((i + 1) * (i + 2)) / 2;
 
-                sum += factor/sqrt(k) * d(num_lvl * (num_lvl - 1) + i);
+                sum += factor / sqrt(k) * d(num_lvl * (num_lvl - 1) + i);
             }
 
-            return 1.0/num_lvl + 0.5 * sum;
+            return 1.0 / num_lvl + 0.5 * sum;
         }
     }
 
@@ -361,8 +339,8 @@ public:
      * Determines coherence vector for given density matrix \param d.
      */
     template<unsigned int num_lvl, unsigned int num_adj>
-    static Eigen::Matrix<real, num_adj, 1>
-    coherence_vector(const qm_operator& d)
+    static Eigen::Matrix<real, num_adj, 1> coherence_vector(
+        const qm_operator& d)
     {
         Eigen::Matrix<real, num_adj, 1> ret =
             Eigen::Matrix<real, num_adj, 1>::Zero();
@@ -383,7 +361,7 @@ public:
         }
 
         /* imag part terms */
-        i = (num_lvl * (num_lvl - 1))/2;
+        i = (num_lvl * (num_lvl - 1)) / 2;
         for (int j = 0, row = 0, col = 1; j < d.get_off_diagonal().size();
              j++) {
 
@@ -399,7 +377,7 @@ public:
 
         /* population terms */
         i = num_lvl * (num_lvl - 1);
-        for (unsigned int l = 0; l < num_lvl - 1;  l++) {
+        for (unsigned int l = 0; l < num_lvl - 1; l++) {
             int j = 0;
             real entry = 0;
 
@@ -408,14 +386,13 @@ public:
             }
             entry += (l + 1) * d.get_main_diagonal()[j];
 
-            int k = ((l + 1) * (l + 2))/2;
-            ret(i + l) = entry/sqrt(k);
+            int k = ((l + 1) * (l + 2)) / 2;
+            ret(i + l) = entry / sqrt(k);
         }
 
         return ret;
     }
 };
-
 }
 
 #endif

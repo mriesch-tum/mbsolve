@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,31 +19,25 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <device.hpp>
+#include <mbsolve/lib/device.hpp>
 
 namespace mbsolve {
 
-device::device(const std::string& name) : m_name(name)
-{
-}
+device::device(const std::string& name) : m_name(name) {}
 
-device::device(const std::string& file, const std::vector<material *>& mats)
-{
+device::device(const std::string& file, const std::vector<material*>& mats) {}
 
-}
-
-device::~device()
-{
-}
+device::~device() {}
 
 void
-device::add_region(std::shared_ptr<region> reg) {
+device::add_region(std::shared_ptr<region> reg)
+{
     m_regions.push_back(reg);
     m_used_materials.insert(reg->get_material()->get_id());
 }
 
 const std::vector<std::shared_ptr<region> >&
-device:: get_regions() const
+device::get_regions() const
 {
     return m_regions;
 }
@@ -55,7 +49,8 @@ device::get_used_materials() const
 }
 
 real
-device::get_length() const {
+device::get_length() const
+{
     real total = 0.0;
     for (auto r : m_regions) {
         total += r->get_length();
@@ -81,5 +76,4 @@ device::get_minimum_permittivity() const
     }
     return min;
 }
-
 }

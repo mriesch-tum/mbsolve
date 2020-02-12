@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -20,12 +20,12 @@
  */
 
 #include <stdexcept>
-#include <record.hpp>
+#include <mbsolve/lib/record.hpp>
 
 namespace mbsolve {
 
-record::record(const std::string& name, real interval, real position) :
-    m_name(name), m_interval(interval), m_position(position)
+record::record(const std::string& name, real interval, real position)
+  : m_name(name), m_interval(interval), m_position(position)
 {
     /* type of requested result? */
     switch (m_name[0]) {
@@ -48,19 +48,20 @@ record::record(const std::string& name, real interval, real position) :
 
     /* TODO parse numbers to identify e.g. density matrix entries */
 
-
     /* complex quantity? only off-diagonal density matrix entries */
     m_is_complex = (m_type == type::density) && (m_row != m_col);
-
 }
 
-record::record(const std::string& name, type record_type, unsigned int row_idx,
-               unsigned int col_idx, real interval, real position) :
-    m_name(name), m_type(record_type), m_row(row_idx - 1), m_col(col_idx - 1),
+record::record(
+    const std::string& name,
+    type record_type,
+    unsigned int row_idx,
+    unsigned int col_idx,
+    real interval,
+    real position)
+  : m_name(name), m_type(record_type), m_row(row_idx - 1), m_col(col_idx - 1),
     m_interval(interval), m_position(position)
 {
     m_is_complex = (m_type == type::density) && (m_row != m_col);
 }
-
-
 }

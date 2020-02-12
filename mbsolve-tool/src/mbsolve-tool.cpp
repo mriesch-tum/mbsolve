@@ -30,7 +30,7 @@
 #include <string>
 #include <vector>
 #include <cxxopts.hpp>
-#include <mbsolve.hpp>
+#include <mbsolve/lib.hpp>
 
 #if USE_CPU
 #include <solver_cpu_loader.hpp>

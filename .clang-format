@@ -21,9 +21,7 @@ IncludeCategories:
     Priority:        1
   - Regex:           '^(<Eigen/|<unsupported/Eigen/)'
     Priority:        2
-  - Regex:           '^(<internal/)'
-    Priority:        4
-  - Regex:           '(.hpp>)$'
+  - Regex:           '^(<mbsolve/)'
     Priority:        3
   - Regex:           '(.h>|.hpp>)$'
     Priority:        2

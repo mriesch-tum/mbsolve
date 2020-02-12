@@ -21,7 +21,7 @@
 
 #include <iostream>
 #include <solver_cpu_fdtd.hpp>
-#include <internal/algo_lindblad_noop.hpp>
+#include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
 
 namespace mbsolve {
 

@@ -23,8 +23,8 @@
 #include <solver_cpu_fdtd.hpp>
 #include <solver_cpu_fdtd_red.hpp>
 #include <solver_cpu_loader.hpp>
-#include <internal/algo_lindblad_cvr_rodr.hpp>
-#include <internal/algo_lindblad_noop.hpp>
+#include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
+#include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
 
 namespace mbsolve {
 
