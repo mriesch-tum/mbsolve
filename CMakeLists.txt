@@ -73,6 +73,7 @@ option(WITH_HDF5 "with(out) HDF5 writer" ON)
 option(WITH_CPU "with(out) CPU solver" ON)
 option(WITH_CUDA "with(out) CUDA solver" OFF)
 option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
+option(WITH_FORMAT "with(out) clang-format support" ON)
 option(WITH_PYTHON "with(out) Python interface" ON)
 option(WITH_CPPTOOL "with(out) C++ tool" ON)
 
@@ -143,6 +144,14 @@ if(WITH_DOXYGEN)
   endif(DOXYGEN_FOUND)
 endif(WITH_DOXYGEN)
 
+# clang-format support
+if(WITH_FORMAT)
+  find_program(CLANG_FORMAT NAMES "clang-format" "clang-format-6.0")
+  if(CLANG_FORMAT)
+    set(MBSOLVE_FORMAT TRUE)
+  endif(CLANG_FORMAT)
+endif(WITH_FORMAT)
+
 # install Python interface
 if(MBSOLVE_PYTHON)
   configure_file("${CMAKE_CURRENT_SOURCE_DIR}/python/setup.py.in"
@@ -172,3 +181,13 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config-version.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
+
+# get all source files
+list(APPEND ALL_SOURCE_FILES)
+
+# code formatting check
+if(MBSOLVE_FORMAT)
+  add_custom_target(format
+    COMMAND ${CLANG_FORMAT} -style=file -i ${ALL_SOURCE_FILES}
+    COMMENT "Formatting all source files")
+endif(MBSOLVE_FORMAT)

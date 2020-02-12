@@ -1,23 +1,21 @@
 ---
-Language:        Cpp
-BasedOnStyle:    Mozilla
+Language: Cpp
+BasedOnStyle: Mozilla
 
 # Basic Formatting
 AccessModifierOffset: -4
-ColumnLimit:     78
+ColumnLimit: 78
 ContinuationIndentWidth: 4
-IndentWidth:     4
+IndentWidth: 4
 
 # Advanced Formatting
 AlignAfterOpenBracket: AlwaysBreak
-AlignOperands:   false
+AlignOperands: false
 AlignTrailingComments: false
-BreakConstructorInitializersBeforeComma: false
+BreakConstructorInitializers: BeforeColon
 IncludeCategories:
   - Regex:           '<[[:alnum:]]+>'
     Priority:        0
-  - Regex:           '(.h>)$'
-    Priority:        1
 # enter system/compiler/framework includes here
   - Regex:           '<omp.h>|<cuda.h>'
     Priority:        1
@@ -27,5 +25,8 @@ IncludeCategories:
     Priority:        4
   - Regex:           '(.hpp>)$'
     Priority:        3
+  - Regex:           '(.h>|.hpp>)$'
+    Priority:        2
 IndentCaseLabels: false
 SpaceAfterCStyleCast: true
+Standard: Cpp03

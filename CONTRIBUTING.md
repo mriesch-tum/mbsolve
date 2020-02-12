@@ -129,10 +129,16 @@ Please follow the rules below when contributing to the mbsolve project.
 
  - Do not use nested namespaces, use only the namespace "mbsolve".
 
- - Run clang-format to format the code automatically. It makes sense to
-   integrate this tool into your editor. At least before issuing a
-   pull request it is mandatory that the code is in agreement with the
-   rules above.
+ - Use a space between double angular brackets, e.g.,
+
+       std::vector<std::vector<double> > my_matrix;
+
+   This is required as SWIG 2 does not fully support C++11.
+
+ - Run clang-format (6.0) to format the code automatically. It makes sense
+   to integrate this tool into your editor. At least before assigning a
+   merge or pull request to a reviewer it is mandatory that the code is in
+   agreement with the rules above.
 
 ### Special rules for Python source code files
 
@@ -185,7 +191,8 @@ From the command line, run
     $ clang-format -i file.cpp
 
 to format file.cpp in place according to the rules given in the .clang-format
-file.
+file. If UNIX Makefiles are used, the command `make format` runs clang-format
+for all source files.
 
 clang-format can be integrated easily into several IDEs and editors. For
 example, in EMACS it can be executed at save
