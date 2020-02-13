@@ -95,6 +95,8 @@ endif(WITH_PYTHON AND BUILD_SHARED_LIBS)
 
 # mbsolve library
 add_subdirectory(mbsolve-lib)
+get_target_property(LIB_SOURCE_FILES mbsolve-lib SOURCES)
+list(APPEND ALL_SOURCE_FILES ${LIB_SOURCE_FILES})
 
 # HDF support?
 if(WITH_HDF5)
@@ -102,6 +104,8 @@ if(WITH_HDF5)
   if(HDF5_FOUND)
     set(MBSOLVE_HDF5 TRUE)
     add_subdirectory(writer-hdf5)
+    get_target_property(WRITER_HDF_SOURCE_FILES writer-hdf5 SOURCES)
+    list(APPEND ALL_SOURCE_FILES ${WRITER_HDF_SOURCE_FILES})
   endif(HDF5_FOUND)
 endif(WITH_HDF5)
 
@@ -120,6 +124,8 @@ if(WITH_CPU)
   if(OPENMP_FOUND)
     set(MBSOLVE_CPU TRUE)
     add_subdirectory(solver-cpu)
+    get_target_property(SOLVER_CPU_SOURCE_FILES solver-cpu SOURCES)
+    list(APPEND ALL_SOURCE_FILES ${SOLVER_CPU_SOURCE_FILES})
   endif(OPENMP_FOUND)
 endif(WITH_CPU)
 
@@ -128,6 +134,8 @@ if(WITH_CPPTOOL)
   find_package(cxxopts NO_MODULE)
   if(cxxopts_FOUND)
     add_subdirectory(mbsolve-tool)
+    get_target_property(TOOL_SOURCE_FILES mbsolve-tool SOURCES)
+    list(APPEND ALL_SOURCE_FILES ${TOOL_SOURCE_FILES})
   endif(cxxopts_FOUND)
 endif(WITH_CPPTOOL)
 
@@ -181,16 +189,6 @@ install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config.cmake
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}-config-version.cmake
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT})
-
-# get all source files
-get_target_property(LIB_SOURCE_FILES mbsolve-lib SOURCES)
-get_target_property(TOOL_SOURCE_FILES mbsolve-tool SOURCES)
-get_target_property(SOLVER_CPU_SOURCE_FILES solver-cpu SOURCES)
-get_target_property(WRITER_HDF_SOURCE_FILES writer-hdf5 SOURCES)
-list(APPEND ALL_SOURCE_FILES ${LIB_SOURCE_FILES})
-list(APPEND ALL_SOURCE_FILES ${TOOL_SOURCE_FILES})
-list(APPEND ALL_SOURCE_FILES ${SOLVER_CPU_SOURCE_FILES})
-list(APPEND ALL_SOURCE_FILES ${WRITER_HDF_SOURCE_FILES})
 
 # code formatting check
 if(MBSOLVE_FORMAT)
