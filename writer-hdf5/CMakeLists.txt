@@ -28,11 +28,16 @@ set_target_properties(writer-hdf5 PROPERTIES
   CXX_STANDARD 11
   VERSION ${VERSION_CORE}
   SOVERSION ${VERSION_MAJOR})
+if(BUILD_SHARED_LIBS)
+  target_compile_definitions(writer-hdf5 PRIVATE "-DH5_BUILT_AS_DYNAMIC_LIB")
+else()
+  target_compile_definitions(writer-hdf5 PRIVATE "-DH5_BUILT_AS_STATIC_LIB")
+endif()
 target_include_directories(writer-hdf5 PRIVATE ${HDF5_INCLUDE_DIRS})
 target_include_directories(writer-hdf5 PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_link_libraries(writer-hdf5 PUBLIC mbsolve-lib ${HDF5_LIBRARIES})
+target_link_libraries(writer-hdf5 PRIVATE mbsolve-lib ${HDF5_LIBRARIES})
 
 if(MBSOLVE_PYTHON)
   include_directories(${PYTHON_INCLUDE_DIRS})
