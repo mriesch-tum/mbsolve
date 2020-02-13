@@ -21,7 +21,8 @@
 cmake_minimum_required(VERSION 3.6)
 project(mbsolve-tool)
 
-add_executable(mbsolve-tool src/mbsolve-tool.cpp)
+add_executable(mbsolve-tool
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/mbsolve-tool.cpp)
 set_property(TARGET mbsolve-tool PROPERTY CXX_STANDARD 11)
 target_link_libraries(mbsolve-tool PRIVATE cxxopts::cxxopts mbsolve-lib)
 
