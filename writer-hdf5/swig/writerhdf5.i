@@ -1,6 +1,6 @@
 %module writerhdf5
 %{
-#include <writer_hdf5.hpp>
+#include <mbsolve/writer-hdf5/writer_hdf5.hpp>
 %}
 
 %init

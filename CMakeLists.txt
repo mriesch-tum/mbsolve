@@ -186,9 +186,11 @@ install(FILES
 get_target_property(LIB_SOURCE_FILES mbsolve-lib SOURCES)
 get_target_property(TOOL_SOURCE_FILES mbsolve-tool SOURCES)
 get_target_property(SOLVER_CPU_SOURCE_FILES solver-cpu SOURCES)
+get_target_property(WRITER_HDF_SOURCE_FILES writer-hdf5 SOURCES)
 list(APPEND ALL_SOURCE_FILES ${LIB_SOURCE_FILES})
 list(APPEND ALL_SOURCE_FILES ${TOOL_SOURCE_FILES})
 list(APPEND ALL_SOURCE_FILES ${SOLVER_CPU_SOURCE_FILES})
+list(APPEND ALL_SOURCE_FILES ${WRITER_HDF_SOURCE_FILES})
 
 # code formatting check
 if(MBSOLVE_FORMAT)

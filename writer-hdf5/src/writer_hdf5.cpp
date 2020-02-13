@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -20,17 +20,13 @@
  */
 
 #include <H5Cpp.h>
-#include <writer_hdf5.hpp>
+#include <mbsolve/writer-hdf5/writer_hdf5.hpp>
 
 namespace mbsolve {
 
-writer_hdf5::writer_hdf5() : writer("hdf5", "hdf")
-{
-}
+writer_hdf5::writer_hdf5() : writer("hdf5", "hdf") {}
 
-writer_hdf5::~writer_hdf5()
-{
-}
+writer_hdf5::~writer_hdf5() {}
 
 void
 writer_hdf5::write(

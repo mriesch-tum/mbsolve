@@ -37,7 +37,7 @@
 #endif
 
 #if USE_HDF5
-#include <writer_hdf5.hpp>
+#include <mbsolve/writer-hdf5/writer_hdf5.hpp>
 #endif
 
 static std::string device_file;

@@ -21,7 +21,9 @@
 cmake_minimum_required(VERSION 3.6)
 project(writer-hdf5)
 
-add_library(writer-hdf5 src/writer_hdf5.cpp)
+add_library(writer-hdf5
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/mbsolve/writer-hdf5/writer_hdf5.hpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/writer_hdf5.cpp)
 set_target_properties(writer-hdf5 PROPERTIES
   CXX_STANDARD 11
   VERSION ${VERSION_CORE}
