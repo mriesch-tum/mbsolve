@@ -1,9 +1,9 @@
 % marskar2011  Displays result of marskar2011 setup.
 %              Reference data available in tools/reference-data.
 
-% mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+% mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
 %
-% Copyright (c) 2016, Computational Photonics Group, Technical University 
+% Copyright (c) 2016, Computational Photonics Group, Technical University
 % of Munich.
 %
 % This program is free software; you can redistribute it and/or modify

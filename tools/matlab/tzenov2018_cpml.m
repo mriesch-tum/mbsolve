@@ -1,8 +1,8 @@
 % tzenov2018_cpml  Displays result of tzenov2018_cpml setup.
 
-% mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+% mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
 %
-% Copyright (c) 2016, Computational Photonics Group, Technical University 
+% Copyright (c) 2016, Computational Photonics Group, Technical University
 % of Munich.
 %
 % This program is free software; you can redistribute it and/or modify

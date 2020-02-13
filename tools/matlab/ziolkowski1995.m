@@ -1,9 +1,9 @@
 % ziolkowski1995  Displays result of ziolkowski1995 setup.
 %                 Reference data available in tools/reference-data.
 
-% mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+% mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
 %
-% Copyright (c) 2016, Computational Photonics Group, Technical University 
+% Copyright (c) 2016, Computational Photonics Group, Technical University
 % of Munich.
 %
 % This program is free software; you can redistribute it and/or modify
@@ -19,7 +19,7 @@
 % You should have received a copy of the GNU General Public License
 % along with this program; if not, write to the Free Software Foundation,
 % Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
- 
+
 clear all;
 close all;
 
