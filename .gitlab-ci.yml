@@ -1,6 +1,7 @@
 stages:
  - build
  - test
+ - quality
 
 .build_image_debian_docker: &build_image_debian_docker_definition
   tags:
@@ -70,3 +71,23 @@ test-py-examples-debian-8:
   dependencies:
    - build-debian-8
   <<: *test_definition_python_examples
+
+format-cpp:
+  image: debian:8
+  <<: *build_image_debian_docker_definition
+  stage: quality
+  dependencies:
+   - build-debian-8
+  script:
+   - mkdir -p build
+   - cd build
+   - cmake ..
+   - make format
+   - cd ..
+   - git diff > build/format_check_revisionlist.txt
+   - if [ `git diff | wc -l` -gt "0" ]; then false; fi
+  artifacts:
+    when: on_failure
+    paths:
+     - "build/format_check_revisionlist.txt"
+  allow_failure: true
