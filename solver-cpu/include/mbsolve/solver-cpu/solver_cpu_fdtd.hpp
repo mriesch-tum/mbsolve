@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -38,8 +38,9 @@ template<unsigned int num_lvl, template<unsigned int> class density_algo>
 class solver_cpu_fdtd : public solver
 {
 public:
-    solver_cpu_fdtd(std::shared_ptr<const device> dev,
-                    std::shared_ptr<scenario> scen);
+    solver_cpu_fdtd(
+        std::shared_ptr<const device> dev,
+        std::shared_ptr<scenario> scen);
 
     ~solver_cpu_fdtd();
 
@@ -52,24 +53,24 @@ private:
      * or implement correctly
      */
 
-    typename density_algo<num_lvl>::density *m_d;
+    typename density_algo<num_lvl>::density* m_d;
 
-    real *m_h;
-    real *m_e;
-    real *m_p;
+    real* m_h;
+    real* m_e;
+    real* m_p;
 
-    real *m_fac_a;
-    real *m_fac_b;
-    real *m_fac_c;
-    real *m_gamma;
+    real* m_fac_a;
+    real* m_fac_b;
+    real* m_fac_c;
+    real* m_gamma;
 
     real m_dx_inv;
 
-    real *m_result_scratch;
+    real* m_result_scratch;
 
-    real *m_source_data;
+    real* m_source_data;
 
-    unsigned int *m_mat_indices;
+    unsigned int* m_mat_indices;
 
     typedef typename density_algo<num_lvl>::sim_constants qm_consts;
     typedef typename density_algo<num_lvl>::allocator qm_allocator;
@@ -79,7 +80,6 @@ private:
 
     std::vector<copy_list_entry> m_copy_list;
 };
-
 }
 
 #endif

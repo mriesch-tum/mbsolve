@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -19,25 +19,54 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-/**
- * \defgroup MBSOLVE_SOLVER_OPENMP solver-openmp
- * Different solvers that use OpenMP for parallelization.
- */
+#include <stdexcept>
+#include <stdlib.h>
 
-#ifndef MBSOLVE_SOLVER_CPU_LOADER
-#define MBSOLVE_SOLVER_CPU_LOADER
+#ifndef MBSOLVE_SOLVER_CPU_COMMON_H
+#define MBSOLVE_SOLVER_CPU_COMMON_H
 
-namespace mbsolve {
+#define ALIGN 64
 
-class solver_cpu_loader
+#ifdef __INTEL_COMPILER
+__mb_on_device inline void*
+mb_aligned_alloc(size_t size)
 {
-private:
-
-public:
-
-    solver_cpu_loader();
-};
-
+    return _mm_malloc(size, ALIGN);
 }
+
+__mb_on_device inline void
+mb_aligned_free(void* ptr)
+{
+    _mm_free(ptr);
+}
+
+#define __mb_assume_aligned(ptr) __assume_aligned((ptr), ALIGN)
+
+#else
+
+inline void*
+mb_aligned_alloc(size_t size)
+{
+    void* addr;
+    int ret;
+
+    ret = posix_memalign(&addr, ALIGN, size);
+
+    if (ret != 0) {
+        throw std::invalid_argument("posix_memalign failed.");
+    }
+
+    return addr;
+}
+
+inline void
+mb_aligned_free(void* ptr)
+{
+    free(ptr);
+}
+
+#define __mb_assume_aligned(ptr) __builtin_assume_aligned(ptr, ALIGN)
+
+#endif
 
 #endif

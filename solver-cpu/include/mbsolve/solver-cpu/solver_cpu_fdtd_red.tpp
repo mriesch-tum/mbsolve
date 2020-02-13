@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -29,10 +29,10 @@
 #include <iostream>
 #include <random>
 #include <omp.h>
-#include <common_cpu.hpp>
-#include <solver_cpu_fdtd_red.hpp>
 #include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
 #include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
+#include <mbsolve/solver-cpu/internal/common_cpu.hpp>
+#include <mbsolve/solver-cpu/solver_cpu_fdtd_red.hpp>
 
 namespace mbsolve {
 
@@ -77,7 +77,7 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
     init_fdtd_simulation(dev, scen, 0.5);
 
     /* inverse grid point size for Ampere's law */
-    m_dx_inv = 1.0/scen->get_gridpoint_size();
+    m_dx_inv = 1.0 / scen->get_gridpoint_size();
 
     /* set up simulation constants for quantum mechanical description */
     std::vector<sim_constants_fdtd> m_sim_consts_fdtd;
@@ -90,8 +90,8 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
         m_sim_consts_fdtd.push_back(get_fdtd_constants(dev, scen, mat));
 
         /* constants for quantum mechanical system */
-        m_sim_consts_qm.push_back(density_algo<num_lvl>::get_qm_constants
-                                  (mat->get_qm(), scen->get_timestep_size()));
+        m_sim_consts_qm.push_back(density_algo<num_lvl>::get_qm_constants(
+            mat->get_qm(), scen->get_timestep_size()));
 
         /* enter material index */
         id_to_idx[mat->get_id()] = j;
@@ -100,7 +100,7 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
 
     /* partition data in chunks per thread */
     uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
-    uint64_t chunk_base = m_scenario->get_num_gridpoints()/P;
+    uint64_t chunk_base = m_scenario->get_num_gridpoints() / P;
     uint64_t chunk_rem = m_scenario->get_num_gridpoints() % P;
     uint64_t num_timesteps = m_scenario->get_num_timesteps();
 
@@ -127,15 +127,15 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
         uint64_t size = chunk + 2 * OL;
 
         m_d[tid] = new density_t[size];
-        m_h[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-        m_e[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-        m_p[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-        m_fac_a[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-        m_fac_b[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-        m_fac_c[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-        m_gamma[tid] = (real *) mb_aligned_alloc(size * sizeof(real));
-        m_mat_indices[tid] = (unsigned int *)
-            mb_aligned_alloc(size * sizeof(unsigned int));
+        m_h[tid] = (real*) mb_aligned_alloc(size * sizeof(real));
+        m_e[tid] = (real*) mb_aligned_alloc(size * sizeof(real));
+        m_p[tid] = (real*) mb_aligned_alloc(size * sizeof(real));
+        m_fac_a[tid] = (real*) mb_aligned_alloc(size * sizeof(real));
+        m_fac_b[tid] = (real*) mb_aligned_alloc(size * sizeof(real));
+        m_fac_c[tid] = (real*) mb_aligned_alloc(size * sizeof(real));
+        m_gamma[tid] = (real*) mb_aligned_alloc(size * sizeof(real));
+        m_mat_indices[tid] =
+            (unsigned int*) mb_aligned_alloc(size * sizeof(unsigned int));
     }
 
     /* set up indices array and initialize data arrays */
@@ -165,10 +165,11 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
             bool has_qm = false;
             if ((global_idx >= 0) && (global_idx < num_gridpoints)) {
                 for (const auto& reg : dev->get_regions()) {
-                    if ((x >= reg->get_x_start()) && (x <= reg->get_x_end())) {
+                    if ((x >= reg->get_x_start()) &&
+                        (x <= reg->get_x_end())) {
                         mat_idx = id_to_idx[reg->get_material()->get_id()];
-                        has_qm = (reg->get_material()->get_qm()) ?
-                            true : false;
+                        has_qm =
+                            (reg->get_material()->get_qm()) ? true : false;
                         break;
                     }
                 }
@@ -177,11 +178,10 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
             /* initialize data arrays */
             if (mat_idx >= 0) {
                 if (has_qm) {
-                    m_d[tid][i] = density_algo<num_lvl>::get_density
-                        (scen->get_rho_init());
+                    m_d[tid][i] = density_algo<num_lvl>::get_density(
+                        scen->get_rho_init());
                 } else {
                     m_d[tid][i] = density_algo<num_lvl>::get_density();
-
                 }
                 m_e[tid][i] = dis(rand_gen) * 1e-15;
                 m_h[tid][i] = 0.0;
@@ -235,16 +235,16 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
     }
 
     /* allocate scratchpad result memory */
-    m_result_scratch = (real *) mb_aligned_alloc(sizeof(real) * scratch_size);
+    m_result_scratch = (real*) mb_aligned_alloc(sizeof(real) * scratch_size);
 
     /* create source data */
-    m_source_data = new real[scen->get_num_timesteps() *
-                             scen->get_sources().size()];
+    m_source_data =
+        new real[scen->get_num_timesteps() * scen->get_sources().size()];
     unsigned int base_idx = 0;
     for (const auto& src : scen->get_sources()) {
         sim_source s;
         s.type = src->get_type();
-        s.x_idx = src->get_position()/scen->get_gridpoint_size();
+        s.x_idx = src->get_position() / scen->get_gridpoint_size();
         s.data_base_idx = base_idx;
         m_sim_sources.push_back(s);
 
@@ -292,21 +292,31 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::~solver_cpu_fdtd_red()
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
 void
-solver_cpu_fdtd_red<num_lvl, density_algo>::update_e
-(uint64_t size, unsigned int border, real *e, real *h, real *p, real *fac_a,
- real *fac_b, real *gamma) const
+solver_cpu_fdtd_red<num_lvl, density_algo>::update_e(
+    uint64_t size,
+    unsigned int border,
+    real* e,
+    real* h,
+    real* p,
+    real* fac_a,
+    real* fac_b,
+    real* gamma) const
 {
 #pragma omp simd aligned(e, h, p, fac_a, fac_b, gamma : ALIGN)
     for (int i = border; i < size - border - 1; i++) {
-        e[i] = fac_a[i] * e[i] + fac_b[i] *
-            (-gamma[i] * p[i] + m_dx_inv * (h[i + 1] - h[i]));
+        e[i] = fac_a[i] * e[i] +
+            fac_b[i] * (-gamma[i] * p[i] + m_dx_inv * (h[i + 1] - h[i]));
     }
 }
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
 void
-solver_cpu_fdtd_red<num_lvl, density_algo>::update_h
-(uint64_t size, unsigned int border, real *e, real *h, real *fac_c) const
+solver_cpu_fdtd_red<num_lvl, density_algo>::update_h(
+    uint64_t size,
+    unsigned int border,
+    real* e,
+    real* h,
+    real* fac_c) const
 {
 #pragma omp simd aligned(e, h, fac_c : ALIGN)
     for (int i = border + 1; i < size - border; i++) {
@@ -316,10 +326,13 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::update_h
 
 template<unsigned int num_lvl, template<unsigned int> class density_algo>
 void
-solver_cpu_fdtd_red<num_lvl, density_algo>::apply_sources
-(real *t_e, real *source_data, unsigned int num_sources,
- uint64_t time,
- unsigned int base_pos, uint64_t chunk) const
+solver_cpu_fdtd_red<num_lvl, density_algo>::apply_sources(
+    real* t_e,
+    real* source_data,
+    unsigned int num_sources,
+    uint64_t time,
+    unsigned int base_pos,
+    uint64_t chunk) const
 {
     for (unsigned int k = 0; k < num_sources; k++) {
         int at = m_sim_sources[k].x_idx - base_pos + OL;
@@ -342,7 +355,7 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
 {
     unsigned int P = omp_get_max_threads();
     uint64_t num_gridpoints = m_scenario->get_num_gridpoints();
-    uint64_t chunk_base = m_scenario->get_num_gridpoints()/P;
+    uint64_t chunk_base = m_scenario->get_num_gridpoints() / P;
     uint64_t chunk_rem = m_scenario->get_num_gridpoints() % P;
     uint64_t num_timesteps = m_scenario->get_num_timesteps();
     unsigned int num_sources = m_sim_sources.size();
@@ -359,10 +372,10 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
 
         /* gather pointers */
         typedef typename density_algo<num_lvl>::density density_t;
-        density_t *t_d;
+        density_t* t_d;
         real *t_h, *t_e, *t_p;
         real *t_fac_a, *t_fac_b, *t_fac_c, *t_gamma;
-        unsigned int *t_mat_indices;
+        unsigned int* t_mat_indices;
 
         t_d = m_d[tid];
         t_e = m_e[tid];
@@ -411,10 +424,10 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
         }
 
         /* main loop */
-        for (uint64_t n = 0; n <= num_timesteps/OL; n++) {
+        for (uint64_t n = 0; n <= num_timesteps / OL; n++) {
             /* handle loop remainder */
-            unsigned int subloop_ct = (n == num_timesteps/OL) ?
-                num_timesteps % OL : OL;
+            unsigned int subloop_ct =
+                (n == num_timesteps / OL) ? num_timesteps % OL : OL;
 
             /* exchange data */
             if (tid > 0) {
@@ -447,18 +460,22 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
                     int mat_idx = t_mat_indices[i];
 
                     /* update density matrix */
-                    density_algo<num_lvl>::update(m_sim_consts_qm[mat_idx],
-                                                  t_d[i], t_e[i], &t_p[i]);
+                    density_algo<num_lvl>::update(
+                        m_sim_consts_qm[mat_idx], t_d[i], t_e[i], &t_p[i]);
                 }
 
                 /* update electric field */
-                update_e(size, border, t_e, t_h, t_p, t_fac_a, t_fac_b,
-                         t_gamma);
+                update_e(
+                    size, border, t_e, t_h, t_p, t_fac_a, t_fac_b, t_gamma);
 
                 /* apply sources */
-                apply_sources(t_e, m_source_data, num_sources,
-                              n * OL + m, tid * chunk_base,
-                              chunk);
+                apply_sources(
+                    t_e,
+                    m_source_data,
+                    num_sources,
+                    n * OL + m,
+                    tid * chunk_base,
+                    chunk);
 
                 /* update magnetic field */
                 update_h(size, border, t_e, t_h, t_fac_c);
@@ -481,8 +498,9 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
                         record::type t = m_copy_list[k].get_type();
 
                         int64_t base_idx = tid * chunk_base - OL;
-                        int64_t off_r = m_copy_list[k].get_offset_scratch_real
-                            (n * OL + m, base_idx - pos);
+                        int64_t off_r =
+                            m_copy_list[k].get_offset_scratch_real(
+                                n * OL + m, base_idx - pos);
 
                         /* TODO switch instead if else
                          * exchange type switch and for loop
@@ -499,14 +517,16 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
                                     m_result_scratch[off_r + i] = t_h[i];
                                 } else if (t == record::type::inversion) {
                                     m_result_scratch[off_r + i] =
-                                        density_algo<num_lvl>::calc_inversion(t_d[i]);
+                                        density_algo<num_lvl>::calc_inversion(
+                                            t_d[i]);
 
                                 } else if (t == record::type::density) {
 
                                     /* right now only populations */
                                     if (ridx == cidx) {
                                         m_result_scratch[off_r + i] =
-                                            density_algo<num_lvl>::calc_population(t_d[i], ridx);
+                                            density_algo<num_lvl>::
+                                                calc_population(t_d[i], ridx);
                                     } else {
                                         /* coherence terms */
 
@@ -536,15 +556,14 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::run() const
 
     /* bulk copy results into result classes */
     for (const auto& cle : m_copy_list) {
-        real *dr = m_result_scratch + cle.get_offset_scratch_real(0, 0);
+        real* dr = m_result_scratch + cle.get_offset_scratch_real(0, 0);
         std::copy(dr, dr + cle.get_size(), cle.get_result_real(0, 0));
         if (cle.is_complex()) {
-            real *di = m_result_scratch + cle.get_offset_scratch_imag(0, 0);
+            real* di = m_result_scratch + cle.get_offset_scratch_imag(0, 0);
             std::copy(di, di + cle.get_size(), cle.get_result_imag(0, 0));
         }
     }
 }
-
 }
 
 #endif

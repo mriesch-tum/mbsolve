@@ -24,12 +24,19 @@ project(solver-cpu)
 string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
   "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 
+set(SRC_BASE_CPU ${CMAKE_CURRENT_SOURCE_DIR})
 add_library(solver-cpu
-  src/solver_cpu_fdtd_noop.cpp
-  src/solver_cpu_fdtd_red_noop.cpp
-  src/solver_cpu_fdtd_cvr_rodr.cpp
-  src/solver_cpu_fdtd_red_cvr_rodr.cpp
-  src/solver_cpu_loader.cpp)
+  ${SRC_BASE_CPU}/include/mbsolve/solver-cpu/internal/common_cpu.hpp
+  ${SRC_BASE_CPU}/include/mbsolve/solver-cpu/solver_cpu_fdtd.hpp
+  ${SRC_BASE_CPU}/include/mbsolve/solver-cpu/solver_cpu_fdtd_red.hpp
+  ${SRC_BASE_CPU}/include/mbsolve/solver-cpu/solver_cpu_fdtd.tpp
+  ${SRC_BASE_CPU}/include/mbsolve/solver-cpu/solver_cpu_fdtd_red.tpp
+  ${SRC_BASE_CPU}/include/mbsolve/solver-cpu/solver_cpu_loader.hpp
+  ${SRC_BASE_CPU}/src/solver_cpu_fdtd_noop.cpp
+  ${SRC_BASE_CPU}/src/solver_cpu_fdtd_red_noop.cpp
+  ${SRC_BASE_CPU}/src/solver_cpu_fdtd_cvr_rodr.cpp
+  ${SRC_BASE_CPU}/src/solver_cpu_fdtd_red_cvr_rodr.cpp
+  ${SRC_BASE_CPU}/src/solver_cpu_loader.cpp)
 set_target_properties(solver-cpu PROPERTIES
   CXX_STANDARD 11
   VERSION ${VERSION_CORE}

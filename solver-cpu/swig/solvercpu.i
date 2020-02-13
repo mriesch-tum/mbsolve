@@ -1,6 +1,6 @@
 %module solvercpu
 %{
-#include <solver_cpu_loader.hpp>
+#include <mbsolve/solver-cpu/solver_cpu_loader.hpp>
 %}
 
 %init

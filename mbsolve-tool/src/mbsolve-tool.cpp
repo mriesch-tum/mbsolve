@@ -33,7 +33,7 @@
 #include <mbsolve/lib.hpp>
 
 #if USE_CPU
-#include <solver_cpu_loader.hpp>
+#include <mbsolve/solver-cpu/solver_cpu_loader.hpp>
 #endif
 
 #if USE_HDF5

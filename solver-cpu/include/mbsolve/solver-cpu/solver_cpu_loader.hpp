@@ -19,13 +19,22 @@
  * Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
  */
 
-#include <iostream>
-#include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
-#include <mbsolve/solver-cpu/solver_cpu_fdtd_red.hpp>
+/**
+ * \defgroup MBSOLVE_SOLVER_OPENMP solver-openmp
+ * Different solvers that use OpenMP for parallelization.
+ */
+
+#ifndef MBSOLVE_SOLVER_CPU_LOADER_H
+#define MBSOLVE_SOLVER_CPU_LOADER_H
 
 namespace mbsolve {
 
-template class solver_cpu_fdtd_red<0, lindblad_noop>;
+class solver_cpu_loader
+{
+private:
+public:
+    solver_cpu_loader();
+};
 }
 
-#include <mbsolve/solver-cpu/solver_cpu_fdtd_red.tpp>
+#endif

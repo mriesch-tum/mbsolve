@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -39,8 +39,9 @@ template<unsigned int num_lvl, template<unsigned int> class density_algo>
 class solver_cpu_fdtd_red : public solver
 {
 public:
-    solver_cpu_fdtd_red(std::shared_ptr<const device> dev,
-                        std::shared_ptr<scenario> scen);
+    solver_cpu_fdtd_red(
+        std::shared_ptr<const device> dev,
+        std::shared_ptr<scenario> scen);
 
     ~solver_cpu_fdtd_red();
 
@@ -49,15 +50,30 @@ public:
 private:
     const std::string m_name;
 
-    void update_e(uint64_t size, unsigned int border, real *e, real *h,
-                  real *p, real *fac_a, real *fac_b, real *gamma) const;
+    void update_e(
+        uint64_t size,
+        unsigned int border,
+        real* e,
+        real* h,
+        real* p,
+        real* fac_a,
+        real* fac_b,
+        real* gamma) const;
 
-    void update_h(uint64_t size, unsigned int border, real *e, real *h,
-                  real *fac_c) const;
+    void update_h(
+        uint64_t size,
+        unsigned int border,
+        real* e,
+        real* h,
+        real* fac_c) const;
 
-    void apply_sources(real *t_e, real *source_data, unsigned int num_sources,
-                       uint64_t time,
-                       unsigned int base_pos, uint64_t chunk) const;
+    void apply_sources(
+        real* t_e,
+        real* source_data,
+        unsigned int num_sources,
+        uint64_t time,
+        unsigned int base_pos,
+        uint64_t chunk) const;
 
     /* TODO: rule of three. make copy constructor etc. private?
      * or implement correctly
@@ -66,24 +82,24 @@ private:
     /**
      * Position-dependent density matrix.
      */
-    typename density_algo<num_lvl>::density **m_d;
+    typename density_algo<num_lvl>::density** m_d;
 
-    real **m_e;
-    real **m_h;
-    real **m_p;
+    real** m_e;
+    real** m_h;
+    real** m_p;
 
-    real **m_fac_a;
-    real **m_fac_b;
-    real **m_fac_c;
-    real **m_gamma;
+    real** m_fac_a;
+    real** m_fac_b;
+    real** m_fac_c;
+    real** m_gamma;
 
     real m_dx_inv;
 
-    real *m_result_scratch;
+    real* m_result_scratch;
 
-    real *m_source_data;
+    real* m_source_data;
 
-    unsigned int **m_mat_indices;
+    unsigned int** m_mat_indices;
 
     typedef typename density_algo<num_lvl>::sim_constants qm_consts;
     typedef typename density_algo<num_lvl>::allocator qm_allocator;
@@ -98,7 +114,6 @@ private:
      */
     const unsigned int OL;
 };
-
 }
 
 #endif

@@ -1,5 +1,5 @@
 /*
- * mbsolve: Framework for solving the Maxwell-Bloch/-Lioville equations
+ * mbsolve: An open-source solver tool for the Maxwell-Bloch equations.
  *
  * Copyright (c) 2016, Computational Photonics Group, Technical University of
  * Munich.
@@ -20,11 +20,11 @@
  */
 
 #include <iostream>
-#include <solver_cpu_fdtd.hpp>
-#include <solver_cpu_fdtd_red.hpp>
-#include <solver_cpu_loader.hpp>
 #include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
 #include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
+#include <mbsolve/solver-cpu/solver_cpu_fdtd.hpp>
+#include <mbsolve/solver-cpu/solver_cpu_fdtd_red.hpp>
+#include <mbsolve/solver-cpu/solver_cpu_loader.hpp>
 
 namespace mbsolve {
 
