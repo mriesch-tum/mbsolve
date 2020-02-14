@@ -23,11 +23,11 @@
 #include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_fdtd.hpp>
 
+#include <mbsolve/solver-cpu/solver_cpu_fdtd.tpp>
+
 namespace mbsolve {
 
 template class solver_cpu_fdtd<2, lindblad_cvr_rodr>;
 template class solver_cpu_fdtd<3, lindblad_cvr_rodr>;
 template class solver_cpu_fdtd<6, lindblad_cvr_rodr>;
 }
-
-#include <mbsolve/solver-cpu/solver_cpu_fdtd.tpp>

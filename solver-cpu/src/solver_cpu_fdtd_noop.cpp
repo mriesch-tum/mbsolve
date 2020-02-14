@@ -23,9 +23,9 @@
 #include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_fdtd.hpp>
 
+#include <mbsolve/solver-cpu/solver_cpu_fdtd.tpp>
+
 namespace mbsolve {
 
 template class solver_cpu_fdtd<0, lindblad_noop>;
 }
-
-#include <mbsolve/solver-cpu/solver_cpu_fdtd.tpp>
