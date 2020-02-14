@@ -20,6 +20,7 @@
  */
 
 #include <algorithm>
+#include <iterator>
 #include <mbsolve/lib/result.hpp>
 
 namespace mbsolve {
