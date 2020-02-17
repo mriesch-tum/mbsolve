@@ -109,7 +109,7 @@ The following software packages are required to build the project:
 
  - C++ compiler (e.g., gcc >= 4.9)
  - cxxopts (any recent version) for mbsolve-tool
- - CMake (3.6)
+ - CMake (3.9)
  - Eigen library (3.3.4)
  - HDF5 (any recent version) for the writer-hdf5
  - Python (2.7) and SWIG (2.0) for Python support

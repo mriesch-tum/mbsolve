@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.9)
 project(solver-cpu)
 
 string(REPLACE "-O2" "-O3" CMAKE_CXX_FLAGS_RELWITHDEBINFO
@@ -70,7 +70,7 @@ target_include_directories(solver-cpu PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 target_link_libraries(solver-cpu
-  PRIVATE Eigen3::Eigen ${OpenMP_CXX_FLAGS}
+  PRIVATE Eigen3::Eigen ${OpenMP_CXX_LIBRARIES}
   PUBLIC mbsolve-lib)
 
 if(MBSOLVE_PYTHON)

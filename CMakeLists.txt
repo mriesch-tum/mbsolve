@@ -18,7 +18,7 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.9)
 
 # project information
 set(PROJECT "mbsolve")
@@ -120,7 +120,7 @@ endif(WITH_CUDA)
 
 # CPU support?
 if(WITH_CPU)
-  find_package(OpenMP)
+  find_package(OpenMP COMPONENTS CXX)
   if(OPENMP_FOUND)
     set(MBSOLVE_CPU TRUE)
     add_subdirectory(solver-cpu)
