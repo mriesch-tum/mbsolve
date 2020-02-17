@@ -119,7 +119,7 @@ solver_cpu_fdtd<num_lvl, density_algo>::solver_cpu_fdtd(
 
     /* set up indices array and initialize data arrays */
 #pragma omp parallel for schedule(static)
-    for (unsigned int i = 0; i < scen->get_num_gridpoints(); i++) {
+    for (int i = 0; i < scen->get_num_gridpoints(); i++) {
         /* determine index of material and whether it has qm description */
         int idx = -1;
         bool has_qm = false;
@@ -235,7 +235,11 @@ solver_cpu_fdtd<num_lvl, density_algo>::run() const
         for (int n = 0; n < m_scenario->get_num_timesteps(); n++) {
 
             /* update electric field in parallel */
+#if USE_OMP_SIMD
 #pragma omp for simd schedule(static)
+#else
+#pragma omp for schedule(static)
+#endif
             for (int i = 0; i < m_scenario->get_num_gridpoints(); i++) {
                 m_e[i] = m_fac_a[i] * m_e[i] +
                     m_fac_b[i] *
@@ -256,7 +260,11 @@ solver_cpu_fdtd<num_lvl, density_algo>::run() const
             }
 
             /* update magnetic field in parallel */
+#if USE_OMP_SIMD
 #pragma omp for simd nowait schedule(static)
+#else
+#pragma omp for nowait schedule(static)
+#endif
             for (int i = 1; i < m_scenario->get_num_gridpoints(); i++) {
                 m_h[i] += m_fac_c[i] * (m_e[i] - m_e[i - 1]);
             }
@@ -272,7 +280,7 @@ solver_cpu_fdtd<num_lvl, density_algo>::run() const
             m_h[m_scenario->get_num_gridpoints()] = 0;
 
             /* update density matrix in parallel */
-#pragma omp for simd schedule(static)
+#pragma omp for schedule(static)
             for (int i = 0; i < m_scenario->get_num_gridpoints(); i++) {
                 unsigned int mat_idx = m_mat_indices[i];
 

@@ -302,7 +302,9 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::update_e(
     real* fac_b,
     real* gamma) const
 {
+#if USE_OMP_SIMD
 #pragma omp simd aligned(e, h, p, fac_a, fac_b, gamma : ALIGN)
+#endif
     for (int i = border; i < size - border - 1; i++) {
         e[i] = fac_a[i] * e[i] +
             fac_b[i] * (-gamma[i] * p[i] + m_dx_inv * (h[i + 1] - h[i]));
@@ -318,7 +320,9 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::update_h(
     real* h,
     real* fac_c) const
 {
+#if USE_OMP_SIMD
 #pragma omp simd aligned(e, h, fac_c : ALIGN)
+#endif
     for (int i = border + 1; i < size - border; i++) {
         h[i] += fac_c[i] * (e[i] - e[i - 1]);
     }

@@ -65,6 +65,13 @@ else()
   endif()
 endif()
 
+# MSVC does not support OpenMP pragma "simd"
+if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+  target_compile_options(solver-cpu PRIVATE "-DUSE_OMP_SIMD=0")
+else()
+  target_compile_options(solver-cpu PRIVATE "-DUSE_OMP_SIMD=1")
+endif()
+
 target_compile_options(solver-cpu PRIVATE ${OpenMP_CXX_FLAGS})
 target_include_directories(solver-cpu PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
