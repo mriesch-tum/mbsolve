@@ -50,6 +50,8 @@
 %template(matrix_real_d) std::vector<std::vector<double> >;
 %template(matrix_real_f) std::vector<std::vector<float> >;
 
+%feature("python:cdefaultargs") mbsolve::material::material;
+
 %include "../include/mbsolve/lib/qm_description.hpp"
 %include "../include/mbsolve/lib/material.hpp"
 %include "../include/mbsolve/lib/device.hpp"
