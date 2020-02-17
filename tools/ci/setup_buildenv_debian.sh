@@ -9,14 +9,19 @@ apt update && apt install --no-install-recommends -y ca-certificates \
 apt install --no-install-recommends -y lsb-release
 codename=`lsb_release -cs`
 
+# Clang compiler
+if [ "$codename" == "buster" ]; then
+    apt-get install --no-install-recommends -y clang-7 libomp-dev
+fi
+
 # clang-format
-if [ "$codename" == "jessie" ]; then
+if [ "$codename" == "buster" ]; then
     apt-get install --no-install-recommends -y clang-format-6.0
 fi
 
 # CMake
-if [ "$codename" == "jessie" ] || [ "$codename" == "xenial" ]; then
-    # Debian jessie comes with CMake 3.0, we need >= 3.6
+if [ "$codename" == "jessie" ] || [ "$codename" == "stretch" ]; then
+    # we need CMake >= 3.9
     wget https://github.com/Kitware/CMake/releases/download/v3.16.2/cmake-3.16.2-Linux-x86_64.sh
     chmod +x cmake-3.16.2-Linux-x86_64.sh
     ./cmake-3.16.2-Linux-x86_64.sh --skip-license --prefix=/

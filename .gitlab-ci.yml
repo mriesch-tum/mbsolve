@@ -17,12 +17,19 @@ stages:
   before_script:
    - ./tools/ci/setup_runtime_debian.sh
 
+.image_lrz_haswell: &image_lrz_haswell_definition
+  tags:
+   - linux
+   - ssh
+   - lrzhaswell
+
 .build_template_make: &build_definition_make
   stage: build
   script:
    - mkdir -p build
    - cd build
-   - cmake ..
+   - cmake $CMAKE_FLAGS
+       -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_PREFIX_PATH=$PREFIX ..
    - cmake --build .
    - cmake --build . --target install
   artifacts:
@@ -54,11 +61,15 @@ stages:
      - "build/"
 
 build-debian-8:
+  only:
+   - master
   image: debian:8
   <<: *build_image_debian_docker_definition
   <<: *build_definition_make
 
 test-cpp-examples-debian-8:
+  only:
+   - master
   image: debian:8
   <<: *runtime_image_debian_docker_definition
   dependencies:
@@ -66,38 +77,24 @@ test-cpp-examples-debian-8:
   <<: *test_definition_cpp_examples
 
 test-py-examples-debian-8:
+  only:
+   - master
   image: debian:8
   <<: *runtime_image_debian_docker_definition
   dependencies:
    - build-debian-8
   <<: *test_definition_python_examples
 
-format-cpp:
-  image: debian:8
-  <<: *build_image_debian_docker_definition
-  stage: quality
-  dependencies:
-   - build-debian-8
-  script:
-   - mkdir -p build
-   - cd build
-   - cmake ..
-   - make format
-   - cd ..
-   - git diff > build/format_check_revisionlist.txt
-   - if [ `git diff | wc -l` -gt "0" ]; then false; fi
-  artifacts:
-    when: on_failure
-    paths:
-     - "build/format_check_revisionlist.txt"
-  allow_failure: true
-
 build-debian-9:
+  only:
+   - master
   image: debian:9
   <<: *build_image_debian_docker_definition
   <<: *build_definition_make
 
 test-cpp-examples-debian-9:
+  only:
+   - master
   image: debian:9
   <<: *runtime_image_debian_docker_definition
   dependencies:
@@ -105,6 +102,8 @@ test-cpp-examples-debian-9:
   <<: *test_definition_cpp_examples
 
 test-py-examples-debian-9:
+  only:
+   - master
   image: debian:9
   <<: *runtime_image_debian_docker_definition
   dependencies:
@@ -128,4 +127,63 @@ test-py-examples-debian-10:
   <<: *runtime_image_debian_docker_definition
   dependencies:
    - build-debian-10
+  <<: *test_definition_python_examples
+
+format-cpp:
+  image: debian:10
+  <<: *build_image_debian_docker_definition
+  stage: quality
+  dependencies:
+   - build-debian-10
+  script:
+   - mkdir -p build
+   - cd build
+   - cmake ..
+   - make format
+   - cd ..
+   - git diff > build/format_check_revisionlist.txt
+   - if [ `git diff | wc -l` -gt "0" ]; then false; fi
+  artifacts:
+    when: on_failure
+    paths:
+     - "build/format_check_revisionlist.txt"
+  allow_failure: true
+
+build-clang:
+  variables:
+    CMAKE_FLAGS: "-DCMAKE_C_COMPILER=clang-7 -DCMAKE_CXX_COMPILER=clang++-7"
+  image: debian:10
+  <<: *build_image_debian_docker_definition
+  <<: *build_definition_make
+
+test-cpp-examples-clang:
+  image: debian:10
+  <<: *runtime_image_debian_docker_definition
+  dependencies:
+   - build-clang
+  <<: *test_definition_cpp_examples
+
+test-py-examples-clang:
+  image: debian:10
+  <<: *runtime_image_debian_docker_definition
+  dependencies:
+   - build-clang
+  <<: *test_definition_python_examples
+
+build-intel:
+  variables:
+    CMAKE_FLAGS: "-DCMAKE_C_COMPILER=icc -DCMAKE_CXX_COMPILER=icpc"
+  <<: *image_lrz_haswell_definition
+  <<: *build_definition_make
+
+test-cpp-examples-intel:
+  <<: *image_lrz_haswell_definition
+  dependencies:
+   - build-intel
+  <<: *test_definition_cpp_examples
+
+test-python-examples-intel:
+  <<: *image_lrz_haswell_definition
+  dependencies:
+   - build-intel
   <<: *test_definition_python_examples
