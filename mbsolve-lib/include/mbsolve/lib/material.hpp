@@ -122,13 +122,6 @@ public:
     static void add_to_library(std::shared_ptr<material> mat);
 
     /**
-     * Adds material to library.
-     *
-     * \param [in] mat Material to be added.
-     */
-    static void add_to_library(const material& mat);
-
-    /**
      * Gets material from library.
      *
      * \param [in] id Material identifier.

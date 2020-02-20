@@ -36,13 +36,6 @@ material::add_to_library(std::shared_ptr<material> mat)
     m_materials[mat->get_id()] = mat;
 }
 
-void
-material::add_to_library(const material& mat)
-{
-    auto ptr = std::make_shared<material>(mat);
-    material::add_to_library(ptr);
-}
-
 std::shared_ptr<material>
 material::get_from_library(const std::string& id)
 {
