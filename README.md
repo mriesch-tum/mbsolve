@@ -107,7 +107,12 @@ the build directory is a child of the source directory. Adjust path_src.)
 
 The following software packages are required to build the project:
 
- - C++ compiler (e.g., gcc >= 4.9)
+ - C++ compiler
+    - GNU Compiler Collection (gcc) >= 4.9.2
+    - Intel C++ Compiler, any recent version
+    - Clang >= v7.0.0 (Note: AppleClang lacks OpenMP support)
+    - Microsoft Visual C++ (MSVC), any recent version (Note: MSVC only
+      supports OpenMP 2.0)
  - cxxopts (any recent version) for mbsolve-tool
  - CMake (3.9)
  - Eigen library (3.3.4)
