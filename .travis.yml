@@ -85,6 +85,7 @@ jobs:
           - make
           - python
           - swig
+         update: true
      script:
       - mkdir -p build
       - cd build
