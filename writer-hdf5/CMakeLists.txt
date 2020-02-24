@@ -40,17 +40,18 @@ target_include_directories(writer-hdf5 PUBLIC
 target_link_libraries(writer-hdf5 PRIVATE mbsolve-lib ${HDF5_LIBRARIES})
 
 if(MBSOLVE_PYTHON)
-  include_directories(${PYTHON_INCLUDE_DIRS})
-  set_source_files_properties(swig/writerhdf5.i PROPERTIES CPLUSPLUS ON)
+  set_property(SOURCE swig/writerhdf5.i PROPERTY CPLUSPLUS ON)
   set(CMAKE_SWIG_OUTDIR ${PYTHON_IFACE_PATH})
-  swig_add_module(writerhdf5 python swig/writerhdf5.i)
+  swig_add_library(writerhdf5
+    LANGUAGE python
+    SOURCES swig/writerhdf5.i)
   set_target_properties(${SWIG_MODULE_writerhdf5_REAL_NAME} PROPERTIES
     CXX_STANDARD 11
-    LIBRARY_OUTPUT_DIRECTORY ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${PYTHON_IFACE_PATH})
+    ARCHIVE_OUTPUT_DIRECTORY $<1:${PYTHON_IFACE_PATH}>
+    LIBRARY_OUTPUT_DIRECTORY $<1:${PYTHON_IFACE_PATH}>
+    RUNTIME_OUTPUT_DIRECTORY $<1:${PYTHON_IFACE_PATH}>)
+  target_include_directories(${SWIG_MODULE_writerhdf5_REAL_NAME} PRIVATE
+    ${PYTHON_INCLUDE_DIRS})
   target_link_libraries(${SWIG_MODULE_writerhdf5_REAL_NAME} PRIVATE
     mbsolve-lib writer-hdf5)
   if(APPLE)

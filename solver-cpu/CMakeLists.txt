@@ -81,17 +81,18 @@ target_link_libraries(solver-cpu
   PUBLIC mbsolve-lib)
 
 if(MBSOLVE_PYTHON)
-  include_directories(${PYTHON_INCLUDE_DIRS})
-  set_source_files_properties(swig/solvercpu.i PROPERTIES CPLUSPLUS ON)
+  set_property(SOURCE swig/solvercpu.i PROPERTY CPLUSPLUS ON)
   set(CMAKE_SWIG_OUTDIR ${PYTHON_IFACE_PATH})
-  swig_add_module(solvercpu python swig/solvercpu.i)
+  swig_add_library(solvercpu
+    LANGUAGE python
+    SOURCES swig/solvercpu.i)
   set_target_properties(${SWIG_MODULE_solvercpu_REAL_NAME} PROPERTIES
     CXX_STANDARD 11
-    LIBRARY_OUTPUT_DIRECTORY ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_DEBUG ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_MINSIZEREL ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_RELEASE ${PYTHON_IFACE_PATH}
-    LIBRARY_OUTPUT_DIRECTORY_RELWITHDEBINFO ${PYTHON_IFACE_PATH})
+    ARCHIVE_OUTPUT_DIRECTORY $<1:${PYTHON_IFACE_PATH}>
+    LIBRARY_OUTPUT_DIRECTORY $<1:${PYTHON_IFACE_PATH}>
+    RUNTIME_OUTPUT_DIRECTORY $<1:${PYTHON_IFACE_PATH}>)
+  target_include_directories(${SWIG_MODULE_solvercpu_REAL_NAME} PRIVATE
+    ${PYTHON_INCLUDE_DIRS})
   target_link_libraries(${SWIG_MODULE_solvercpu_REAL_NAME} PRIVATE
     mbsolve-lib solver-cpu)
   if(APPLE)
