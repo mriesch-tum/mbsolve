@@ -96,8 +96,8 @@ if(WITH_PYTHON AND BUILD_SHARED_LIBS)
     set(MBSOLVE_PYTHON TRUE)
     set(PYTHON_IFACE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}")
     set(PYTHON_MOD_STRING "")
-  endif(SWIG_FOUND AND PythonLibs_FOUND AND PythonInterp_FOUND)
-endif(WITH_PYTHON AND BUILD_SHARED_LIBS)
+  endif()
+endif()
 
 # mbsolve library
 add_subdirectory(mbsolve-lib)
@@ -112,8 +112,8 @@ if(WITH_HDF5)
     add_subdirectory(writer-hdf5)
     get_target_property(WRITER_HDF_SOURCE_FILES writer-hdf5 SOURCES)
     list(APPEND ALL_SOURCE_FILES ${WRITER_HDF_SOURCE_FILES})
-  endif(HDF5_FOUND)
-endif(WITH_HDF5)
+  endif()
+endif()
 
 # CUDA support?
 if(WITH_CUDA)
@@ -121,8 +121,8 @@ if(WITH_CUDA)
   if(CUDA_FOUND)
     set(MBSOLVE_CUDA TRUE)
     add_subdirectory(solver-cuda)
-  endif(CUDA_FOUND)
-endif(WITH_CUDA)
+  endif()
+endif()
 
 # CPU support?
 if(WITH_CPU)
@@ -132,8 +132,8 @@ if(WITH_CPU)
     add_subdirectory(solver-cpu)
     get_target_property(SOLVER_CPU_SOURCE_FILES solver-cpu SOURCES)
     list(APPEND ALL_SOURCE_FILES ${SOLVER_CPU_SOURCE_FILES})
-  endif(OPENMP_FOUND)
-endif(WITH_CPU)
+  endif()
+endif()
 
 # C++ tool
 if(WITH_CPPTOOL)
@@ -142,8 +142,8 @@ if(WITH_CPPTOOL)
     add_subdirectory(mbsolve-tool)
     get_target_property(TOOL_SOURCE_FILES mbsolve-tool SOURCES)
     list(APPEND ALL_SOURCE_FILES ${TOOL_SOURCE_FILES})
-  endif(cxxopts_FOUND)
-endif(WITH_CPPTOOL)
+  endif()
+endif()
 
 # Doxygen documentation
 if(WITH_DOXYGEN)
@@ -155,16 +155,16 @@ if(WITH_DOXYGEN)
       ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile
       WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
       COMMENT "Generating API documentation with Doxygen" VERBATIM)
-  endif(DOXYGEN_FOUND)
-endif(WITH_DOXYGEN)
+  endif()
+endif()
 
 # clang-format support
 if(WITH_FORMAT)
   find_program(CLANG_FORMAT NAMES "clang-format" "clang-format-6.0")
   if(CLANG_FORMAT)
     set(MBSOLVE_FORMAT TRUE)
-  endif(CLANG_FORMAT)
-endif(WITH_FORMAT)
+  endif()
+endif()
 
 # install Python interface
 if(MBSOLVE_PYTHON)
@@ -180,7 +180,7 @@ if(MBSOLVE_PYTHON)
     "execute_process(COMMAND ${PYTHON_EXECUTABLE} -m pip install . \
      ${PREFIX_SETUPPY} \
      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
-endif(MBSOLVE_PYTHON)
+endif()
 
 # install CMake configuration files
 configure_package_config_file(
@@ -201,4 +201,4 @@ if(MBSOLVE_FORMAT)
   add_custom_target(format
     COMMAND ${CLANG_FORMAT} -style=file -i ${ALL_SOURCE_FILES}
     COMMENT "Formatting all source files")
-endif(MBSOLVE_FORMAT)
+endif()

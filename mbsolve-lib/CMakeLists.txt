@@ -71,12 +71,12 @@ if(MBSOLVE_PYTHON)
   if(WIN32)
     target_link_libraries(${SWIG_MODULE_lib_REAL_NAME} PRIVATE
       ${PYTHON_LIBRARIES})
-  endif(WIN32)
+  endif()
   set(PYTHON_MOD_STRING
     "${PYTHON_MOD_STRING}
             '$<TARGET_FILE_NAME:${SWIG_MODULE_lib_REAL_NAME}>',"
     PARENT_SCOPE)
-endif(MBSOLVE_PYTHON)
+endif()
 
 # install library
 install(TARGETS mbsolve-lib

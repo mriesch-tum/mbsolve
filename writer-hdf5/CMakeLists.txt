@@ -68,7 +68,7 @@ if(MBSOLVE_PYTHON)
     "${PYTHON_MOD_STRING}
             '$<TARGET_FILE_NAME:${SWIG_MODULE_writerhdf5_REAL_NAME}>',"
     PARENT_SCOPE)
-endif(MBSOLVE_PYTHON)
+endif()
 
 # install library
 install(TARGETS writer-hdf5
