@@ -25,8 +25,6 @@ namespace mbsolve {
 
 device::device(const std::string& name) : m_name(name) {}
 
-device::device(const std::string& file, const std::vector<material*>& mats) {}
-
 device::~device() {}
 
 void
