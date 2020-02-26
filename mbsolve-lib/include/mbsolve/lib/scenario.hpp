@@ -32,6 +32,49 @@
 namespace mbsolve {
 
 /**
+ * Abstract base class that represents the initial conditions of the
+ * density matrix, which potentially depend on space.
+ */
+class ic_density
+{
+public:
+    /**
+     * Returns initial density matrix for given position x.
+     */
+    virtual const qm_operator& initialize(real x) = 0;
+};
+
+/**
+ * Represents initial conditions of the density matrix which are constant
+ * with respect to space.
+ */
+class ic_density_const : public ic_density
+{
+private:
+    qm_operator m_rho;
+
+public:
+    /**
+     * Constructs constant initial conditions from given initial density
+     * matrix \p rho.
+     *
+     * \param [in] rho   Initial density matrix.
+     */
+    explicit ic_density_const(const qm_operator& rho) : m_rho(rho)
+    {
+        /* TODO check whether rho_init is a valid matrix
+         * possibly exceptions for zero matrix, indicating that random init
+         * is desired
+         */
+    }
+
+    /**
+     * Returns initial density matrix (independent of position).
+     */
+    const qm_operator& initialize(real /* x */) { return m_rho; }
+};
+
+/**
  * Stores simulation scenario (simulation settings as well as \ref source
  * objects and a collection of \ref record.
  * \ingroup MBSOLVE_LIB
@@ -58,8 +101,8 @@ private:
     /* TODO: initial conditions fields */
     /* choice: random, zero */
 
-    /* initial density matrix */
-    qm_operator m_rho_init;
+    /* initial conditions for density matrix */
+    std::shared_ptr<ic_density> m_dens_init;
 
 public:
     /**
@@ -75,6 +118,20 @@ public:
         unsigned int num_gridpoints,
         real endtime,
         const qm_operator& rho_init);
+
+    /**
+     * Constructs scenario.
+     *
+     * \param [in] name           Name of the scenario.
+     * \param [in] num_gridpoints Number of spatial grid points.
+     * \param [in] endtime        Simulation end time.
+     * \param [in] density_init   Initial conditions for density matrix.
+     */
+    scenario(
+        const std::string& name,
+        unsigned int num_gridpoints,
+        real endtime,
+        std::shared_ptr<ic_density> density_init);
 
     /**
      * Adds a record that specifies which data trace is collected.
@@ -152,14 +209,14 @@ public:
     void set_endtime(real value);
 
     /**
-     * Gets initial density matrix.
+     * Gets initial conditions for density matrix.
      */
-    qm_operator get_rho_init() const;
+    std::shared_ptr<ic_density> get_ic_density() const;
 
     /**
-     * Sets initial density matrix.
+     * Sets initial conditions for density matrix.
      */
-    void set_rho_init(const qm_operator& rho_init);
+    void set_ic_density(std::shared_ptr<ic_density> density_init);
 };
 }
 

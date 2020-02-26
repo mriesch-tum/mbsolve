@@ -146,7 +146,8 @@ solver_cpu_fdtd<num_lvl, density_algo>::solver_cpu_fdtd(
 
         /* initialization */
         if (has_qm) {
-            m_d[i] = density_algo<num_lvl>::get_density(scen->get_rho_init());
+            auto ic_dm = scen->get_ic_density();
+            m_d[i] = density_algo<num_lvl>::get_density(ic_dm->initialize(x));
         } else {
             m_d[i] = density_algo<num_lvl>::get_density();
         }

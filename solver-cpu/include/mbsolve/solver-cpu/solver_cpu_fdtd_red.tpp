@@ -178,8 +178,9 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
             /* initialize data arrays */
             if (mat_idx >= 0) {
                 if (has_qm) {
+                    auto ic_dm = scen->get_ic_density();
                     m_d[tid][i] = density_algo<num_lvl>::get_density(
-                        scen->get_rho_init());
+                        ic_dm->initialize(x));
                 } else {
                     m_d[tid][i] = density_algo<num_lvl>::get_density();
                 }

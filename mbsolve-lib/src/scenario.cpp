@@ -29,7 +29,16 @@ scenario::scenario(
     real endtime,
     const qm_operator& rho_init)
   : m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
-    m_rho_init(rho_init)
+    m_dens_init(std::make_shared<ic_density_const>(rho_init))
+{}
+
+scenario::scenario(
+    const std::string& name,
+    unsigned int num_gridpoints,
+    real endtime,
+    std::shared_ptr<ic_density> density_init)
+  : m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
+    m_dens_init(density_init)
 {}
 
 void
@@ -122,19 +131,15 @@ scenario::set_endtime(real value)
     m_endtime = value;
 }
 
-qm_operator
-scenario::get_rho_init() const
+std::shared_ptr<ic_density>
+scenario::get_ic_density() const
 {
-    return m_rho_init;
+    return m_dens_init;
 }
 
 void
-scenario::set_rho_init(const qm_operator& rho_init)
+scenario::set_ic_density(std::shared_ptr<ic_density> density_init)
 {
-    /* TODO check whether rho_init is a valid matrix */
-    /* possibly exceptions for zero matrix, indicating that random init
-     * is desired */
-
-    m_rho_init = rho_init;
+    m_dens_init = density_init;
 }
 }
