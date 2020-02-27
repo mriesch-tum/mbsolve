@@ -80,26 +80,31 @@ public:
 
     bool is_complex() const { return m_is_complex; }
 
-    //   complex *get_data(unsigned int row = 0) { return &m_values[row *
-    //   m_cols]; }
-
-    std::vector<real>::iterator get_data_real(
+    /**
+     * Gets iterator for result data (real part).
+     *
+     * \param [in] row   Row index.
+     * \param [in] col   Column index.
+     */
+    std::vector<real>::iterator get_data_real_it(
         unsigned int row,
         unsigned int col)
     {
         return m_real.begin() + row * m_cols + col;
     }
 
-    std::vector<real>::iterator get_data_imag(
+    /**
+     * Gets iterator for result data (real part).
+     *
+     * \param [in] row   Row index.
+     * \param [in] col   Column index.
+     */
+    std::vector<real>::iterator get_data_imag_it(
         unsigned int row,
         unsigned int col)
     {
         return m_imag.begin() + row * m_cols + col;
     }
-
-    real* get_data_real_raw() { return m_real.data(); }
-
-    real* get_data_imag_raw() { return m_imag.data(); }
 
     /**
      * Gets result data (real part).

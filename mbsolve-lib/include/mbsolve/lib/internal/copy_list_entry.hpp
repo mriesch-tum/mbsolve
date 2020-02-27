@@ -203,7 +203,7 @@ public:
         uint64_t iteration,
         uint64_t gridpoint = 0) const
     {
-        return m_result->get_data_real(
+        return m_result->get_data_real_it(
             floor(m_dev.m_interval_ratio * iteration), gridpoint);
     }
 
@@ -211,7 +211,7 @@ public:
         uint64_t iteration,
         uint64_t gridpoint = 0) const
     {
-        return m_result->get_data_imag(
+        return m_result->get_data_imag_it(
             floor(m_dev.m_interval_ratio * iteration), gridpoint);
     }
 

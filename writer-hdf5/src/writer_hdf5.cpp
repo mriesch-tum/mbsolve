@@ -99,12 +99,12 @@ writer_hdf5::write(
 
         /* write real part */
         H5::DataSet d_real = g.createDataSet("real", h5_dbl, dataspace);
-        d_real.write(result->get_data_real_raw(), h5_dbl);
+        d_real.write(result->get_data_real().data(), h5_dbl);
 
         /* write imag part */
         if (is_complex) {
             H5::DataSet d_imag = g.createDataSet("imag", h5_dbl, dataspace);
-            d_imag.write(result->get_data_imag_raw(), h5_dbl);
+            d_imag.write(result->get_data_imag().data(), h5_dbl);
         }
     }
 }
