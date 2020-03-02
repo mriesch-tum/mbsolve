@@ -1,0 +1,5 @@
+<map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
+<area shape="rect" id="node1" href="$classmbsolve_1_1solver.html" title="mbsolve::solver" alt="" coords="5,60,132,87"/>
+<area shape="rect" id="node2" href="$classmbsolve_1_1solver__cpu__fdtd.html" title="mbsolve::solver_cpu\l_fdtd\&lt; num_lvl, density\l_algo \&gt;" alt="" coords="180,5,359,61"/>
+<area shape="rect" id="node3" href="$classmbsolve_1_1solver__cpu__fdtd__red.html" title="mbsolve::solver_cpu\l_fdtd_red\&lt; num_lvl,\l density_algo \&gt;" alt="" coords="191,85,347,141"/>
+</map>
