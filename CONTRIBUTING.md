@@ -207,3 +207,20 @@ example, in EMACS it can be executed at save
 ## Documentation
 
  - Document your code using Doxygen annotation.
+
+## Creating a release
+
+ - Summarize the changes in `CHANGELOG.md`.
+
+ - Update version number in the top-level `CMakeLists.txt`. Make sure to
+   clear the pre-release version variable.
+
+ - Commit the changes using the commit message "Released vX.Y.Z.", where
+   X, Y, and Z denote the major, minor, and patch version number. Merge the
+   commit into "master".
+
+ - Create a git tag named vX.Y.Z with the message "Version vX.Y.Z." and push
+   it to the repository.
+
+ - Optionally, create the branch "stable-X.Y.Z" and push it to the
+   repository.
