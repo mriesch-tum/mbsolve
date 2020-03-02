@@ -2,6 +2,8 @@
 
 An open-source solver tool for the full wave 1D Maxwell-Bloch equations.
 
+[![Build Status](https://travis-ci.org/mriesch-tum/mbsolve.svg?branch=master)](https://travis-ci.org/mriesch-tum/mbsolve)
+
 ## Overview
 
 ![mbsolve overview](doc/mbsolve_overview.png)
@@ -32,6 +34,14 @@ The project consists of the following components:
 
 All libraries feature a Python interface and can be used conveniently from
 Python scripts, Jupyter notebooks etc. See tools/python for examples.
+
+## Install via conda
+
+If you have a conda distribution installed, you can install mbsolve using
+
+    $ conda install -c conda-forge mbsolve
+
+from the `conda-forge` channel.
 
 ## Get the code
 
@@ -114,12 +124,12 @@ The following software packages are required to build the project:
     - Microsoft Visual C++ (MSVC), any recent version (Note: MSVC only
       supports OpenMP 2.0)
  - cxxopts (any recent version) for mbsolve-tool
- - CMake (3.9)
- - Eigen library (3.3.4)
+ - CMake >= 3.9
+ - Eigen library >= 3.3.4
  - HDF5 (any recent version) for the writer-hdf5
- - Python (2.7) and SWIG (2.0) for Python support
- - CUDA (7.0) for solver-cuda
- - OpenMP (any recent version) for solver-cpu
+ - Python >= 2.7 and SWIG >= 2.0.12 for Python support
+ - CUDA >= 7.0 for solver-cuda
+ - OpenMP (see supported compilers) for solver-cpu
  - Doxygen (any recent version) for the documentation
 
 If the required dependencies are not met, the components may be disabled by
