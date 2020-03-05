@@ -7,6 +7,19 @@ The format is based on
 and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2020-xx-xx
+
+Forth unstable version.
+
+### Added
+ - Flexible initial conditions for electric and magnetic fields.
+ - Flexible boundary conditions for electric and magnetic fields.
+ - Support for automatic "big picture" documentation generation.
+ - Support for automatic unit tests.
+
+### Changed
+ - xxx TODO xxxx
+
 ## [0.3.0] - 2020-03-02
 
 Third unstable version.
