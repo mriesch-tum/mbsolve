@@ -27,12 +27,16 @@ scenario::scenario(
     const std::string& name,
     unsigned int num_gridpoints,
     real endtime,
-    const qm_operator& rho_init)
+    const qm_operator& rho_init,
+    unsigned int num_timesteps)
   : scenario(
         name,
         num_gridpoints,
         endtime,
-        std::make_shared<ic_density_const>(rho_init))
+        std::make_shared<ic_density_const>(rho_init),
+        std::make_shared<ic_field_random>(),
+        std::make_shared<ic_field_const>(0),
+        num_timesteps)
 {}
 
 scenario::scenario(
@@ -41,10 +45,11 @@ scenario::scenario(
     real endtime,
     std::shared_ptr<ic_density> density_init,
     std::shared_ptr<ic_field> electric_init,
-    std::shared_ptr<ic_field> magnetic_init)
+    std::shared_ptr<ic_field> magnetic_init,
+    unsigned int num_timesteps)
   : m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
     m_dens_init(density_init), m_e_init(electric_init),
-    m_h_init(magnetic_init)
+    m_h_init(magnetic_init), m_num_timesteps(num_timesteps)
 {}
 
 void

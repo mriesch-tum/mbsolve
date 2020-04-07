@@ -22,6 +22,7 @@
 #ifndef MBSOLVE_COMMON_FDTD_H
 #define MBSOLVE_COMMON_FDTD_H
 
+#include <limits>
 #include <memory>
 #include <mbsolve/lib/device.hpp>
 #include <mbsolve/lib/scenario.hpp>
@@ -62,21 +63,60 @@ init_fdtd_simulation(
         /* get number of grid points */
         unsigned int n_x = scen->get_num_gridpoints();
 
-        /* grid point size */
-        real d_x = dev->get_length() / (n_x - 1);
-        scen->set_gridpoint_size(d_x);
-
-        /* time step size */
-        real d_t = courant * d_x / velocity;
-
         /* number of time steps */
-        unsigned int n_t = ceil(scen->get_endtime() / d_t) + 1;
-        scen->set_num_timesteps(n_t);
+        unsigned int n_t;
 
-        /* re-adjust time step size in order to fit number of time steps */
-        d_t = scen->get_endtime() / (n_t - 1);
-        scen->set_timestep_size(d_t);
+        /* special scenario for 0D simulations? */
+        if (n_x == 1) {
+            /*
+             * if device length does not equal 0, this is probably not
+             * intended!
+             */
+            if (dev->get_length() > 0.0) {
+                std::cout << "Warning: Device with length = "
+                          << dev->get_length()
+                          << " simulated using only one grid point!"
+                          << std::endl;
+            }
 
+            /*
+             * the single grid point is infinitely large
+             * note: It is not practical to use infinity, hence we use
+             * approx. 1 light-year.
+             */
+            scen->set_gridpoint_size(1e13);
+
+            /* use the number of time steps specified by user */
+            n_t = scen->get_num_timesteps();
+            if (n_t < 2) {
+                throw std::invalid_argument("Invalid scenario.");
+            }
+        } else {
+            /* divide device in equidistant grid */
+            real d_x = dev->get_length() / (n_x - 1);
+            scen->set_gridpoint_size(d_x);
+
+            /* get time step size via Courant number and max. velocity */
+            real d_t = courant * d_x / velocity;
+
+            /* number of time steps */
+            unsigned int n_t = ceil(scen->get_endtime() / d_t) + 1;
+            scen->set_num_timesteps(n_t);
+        }
+
+        /* (re)-adjust time step size in order to fit number of time steps */
+        if (scen->get_endtime() > std::numeric_limits<real>::min()) {
+            real d_t = scen->get_endtime() / (n_t - 1);
+            scen->set_timestep_size(d_t);
+        } else {
+            scen->set_num_timesteps(1);
+            /*
+             * the single time step is infinitely large
+             * note: It is not practical to use infinity, hence we use
+             * approx. 1 century
+             */
+            scen->set_timestep_size(3.154e10);
+        }
     } else {
         throw std::invalid_argument("Invalid scenario.");
     }

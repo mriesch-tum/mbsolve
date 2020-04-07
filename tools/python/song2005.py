@@ -52,12 +52,13 @@ mb.material.add_to_library(mat_ar)
 
 # Song setup
 dev = mb.device("Song")
-dev.add_region(mb.region("Active region", mat_ar, 0, 150e-6))
+dev.add_region(mb.region("Active region (single point)", mat_ar, 0, 0))
 
 # scenario
 ic_d = mb.ic_density_const(rho_init)
 ic_e = mb.ic_field_const(0.0)
-sce = mb.scenario("Basic", 32768, 80e-15, ic_d, ic_e)
+ic_m = mb.ic_field_const(0.0)
+sce = mb.scenario("Basic", 1, 80e-15, ic_d, ic_e, ic_m, 10000)
 sce.add_record(mb.record("e", 0.0, 0.0))
 sce.add_record(mb.record("d11", mb.record.density, 1, 1, 0.0, 0.0))
 sce.add_record(mb.record("d22", mb.record.density, 2, 2, 0.0, 0.0))
@@ -68,7 +69,7 @@ sce.add_source(mb.sech_pulse("sech", 0.0, mb.source.hard_source, 3.5471e9,
                              3.8118e14, 17.248, 1.76/5e-15, -math.pi/2))
 
 # run solver
-sol = mb.solver.create_instance("cpu-fdtd-red-3lvl-cvr-rodr", dev, sce)
+sol = mb.solver.create_instance("cpu-fdtd-3lvl-cvr-rodr", dev, sce)
 print('Solver ' + sol.get_name() + ' started')
 tic = time.time()
 sol.run()

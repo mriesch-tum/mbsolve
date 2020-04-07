@@ -197,12 +197,14 @@ public:
      * \param [in] num_gridpoints Number of spatial grid points.
      * \param [in] endtime        Simulation end time.
      * \param [in] rho_init       Initial density matrix.
+     * \param [in] num_timesteps  Number of time steps.
      */
     scenario(
         const std::string& name,
         unsigned int num_gridpoints,
         real endtime,
-        const qm_operator& rho_init);
+        const qm_operator& rho_init,
+        unsigned int num_timesteps = 2);
 
     /**
      * Constructs scenario.
@@ -213,6 +215,7 @@ public:
      * \param [in] density_init   Initial conditions for density matrix.
      * \param [in] electric_init  Initial conditions for electric field.
      * \param [in] magnetic_init  Initial conditions for magnetic field.
+     * \param [in] num_timesteps  Number of time steps.
      */
     scenario(
         const std::string& name,
@@ -222,7 +225,8 @@ public:
         std::shared_ptr<ic_field> electric_init =
             std::make_shared<ic_field_random>(),
         std::shared_ptr<ic_field> magnetic_init =
-            std::make_shared<ic_field_const>(0));
+            std::make_shared<ic_field_const>(0),
+        unsigned int num_timesteps = 2);
 
     /**
      * Adds a record that specifies which data trace is collected.

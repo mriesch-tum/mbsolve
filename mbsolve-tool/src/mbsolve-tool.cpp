@@ -206,11 +206,11 @@ main(int argc, char** argv)
 
             dev = std::make_shared<mbsolve::device>("Song");
             dev->add_region(std::make_shared<mbsolve::region>(
-                "Active region", mat_ar, 0, 150e-6));
+                "Active region (single point)", mat_ar, 0, 0));
 
             /* default settings */
             if (num_gridpoints == 0) {
-                num_gridpoints = 32768;
+                num_gridpoints = 1;
             }
             if (sim_endtime < 1e-21) {
                 sim_endtime = 80e-15;
@@ -221,9 +221,10 @@ main(int argc, char** argv)
             /* Song basic scenario */
             auto ic_d = std::make_shared<mbsolve::ic_density_const>(rho_init);
             auto ic_e = std::make_shared<mbsolve::ic_field_const>(0.0);
+            auto ic_m = std::make_shared<mbsolve::ic_field_const>(0.0);
 
             scen = std::make_shared<mbsolve::scenario>(
-                "Basic", num_gridpoints, sim_endtime, ic_d, ic_e);
+                "Basic", 1, sim_endtime, ic_d, ic_e, ic_m, 10000);
 
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>(
                 "sech",
