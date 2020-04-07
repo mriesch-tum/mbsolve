@@ -23,6 +23,7 @@
 #define MBSOLVE_LIB_SCENARIO_H
 
 #include <memory>
+#include <random>
 #include <string>
 #include <vector>
 #include <mbsolve/lib/qm_description.hpp>
@@ -77,6 +78,85 @@ public:
 };
 
 /**
+ * Abstract base class that represents the initial conditions of the
+ * electric or magnetic field, which potentially depend on space.
+ * \ingroup MBSOLVE_LIB
+ */
+class ic_field
+{
+public:
+    /**
+     * Returns initial field value for given position x.
+     */
+    virtual real initialize(real x) = 0;
+};
+
+/**
+ * Represents initial conditions of a field (electric or magnetic) that are
+ * constant with respect to space.
+ * \ingroup MBSOLVE_LIB
+ */
+class ic_field_const : public ic_field
+{
+private:
+    real m_field_value;
+
+public:
+    /**
+     * Constructs constant initial conditions from given initial value
+     * \p field_value.
+     *
+     * \param [in] field_value   Initial field value.
+     */
+    explicit ic_field_const(real field_value) : m_field_value(field_value) {}
+
+    /**
+     * Returns initial field value (independent of position).
+     */
+    real initialize(real /* x */) { return m_field_value; }
+};
+
+/**
+ * Represents random initial conditions of a field (electric or magnetic).
+ *
+ * The random number generation is based on a normal distribution.
+ * \ingroup MBSOLVE_LIB
+ */
+class ic_field_random : public ic_field
+{
+private:
+    /* random number generator */
+    std::random_device m_rand_dev;
+    std::mt19937 m_rand_gen;
+
+    /* distribution */
+    std::normal_distribution<real> m_dis;
+
+    /* field amplitude */
+    real m_amplitude;
+
+public:
+    /**
+     * Constructs random initial conditions based on normal distribution.
+     *
+     * \param [in] mean      Mean value of the normal distribution.
+     * \param [in] stddev    Standard deviation of the normal distribution.
+     * \param [in] amplitude Field amplitude.
+     */
+    explicit ic_field_random(
+        real mean = 0.0,
+        real stddev = 1.0,
+        real amplitude = 1e-15)
+      : m_rand_gen(m_rand_dev()), m_dis(mean, stddev), m_amplitude(amplitude)
+    {}
+
+    /**
+     * Returns random initial field value.
+     */
+    real initialize(real /* x */) { return m_dis(m_rand_gen) * m_amplitude; }
+};
+
+/**
  * Stores simulation scenario (simulation settings as well as \ref source
  * objects and a collection of \ref record).
  * \ingroup MBSOLVE_LIB
@@ -100,11 +180,14 @@ private:
 
     std::vector<std::shared_ptr<source> > m_sources;
 
-    /* TODO: initial conditions fields */
-    /* choice: random, zero */
-
     /* initial conditions for density matrix */
     std::shared_ptr<ic_density> m_dens_init;
+
+    /* initial conditions for magnetic field */
+    std::shared_ptr<ic_field> m_h_init;
+
+    /* initial conditions for electric field */
+    std::shared_ptr<ic_field> m_e_init;
 
 public:
     /**
@@ -128,12 +211,18 @@ public:
      * \param [in] num_gridpoints Number of spatial grid points.
      * \param [in] endtime        Simulation end time.
      * \param [in] density_init   Initial conditions for density matrix.
+     * \param [in] electric_init  Initial conditions for electric field.
+     * \param [in] magnetic_init  Initial conditions for magnetic field.
      */
     scenario(
         const std::string& name,
         unsigned int num_gridpoints,
         real endtime,
-        std::shared_ptr<ic_density> density_init);
+        std::shared_ptr<ic_density> density_init,
+        std::shared_ptr<ic_field> electric_init =
+            std::make_shared<ic_field_random>(),
+        std::shared_ptr<ic_field> magnetic_init =
+            std::make_shared<ic_field_const>(0));
 
     /**
      * Adds a record that specifies which data trace is collected.
@@ -219,6 +308,26 @@ public:
      * Sets initial conditions for density matrix.
      */
     void set_ic_density(std::shared_ptr<ic_density> density_init);
+
+    /**
+     * Gets initial conditions for electric field,
+     */
+    std::shared_ptr<ic_field> get_ic_electric() const;
+
+    /**
+     * Sets initial conditions for electric field.
+     */
+    void set_ic_electric(std::shared_ptr<ic_field> electric_init);
+
+    /**
+     * Gets initial conditions for magnetic field,
+     */
+    std::shared_ptr<ic_field> get_ic_magnetic() const;
+
+    /**
+     * Sets initial conditions for magnetic field.
+     */
+    void set_ic_magnetic(std::shared_ptr<ic_field> magnetic_init);
 };
 }
 

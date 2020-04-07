@@ -21,17 +21,22 @@
 %}
 
 %shared_ptr(mbsolve::device)
+%shared_ptr(mbsolve::gaussian_pulse)
+%shared_ptr(mbsolve::ic_density)
+%shared_ptr(mbsolve::ic_density_const)
+%shared_ptr(mbsolve::ic_field)
+%shared_ptr(mbsolve::ic_field_const)
+%shared_ptr(mbsolve::ic_field_random)
+%shared_ptr(mbsolve::material)
 %shared_ptr(mbsolve::qm_operator)
 %shared_ptr(mbsolve::qm_superop)
 %shared_ptr(mbsolve::qm_lindblad_relaxation)
 %shared_ptr(mbsolve::qm_description)
 %shared_ptr(mbsolve::qm_desc_2lvl)
-%shared_ptr(mbsolve::material)
 %shared_ptr(mbsolve::record)
 %shared_ptr(mbsolve::region)
 %shared_ptr(mbsolve::result)
 %shared_ptr(mbsolve::scenario)
-%shared_ptr(mbsolve::gaussian_pulse)
 %shared_ptr(mbsolve::sech_pulse)
 %shared_ptr(mbsolve::sine_source)
 %shared_ptr(mbsolve::single_cycle_pulse)
@@ -51,6 +56,7 @@
 %template(matrix_real_f) std::vector<std::vector<float> >;
 
 %feature("python:cdefaultargs") mbsolve::material::material;
+%feature("python:cdefaultargs") mbsolve::scenario::scenario;
 
 %include "../include/mbsolve/lib/qm_description.hpp"
 %include "../include/mbsolve/lib/material.hpp"

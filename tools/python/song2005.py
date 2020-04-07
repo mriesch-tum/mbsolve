@@ -50,12 +50,14 @@ qm = mb.qm_description(6e24, H, u, relax_sop)
 mat_ar = mb.material("AR_Song", qm)
 mb.material.add_to_library(mat_ar)
 
-# Ziolkowski setup
+# Song setup
 dev = mb.device("Song")
 dev.add_region(mb.region("Active region", mat_ar, 0, 150e-6))
 
 # scenario
-sce = mb.scenario("Basic", 32768, 80e-15, rho_init)
+ic_d = mb.ic_density_const(rho_init)
+ic_e = mb.ic_field_const(0.0)
+sce = mb.scenario("Basic", 32768, 80e-15, ic_d, ic_e)
 sce.add_record(mb.record("e", 0.0, 0.0))
 sce.add_record(mb.record("d11", mb.record.density, 1, 1, 0.0, 0.0))
 sce.add_record(mb.record("d22", mb.record.density, 2, 2, 0.0, 0.0))

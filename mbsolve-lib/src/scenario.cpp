@@ -28,17 +28,23 @@ scenario::scenario(
     unsigned int num_gridpoints,
     real endtime,
     const qm_operator& rho_init)
-  : m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
-    m_dens_init(std::make_shared<ic_density_const>(rho_init))
+  : scenario(
+        name,
+        num_gridpoints,
+        endtime,
+        std::make_shared<ic_density_const>(rho_init))
 {}
 
 scenario::scenario(
     const std::string& name,
     unsigned int num_gridpoints,
     real endtime,
-    std::shared_ptr<ic_density> density_init)
+    std::shared_ptr<ic_density> density_init,
+    std::shared_ptr<ic_field> electric_init,
+    std::shared_ptr<ic_field> magnetic_init)
   : m_name(name), m_num_gridpoints(num_gridpoints), m_endtime(endtime),
-    m_dens_init(density_init)
+    m_dens_init(density_init), m_e_init(electric_init),
+    m_h_init(magnetic_init)
 {}
 
 void
@@ -141,5 +147,29 @@ void
 scenario::set_ic_density(std::shared_ptr<ic_density> density_init)
 {
     m_dens_init = density_init;
+}
+
+std::shared_ptr<ic_field>
+scenario::get_ic_electric() const
+{
+    return m_e_init;
+}
+
+void
+scenario::set_ic_electric(std::shared_ptr<ic_field> electric_init)
+{
+    m_e_init = electric_init;
+}
+
+std::shared_ptr<ic_field>
+scenario::get_ic_magnetic() const
+{
+    return m_h_init;
+}
+
+void
+scenario::set_ic_magnetic(std::shared_ptr<ic_field> magnetic_init)
+{
+    m_h_init = magnetic_init;
 }
 }

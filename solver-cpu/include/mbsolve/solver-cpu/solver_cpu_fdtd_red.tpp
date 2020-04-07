@@ -27,7 +27,6 @@
 #define EIGEN_STRONG_INLINE inline
 
 #include <iostream>
-#include <random>
 #include <omp.h>
 #include <mbsolve/solver-cpu/internal/common_cpu.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_fdtd_red.hpp>
@@ -146,11 +145,6 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
             chunk += chunk_rem;
         }
 
-        /* random number generation */
-        std::random_device rand_dev;
-        std::mt19937 rand_gen(rand_dev());
-        std::normal_distribution<real> dis(0.0, 1.0);
-
         /* allocation */
         uint64_t size = chunk + 2 * OL;
 
@@ -182,8 +176,10 @@ solver_cpu_fdtd_red<num_lvl, density_algo>::solver_cpu_fdtd_red(
                 } else {
                     m_d[tid][i] = density_algo<num_lvl>::get_density();
                 }
-                m_e[tid][i] = dis(rand_gen) * 1e-15;
-                m_h[tid][i] = 0.0;
+                auto ic_e = scen->get_ic_electric();
+                auto ic_h = scen->get_ic_magnetic();
+                m_e[tid][i] = ic_e->initialize(x);
+                m_h[tid][i] = ic_h->initialize(x);
                 m_p[tid][i] = 0.0;
                 m_fac_a[tid][i] = m_sim_consts_fdtd[mat_idx].fac_a;
                 m_fac_b[tid][i] = m_sim_consts_fdtd[mat_idx].fac_b;

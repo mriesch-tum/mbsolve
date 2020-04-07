@@ -48,7 +48,9 @@ dev.add_region(mb.region("Vacuum right", mat_vac, 142.5e-6, 150e-6))
 rho_init = mb.qm_operator([ 1, 0 ])
 
 # scenario
-sce = mb.scenario("Basic", 32768, 200e-15, rho_init)
+ic_d = mb.ic_density_const(rho_init)
+ic_e = mb.ic_field_const(0.0)
+sce = mb.scenario("Basic", 32768, 200e-15, ic_d, ic_e)
 sce.add_record(mb.record("inv12", 2.5e-15))
 sce.add_record(mb.record("e", 2.5e-15))
 

@@ -27,7 +27,6 @@
 #define EIGEN_STRONG_INLINE inline
 
 #include <iostream>
-#include <random>
 #include <omp.h>
 #include <mbsolve/solver-cpu/internal/common_cpu.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_fdtd.hpp>
@@ -110,11 +109,6 @@ solver_cpu_fdtd<num_lvl, density_algo>::solver_cpu_fdtd(
     m_mat_indices = (unsigned int*) mb_aligned_alloc(
         sizeof(unsigned int) * scen->get_num_gridpoints());
 
-    /* random number generation */
-    std::random_device rand_dev;
-    std::mt19937 rand_gen(rand_dev());
-    std::normal_distribution<real> dis(0.0, 1.0);
-
     /* set up indices array and initialize data arrays */
 #pragma omp parallel for schedule(static)
     for (int i = 0; i < scen->get_num_gridpoints(); i++) {
@@ -149,8 +143,10 @@ solver_cpu_fdtd<num_lvl, density_algo>::solver_cpu_fdtd(
         } else {
             m_d[i] = density_algo<num_lvl>::get_density();
         }
-        m_e[i] = dis(rand_gen) * 1e-15;
-        m_h[i] = 0.0;
+        auto ic_e = scen->get_ic_electric();
+        auto ic_h = scen->get_ic_magnetic();
+        m_e[i] = ic_e->initialize(x);
+        m_h[i] = ic_h->initialize(x);
         if (i == scen->get_num_gridpoints() - 1) {
             m_h[i + 1] = 0.0;
         }

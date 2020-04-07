@@ -219,8 +219,11 @@ main(int argc, char** argv)
             mbsolve::qm_operator rho_init({ 1, 0, 0 });
 
             /* Song basic scenario */
+            auto ic_d = std::make_shared<mbsolve::ic_density_const>(rho_init);
+            auto ic_e = std::make_shared<mbsolve::ic_field_const>(0.0);
+
             scen = std::make_shared<mbsolve::scenario>(
-                "Basic", num_gridpoints, sim_endtime, rho_init);
+                "Basic", num_gridpoints, sim_endtime, ic_d, ic_e);
 
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>(
                 "sech",
@@ -280,8 +283,11 @@ main(int argc, char** argv)
             mbsolve::qm_operator rho_init({ 1, 0, 0 });
 
             /* Ziolkowski basic scenario */
+            auto ic_d = std::make_shared<mbsolve::ic_density_const>(rho_init);
+            auto ic_e = std::make_shared<mbsolve::ic_field_const>(0.0);
+
             scen = std::make_shared<mbsolve::scenario>(
-                "Basic", num_gridpoints, sim_endtime, rho_init);
+                "Basic", num_gridpoints, sim_endtime, ic_d, ic_e);
 
             auto sech_pulse = std::make_shared<mbsolve::sech_pulse>
                 //("sech", 0.0, mbsolve::source::hard_source, 4.2186e9/2,
@@ -508,8 +514,11 @@ main(int argc, char** argv)
             mbsolve::qm_operator rho_init(populations_eq);
 
             /* Marskar basic scenario */
+            auto ic_d = std::make_shared<mbsolve::ic_density_const>(rho_init);
+            auto ic_e = std::make_shared<mbsolve::ic_field_const>(0.0);
+
             scen = std::make_shared<mbsolve::scenario>(
-                "basic", num_gridpoints, sim_endtime, rho_init);
+                "basic", num_gridpoints, sim_endtime, ic_d, ic_e);
 
             /* input pulse */
             mbsolve::real tau = 100e-15;
