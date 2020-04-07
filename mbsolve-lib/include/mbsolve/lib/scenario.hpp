@@ -34,6 +34,7 @@ namespace mbsolve {
 /**
  * Abstract base class that represents the initial conditions of the
  * density matrix, which potentially depend on space.
+ * \ingroup MBSOLVE_LIB
  */
 class ic_density
 {
@@ -45,8 +46,9 @@ public:
 };
 
 /**
- * Represents initial conditions of the density matrix which are constant
+ * Represents initial conditions of the density matrix that are constant
  * with respect to space.
+ * \ingroup MBSOLVE_LIB
  */
 class ic_density_const : public ic_density
 {
@@ -76,7 +78,7 @@ public:
 
 /**
  * Stores simulation scenario (simulation settings as well as \ref source
- * objects and a collection of \ref record.
+ * objects and a collection of \ref record).
  * \ingroup MBSOLVE_LIB
  */
 class scenario
