@@ -182,7 +182,7 @@ test-cpp-examples-intel:
    - build-intel
   <<: *test_definition_cpp_examples
 
-test-python-examples-intel:
+test-py-examples-intel:
   <<: *image_lrz_haswell_definition
   dependencies:
    - build-intel
