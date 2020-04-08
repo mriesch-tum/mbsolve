@@ -45,11 +45,4 @@ material::get_from_library(const std::string& id)
     }
     return it->second;
 }
-
-/*
-void
-material::add_to_library() const
-{
-
-}*/
 }
