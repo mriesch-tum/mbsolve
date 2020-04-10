@@ -20,6 +20,8 @@
   }
 %}
 
+%shared_ptr(mbsolve::bc_field)
+%shared_ptr(mbsolve::bc_field_reflectivity)
 %shared_ptr(mbsolve::device)
 %shared_ptr(mbsolve::gaussian_pulse)
 %shared_ptr(mbsolve::ic_density)
@@ -55,6 +57,7 @@
 %template(matrix_real_d) std::vector<std::vector<double> >;
 %template(matrix_real_f) std::vector<std::vector<float> >;
 
+%feature("python:cdefaultargs") mbsolve::device::device;
 %feature("python:cdefaultargs") mbsolve::material::material;
 %feature("python:cdefaultargs") mbsolve::scenario::scenario;
 

@@ -23,7 +23,11 @@
 
 namespace mbsolve {
 
-device::device(const std::string& name) : m_name(name) {}
+device::device(
+    const std::string& name,
+    std::shared_ptr<bc_field> field_boundary)
+  : m_name(name), m_bc_field(field_boundary)
+{}
 
 device::~device() {}
 
@@ -73,5 +77,16 @@ device::get_minimum_permittivity() const
         }
     }
     return min;
+}
+std::shared_ptr<bc_field>
+device::get_bc_field() const
+{
+    return m_bc_field;
+}
+
+void
+device::set_bc_field(std::shared_ptr<bc_field> boundary_field)
+{
+    m_bc_field = boundary_field;
 }
 }

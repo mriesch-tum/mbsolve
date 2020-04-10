@@ -32,6 +32,53 @@
 namespace mbsolve {
 
 /**
+ * Abstract base class that represents the boundary conditions of the
+ * electromagnetic field.
+ * \ingroup MBSOLVE_LIB
+ */
+class bc_field
+{
+public:
+    virtual ~bc_field() {}
+};
+
+/**
+ * Represents boundary conditions for the electromagnetic field that yield
+ * the specified reflectivity values at the ends of the device.
+ * \ingroup MBSOLVE_LIB
+ */
+class bc_field_reflectivity : public bc_field
+{
+private:
+    real m_refl_left;
+    real m_refl_right;
+
+public:
+    /**
+     * Constructs boundary conditions that yield a given reflectivity
+     * values, which default to perfect reflection.
+     *
+     * \param [in] refl_left  Reflectivity at left end of the device.
+     * \param [in] refl_right Reflectivity at right end of the device.
+     */
+    explicit bc_field_reflectivity(
+        real refl_left = 1.0,
+        real refl_right = 1.0)
+      : m_refl_left(refl_left), m_refl_right(refl_right)
+    {}
+
+    /**
+     * Gets right reflectivity value.
+     */
+    real get_refl_right() { return m_refl_right; }
+
+    /**
+     * Gets left reflectivity value.
+     */
+    real get_refl_left() { return m_refl_left; }
+};
+
+/**
  * Represents a section in the device or setup, has a certain \ref material.
  * \ingroup MBSOLVE_LIB
  */
@@ -110,20 +157,20 @@ private:
 
     std::set<std::string> m_used_materials;
 
-    /* TODO: boundary conditions for fields */
-    /* choices: periodic (ring cavity), PML, PMC (Fabry-Perot cavity) ... */
-
-    /* TODO: boundary conditions for density matrix ? */
-    /* choices: injection current. rather put it in scenario? as source? */
-    /* choices: periodic */
+    /* boundary conditions for electromagnetic field */
+    std::shared_ptr<bc_field> m_bc_field;
 
 public:
     /**
      * Constructs device.
      *
-     * \param [in] name Name of the device.
+     * \param [in] name              Name of the device.
+     * \param [in] field_boundary    Boundary conditions for the EM field.
      */
-    device(const std::string& name);
+    device(
+        const std::string& name,
+        std::shared_ptr<bc_field> field_boundary =
+            std::make_shared<bc_field_reflectivity>(1.0, 1.0));
 
     ~device();
 
@@ -156,6 +203,16 @@ public:
      * Gets the minimum relative permittivity value.
      */
     real get_minimum_permittivity() const;
+
+    /**
+     * Sets boundary condition for the field.
+     */
+    std::shared_ptr<bc_field> get_bc_field() const;
+
+    /**
+     * Gets boundary condition for the field.
+     */
+    void set_bc_field(std::shared_ptr<bc_field> boundary_field);
 };
 }
 
