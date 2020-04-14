@@ -30,6 +30,18 @@ if (filename == 0)
    return;
 end
 
+% try to determine level count from filename
+parts = split(filename, { '-', '_' });
+if length(parts) > 1
+    N = str2num(erase(parts{2}, 'lvl'));
+    if isempty(N)
+        N = 6;
+    end
+else
+    N = 6;
+end
+display([ 'Assuming ', num2str(N), ' levels' ]);
+
 comp_data = {};
 [filenames, folder] = uigetfile('../reference-data/*.csv', ...
     'Select compare trace', 'MultiSelect', 'on');
@@ -54,12 +66,9 @@ t = 0:d_t:t_e;
 
 % data
 e = h5read(f, '/e/real');
-rho11 = h5read(f, '/d11/real');
-rho22 = h5read(f, '/d22/real');
-rho33 = h5read(f, '/d33/real');
-rho44 = h5read(f, '/d44/real');
-rho55 = h5read(f, '/d55/real');
-rho66 = h5read(f, '/d66/real');
+for i = 1:N
+   rho(i, :) = h5read(f, [ '/d', num2str(i), num2str(i), '/real' ]);
+end
 
 figure;
 plot(t, e);
@@ -68,13 +77,13 @@ ylabel('E-Field/Vm^{-1}');
 xlim([0, t_e]);
 
 figure;
-plot(t, rho11, 'DisplayName', '\rho_{11}');
+plot(t, rho(1 ,:), 'DisplayName', '\rho_{11}');
 hold on;
-plot(t, rho22, 'DisplayName', '\rho_{22}');
-plot(t, rho33, 'DisplayName', '\rho_{33}');
-plot(t, rho44, 'DisplayName', '\rho_{44}');
-plot(t, rho55, 'DisplayName', '\rho_{55}');
-plot(t, rho66, 'DisplayName', '\rho_{66}');
+for i = 2:N
+  plot(t, rho(i, :), 'DisplayName', ...
+      [ '\rho_{', num2str(i), num2str(i), '}' ]);
+end
+
 for i = 1:length(comp_data)
     plot(comp_data{i}(:, 1) * 1e-12, comp_data{i}(:, 2), ...
         'DisplayName', 'Ref');

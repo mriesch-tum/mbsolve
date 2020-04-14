@@ -27,6 +27,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <iostream>
+#include <regex>
 #include <string>
 #include <vector>
 #include <cxxopts.hpp>
@@ -363,17 +364,44 @@ main(int argc, char** argv)
             scen->add_record(std::make_shared<mbsolve::record>(
                 "h0", mbsolve::record::magnetic, 1, 1, 0.0, 1.373e-7));
 
-        } else if (device_file == "marskar2011") {
+        } else if (device_file.rfind("marskar2011", 0) == 0) {
             /**
-             * The marskar2011 setup is a 6-level anharmonic ladder system.
-             * In the scenario, the interaction with a few-cycle Gaussian
-             * pulse is simulated. For details see literature:
+             * The marskar2011 setup is a 6-level anharmonic ladder
+             * system. In the scenario, the interaction with a few-cycle
+             * Gaussian pulse is simulated. For details see literature:
              * https://doi.org/10.1364/OE.19.016784
+             *
+             * This setup has been generalized to an arbitrary number of
+             * levels N >= 2, which can be specified by setting the
+             * device_file to "marskar2011-Nlvl". If the expression cannot
+             * be parsed or the original device_file = "marskar2011" is
+             * used, N defaults to 6.
+             *
              */
 
+            /* number of levels, defaults to 6 */
+            int N = 6;
+
+            /* parse number of levels*/
+            std::string num_lvl = device_file;
+            num_lvl = std::regex_replace(
+                num_lvl, std::regex("^marskar2011[-]?"), "");
+            num_lvl = std::regex_replace(num_lvl, std::regex("lvl$"), "");
+
+            try {
+                N = std::stoi(num_lvl);
+                if (N < 2) {
+                    throw std::invalid_argument("N must be >= 2!");
+                }
+            } catch (const std::exception& e) {
+                std::cout << "Warning: Could not determine number of levels."
+                          << " Assuming N = 6." << std::endl;
+                N = 6;
+            }
+
             /* set up quantum mechanical description */
-            std::vector<mbsolve::real> energies(6, 0.0);
-            for (int i = 1; i < 6; i++) {
+            std::vector<mbsolve::real> energies(N, 0.0);
+            for (int i = 1; i < N; i++) {
                 energies[i] = energies[i - 1] +
                     (1.0 - 0.1 * (i - 3)) * mbsolve::HBAR * 2 * mbsolve::PI *
                         1e13;
@@ -382,22 +410,44 @@ main(int argc, char** argv)
             mbsolve::qm_operator H(energies);
 
             mbsolve::real dipole = 1e-29;
-            std::vector<std::complex<mbsolve::real> > dipoles = {
-                dipole, 0,      dipole, 0, 0, dipole, 0,     0,
-                0,      dipole, 0,      0, 0, 0,      dipole
-            };
+            std::vector<std::complex<mbsolve::real> > dipoles;
+            for (int i = 1; i < N; i++) {
+                for (int j = 0; j < i - 1; j++) {
+                    dipoles.push_back(0.0);
+                }
+                dipoles.push_back(dipole);
+            }
 
-            mbsolve::qm_operator u({ 0, 0, 0, 0, 0, 0 }, dipoles);
+            mbsolve::qm_operator u(
+                std::vector<mbsolve::real>(N, 0.0), dipoles);
 
-            mbsolve::real rate = 1e12;
-            std::vector<std::vector<mbsolve::real> > scattering_rates = {
-                { rate, 1.0 / (1.0e-12), 0, 0, 0, 0 },
-                { 3.82950e+11, rate, 1.0 / (1.1e-12), 0, 0, 0 },
-                { 0, 3.77127e+11, rate, 1.0 / (1.2e-12), 0, 0 },
-                { 0, 0, 3.74488e+11, rate, 1.0 / (1.3e-12), 0 },
-                { 0, 0, 0, 3.74467e+11, rate, 1.0 / (1.4e-12) },
-                { 0, 0, 0, 0, 3.76675e+11, rate }
-            };
+            /* scattering rates are temperature dependent (use T = 600 K)
+             */
+            mbsolve::real T = 600;
+
+            /* pure dephasing rate */
+            mbsolve::real pure_deph = 1e12;
+
+            std::vector<std::vector<mbsolve::real> > scattering_rates;
+            for (int i = 0; i < N; i++) {
+                std::vector<mbsolve::real> v;
+                for (int j = 0; j < N; j++) {
+                    mbsolve::real rate;
+                    if (i == j) {
+                        rate = pure_deph;
+                    } else if (i == j - 1) {
+                        rate = 1e12 / (1 + 0.1 * i);
+                    } else if (i == j + 1) {
+                        rate = 1e12 / (1 + 0.1 * j) *
+                            exp((energies[j] - energies[i]) /
+                                (mbsolve::KB * T));
+                    } else {
+                        rate = 0.0;
+                    }
+                    v.push_back(rate);
+                }
+                scattering_rates.push_back(v);
+            }
 
             auto relax_sop =
                 std::make_shared<mbsolve::qm_lindblad_relaxation>(
@@ -413,7 +463,8 @@ main(int argc, char** argv)
             mbsolve::material::add_to_library(mat_ar);
 
             /* set up device */
-            dev = std::make_shared<mbsolve::device>("Marskar");
+            dev = std::make_shared<mbsolve::device>(
+                "marskar2011-" + std::to_string(N) + "lvl");
             dev->add_region(std::make_shared<mbsolve::region>(
                 "Active region", mat_ar, 0, 1e-3));
 
@@ -425,12 +476,40 @@ main(int argc, char** argv)
                 sim_endtime = 2e-12;
             }
 
-            mbsolve::qm_operator rho_init(
-                { 0.60, 0.23, 0.096, 0.044, 0.02, 0.01 });
+            /* determine equilibrium populations:
+             *  - the scattering rates form a tridiagonal N x N matrix
+             *  - we solve for the homogeneous solution = equilibrium
+             *  - solving yields relations between neighboring populations
+             *    of the form rho_22 = (gamma_21/gamma_12) rho_11
+             */
+            mbsolve::real total = 0.0;
+            for (int i = 0; i < N; i++) {
+                /* the ratios are chained, e.g.,
+                 * rho_33 = (gamma_32/gamma_23) (gamma_21/gamma_12) rho_11
+                 */
+                mbsolve::real prod = 1;
+                for (int j = 0; j < i; j++) {
+                    prod *= scattering_rates[j + 1][j] /
+                        scattering_rates[j][j + 1];
+                }
+                total += prod;
+            }
+
+            std::vector<mbsolve::real> populations_eq;
+            /* rho_11 is normalized w.r.t. to the sum of products */
+            populations_eq.push_back(1 / total);
+            /* the remaining populations are calculated */
+            for (int i = 1; i < N; i++) {
+                populations_eq.push_back(
+                    populations_eq[i - 1] * scattering_rates[i][i - 1] /
+                    scattering_rates[i - 1][i]);
+            }
+
+            mbsolve::qm_operator rho_init(populations_eq);
 
             /* Marskar basic scenario */
             scen = std::make_shared<mbsolve::scenario>(
-                "Basic", num_gridpoints, sim_endtime, rho_init);
+                "basic", num_gridpoints, sim_endtime, rho_init);
 
             /* input pulse */
             mbsolve::real tau = 100e-15;
@@ -448,48 +527,15 @@ main(int argc, char** argv)
             /* select data to be recorded */
             mbsolve::real sample_time = 0.0;
             mbsolve::real sample_pos = 0.0;
-            scen->add_record(std::make_shared<mbsolve::record>(
-                "d11",
-                mbsolve::record::type::density,
-                1,
-                1,
-                sample_time,
-                sample_pos));
-            scen->add_record(std::make_shared<mbsolve::record>(
-                "d22",
-                mbsolve::record::type::density,
-                2,
-                2,
-                sample_time,
-                sample_pos));
-            scen->add_record(std::make_shared<mbsolve::record>(
-                "d33",
-                mbsolve::record::type::density,
-                3,
-                3,
-                sample_time,
-                sample_pos));
-            scen->add_record(std::make_shared<mbsolve::record>(
-                "d44",
-                mbsolve::record::type::density,
-                4,
-                4,
-                sample_time,
-                sample_pos));
-            scen->add_record(std::make_shared<mbsolve::record>(
-                "d55",
-                mbsolve::record::type::density,
-                5,
-                5,
-                sample_time,
-                sample_pos));
-            scen->add_record(std::make_shared<mbsolve::record>(
-                "d66",
-                mbsolve::record::type::density,
-                6,
-                6,
-                sample_time,
-                sample_pos));
+            for (int i = 1; i <= N; i++) {
+                scen->add_record(std::make_shared<mbsolve::record>(
+                    "d" + std::to_string(i) + std::to_string(i),
+                    mbsolve::record::type::density,
+                    i,
+                    i,
+                    sample_time,
+                    sample_pos));
+            }
             scen->add_record(std::make_shared<mbsolve::record>(
                 "e",
                 mbsolve::record::type::electric,
