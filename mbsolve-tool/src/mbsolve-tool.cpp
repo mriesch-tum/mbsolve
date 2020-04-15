@@ -307,6 +307,110 @@ main(int argc, char** argv)
                 std::make_shared<mbsolve::record>("inv12", 2.5e-15));
             scen->add_record(std::make_shared<mbsolve::record>("e", 2.5e-15));
 
+        } else if (device_file == "tzenov2016") {
+            /**
+             * The tzenov2016 setup is a model of an actual quantum cascade
+             * laser frequency comb.
+             * For details see literature:
+             * https://doi.org/10.1364/OE.24.023232
+             */
+
+            /* quantum mechanical description of active region */
+            mbsolve::qm_operator H(
+                { 0.10103 * mbsolve::E0,
+                  0.09677 * mbsolve::E0,
+                  0.09720 * mbsolve::E0,
+                  0.08129 * mbsolve::E0,
+                  0.07633 * mbsolve::E0 },
+                { 0.0,
+                  1.2329e-3 * mbsolve::E0,
+                  -1.3447e-3 * mbsolve::E0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0 });
+
+            mbsolve::qm_operator u(
+                { 0.0, 0.0, 0.0, 0.0, 0.0 },
+                { 0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0,
+                  -mbsolve::E0 * 4e-9,
+                  0.0,
+                  0.0,
+                  0.0,
+                  0.0 });
+
+            std::vector<std::vector<mbsolve::real> > scattering_rates = {
+                { 0.0000000, 0.4947e12, 0.0974e12, 0.8116e12, 1.0410e12 },
+                { 0.8245e12, 0.0000000, 0.1358e12, 0.6621e12, 1.1240e12 },
+                { 0.0229e12, 0.0469e12, 0.0000000, 0.0794e12, 0.0357e12 },
+                { 0.0047e12, 0.0029e12, 0.1252e12, 0.0000000, 0.2810e12 },
+                { 0.0049e12, 0.0049e12, 0.1101e12, 0.4949e12, 0.0000000 }
+            };
+
+            mbsolve::real deph_inj_ull = 1.0 / (1.6e-12);
+            mbsolve::real deph_xxx_xxx = 1.0 / (4.8e-12);
+
+            std::vector<mbsolve::real> dephasing_rates = { 0,
+                                                           deph_inj_ull,
+                                                           deph_inj_ull,
+                                                           deph_xxx_xxx,
+                                                           deph_xxx_xxx,
+                                                           deph_xxx_xxx,
+                                                           deph_xxx_xxx,
+                                                           deph_xxx_xxx,
+                                                           deph_xxx_xxx,
+                                                           deph_xxx_xxx };
+            auto relax_sop =
+                std::make_shared<mbsolve::qm_lindblad_relaxation>(
+                    scattering_rates, dephasing_rates);
+
+            auto qm = std::make_shared<mbsolve::qm_description>(
+                5.6e21, H, u, relax_sop);
+
+            auto mat_ar = std::make_shared<mbsolve::material>(
+                "AR", qm, 19.35, 0.9, 1300);
+            mbsolve::material::add_to_library(mat_ar);
+
+            /* set up device with semi-transparent mirror boundary cond. */
+            auto bc =
+                std::make_shared<mbsolve::bc_field_reflectivity>(0.8, 0.8);
+            dev = std::make_shared<mbsolve::device>("tzenov2016", bc);
+            dev->add_region(std::make_shared<mbsolve::region>(
+                "Active region", mat_ar, 0, 5e-3));
+
+            /* default settings */
+            if (num_gridpoints == 0) {
+                num_gridpoints = 8192;
+            }
+            if (sim_endtime < 1e-21) {
+                sim_endtime = 0.2e-9;
+            }
+
+            /* initial density matrix */
+            mbsolve::qm_operator rho_init({ 0.0, 0.0, 1.0, 0.0, 0.0 });
+
+            /* basic scenario */
+            scen = std::make_shared<mbsolve::scenario>(
+                "basic", num_gridpoints, sim_endtime, rho_init);
+            scen->add_record(std::make_shared<mbsolve::record>(
+                "e0", mbsolve::record::electric, 1, 1, 0.0, 0.0));
+            for (int i = 1; i <= 5; i++) {
+                scen->add_record(std::make_shared<mbsolve::record>(
+                    "d" + std::to_string(i) + std::to_string(i),
+                    mbsolve::record::type::density,
+                    i,
+                    i,
+                    0.0,
+                    0.1e-3));
+            }
+
         } else if (device_file == "tzenov2018-cpml") {
             /**
              * The tzenov2018-cpml setup consists of an absorber region

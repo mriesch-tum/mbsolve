@@ -1,0 +1,41 @@
+#!/bin/bash
+#SBATCH -o %x.%j.%N.out
+#SBATCH -J tzenov2016
+#SBATCH --get-user-env
+#SBATCH --clusters=cm2_tiny
+#SBATCH --partition=cm2_tiny
+#SBATCH --qos=cm2_tiny
+#SBATCH --nodes=1-1
+#SBATCH --cpus-per-task=28
+#SBATCH --export=NONE
+#SBATCH --time=72:00:00
+
+# check if mbsolve-tool application is available
+if [ -f ${SLURM_SUBMIT_DIR}/mbsolve-tool/mbsolve-tool ]; then
+    # valid working directory
+    cd ${SLURM_SUBMIT_DIR}
+else
+    # invalid working directory or mbsolve-tool not found, report error
+    echo "Could not find application mbsolve-tool in" \
+        "${SLURM_SUBMIT_DIR}/mbsolve-tool/. Make sure that mbsolve-tool was" \
+        "built and you submitted the job script from the build directory."
+    exit 1
+fi
+
+# create working directory
+work_dir=simulations/${SLURM_JOB_NAME}.${SLURM_JOB_ID}
+mkdir -p $work_dir
+cd $work_dir
+
+# load modules
+source /etc/profile.d/modules.sh
+module load hdf5
+module load gcc/7
+module load likwid
+
+export OMP_NUM_THREADS=28
+
+endtime=15e-9
+
+likwid-pin -c N:0-27 ../../mbsolve-tool/mbsolve-tool -d tzenov2016 \
+           -m cpu-fdtd-5lvl-reg-cayley -w hdf5 -e $endtime
