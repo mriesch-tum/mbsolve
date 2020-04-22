@@ -29,8 +29,6 @@
 #include <iostream>
 #include <random>
 #include <omp.h>
-#include <mbsolve/lib/internal/algo_lindblad_cvr_rodr.hpp>
-#include <mbsolve/lib/internal/algo_lindblad_noop.hpp>
 #include <mbsolve/solver-cpu/internal/common_cpu.hpp>
 #include <mbsolve/solver-cpu/solver_cpu_fdtd_red.hpp>
 
