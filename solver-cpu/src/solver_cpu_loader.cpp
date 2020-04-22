@@ -44,6 +44,10 @@ solver_cpu_loader::solver_cpu_loader()
         "cpu-fdtd-2lvl-cvr-rodr");
     solver::register_solver<solver_cpu_fdtd<3, lindblad_cvr_rodr> >(
         "cpu-fdtd-3lvl-cvr-rodr");
+    solver::register_solver<solver_cpu_fdtd<4, lindblad_cvr_rodr> >(
+        "cpu-fdtd-4lvl-cvr-rodr");
+    solver::register_solver<solver_cpu_fdtd<5, lindblad_cvr_rodr> >(
+        "cpu-fdtd-5lvl-cvr-rodr");
     solver::register_solver<solver_cpu_fdtd<6, lindblad_cvr_rodr> >(
         "cpu-fdtd-6lvl-cvr-rodr");
 
@@ -52,6 +56,10 @@ solver_cpu_loader::solver_cpu_loader()
         "cpu-fdtd-red-2lvl-cvr-rodr");
     solver::register_solver<solver_cpu_fdtd_red<3, lindblad_cvr_rodr> >(
         "cpu-fdtd-red-3lvl-cvr-rodr");
+    solver::register_solver<solver_cpu_fdtd_red<4, lindblad_cvr_rodr> >(
+        "cpu-fdtd-red-4lvl-cvr-rodr");
+    solver::register_solver<solver_cpu_fdtd_red<5, lindblad_cvr_rodr> >(
+        "cpu-fdtd-red-5lvl-cvr-rodr");
     solver::register_solver<solver_cpu_fdtd_red<6, lindblad_cvr_rodr> >(
         "cpu-fdtd-red-6lvl-cvr-rodr");
 

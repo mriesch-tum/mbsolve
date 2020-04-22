@@ -29,5 +29,7 @@ namespace mbsolve {
 
 template class solver_cpu_fdtd_red<2, lindblad_cvr_rodr>;
 template class solver_cpu_fdtd_red<3, lindblad_cvr_rodr>;
+template class solver_cpu_fdtd_red<4, lindblad_cvr_rodr>;
+template class solver_cpu_fdtd_red<5, lindblad_cvr_rodr>;
 template class solver_cpu_fdtd_red<6, lindblad_cvr_rodr>;
 }
