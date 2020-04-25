@@ -69,3 +69,21 @@ plot(x, e(:, i));
 xlabel('Propagation direction/m');
 ylabel('E-Field/Vm^{-1}');
 xlim([0, L_x]);
+
+% detailed time trace, see Ziolkowski et al., Fig. 2
+papersize = [ 15 12 ];
+fig = figure('units', 'centimeters');
+pos = get(gcf, 'pos');
+plot(x/1e-6, e(:, i)/max(e(:, i)), '--', ...
+    'DisplayName', 'Electric field', 'Color', [0, 101, 189]/255);
+hold on;
+plot(x/1e-6, inv12(:, i), 'DisplayName', 'Population inversion', ...
+    'Color', [227, 114, 34]/255);
+xlabel('Distance/µm');
+ylabel('Normalized Amplitude');
+xlim([30, 50]);
+grid on;
+legend('show', 'Location', 'northwest');
+set(fig, 'PaperPositionMode', 'Auto', 'PaperUnits', 'Centimeters', ...
+    'PaperSize', papersize);
+print(fig, 'ziolkowski1995.pdf', '-dpdf', '-fillpage');
