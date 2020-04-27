@@ -100,7 +100,7 @@ init_fdtd_simulation(
             real d_t = courant * d_x / velocity;
 
             /* number of time steps */
-            unsigned int n_t = ceil(scen->get_endtime() / d_t) + 1;
+            n_t = ceil(scen->get_endtime() / d_t) + 1;
             scen->set_num_timesteps(n_t);
         }
 
