@@ -47,6 +47,7 @@ jobs:
       - cmake --build .
       - cmake --build . --target doc
       - sudo cmake --build . --target install
+      - ctest
       - cd ..
       - mbsolve-tool -d ziolkowski1995 -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
           -e 100e-15
@@ -93,6 +94,7 @@ jobs:
       - cmake --build .
       - cmake --build . --target doc
       - sudo cmake --build . --target install
+      - ctest
       - cd ..
       - mbsolve-tool -d ziolkowski1995 -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
           -e 100e-15
@@ -122,6 +124,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release ..
       - cmake --build . --config Release
       - cmake --build . --config Release --target install
+      - ctest
       - cd ..
       - mbsolve-tool -d ziolkowski1995 -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
           -e 100e-15

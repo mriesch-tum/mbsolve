@@ -29,6 +29,11 @@ else
     apt-get install --no-install-recommends -y cmake
 fi
 
+# Catch2 library
+git clone https://github.com/catchorg/Catch2.git && cd Catch2 && \
+  cmake -Bbuild -H. -DBUILD_TESTING=OFF && \
+  cmake --build build/ --target install && cd ..
+
 # cxxopts library
 git clone https://github.com/jarro2783/cxxopts.git && cd cxxopts && \
   cmake -Bbuild -H. -DCXXOPTS_BUILD_EXAMPLES=OFF -DCXXOPTS_BUILD_TESTS=OFF && \

@@ -47,6 +47,13 @@ set_target_properties(mbsolve-lib PROPERTIES
 target_include_directories(mbsolve-lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
+if(MBSOLVE_TESTS)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(mbsolve-lib PRIVATE -fprofile-arcs
+      -ftest-coverage)
+    target_link_libraries(mbsolve-lib -lgcov)
+  endif()
+endif()
 
 if(MBSOLVE_PYTHON)
   set_property(SOURCE swig/lib.i PROPERTY CPLUSPLUS ON)
@@ -76,6 +83,17 @@ if(MBSOLVE_PYTHON)
     "${PYTHON_MOD_STRING}
             '$<TARGET_FILE_NAME:${SWIG_MODULE_lib_REAL_NAME}>',"
     PARENT_SCOPE)
+endif()
+
+# Catch2 unit tests
+if(MBSOLVE_TESTS)
+  add_executable(mbsolve-lib-test
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests_device.cpp)
+  target_link_libraries(mbsolve-lib-test
+    PRIVATE Catch2::Catch2 mbsolve-lib)
+  set_target_properties(mbsolve-lib-test PROPERTIES CXX_STANDARD 11)
+  catch_discover_tests(mbsolve-lib-test)
 endif()
 
 # install library

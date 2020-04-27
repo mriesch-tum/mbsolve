@@ -28,7 +28,7 @@ stages:
   script:
    - mkdir -p build
    - cd build
-   - cmake $CMAKE_FLAGS
+   - cmake $CMAKE_FLAGS -DWITH_TESTS=ON
        -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_PREFIX_PATH=$PREFIX ..
    - cmake --build .
    - cmake --build . --target install
@@ -40,6 +40,7 @@ stages:
   stage: test
   script:
    - cd build
+   - ctest
    - mbsolve-tool/mbsolve-tool -d ziolkowski1995 -e 100e-15
        -m cpu-fdtd-red-2lvl-cvr-rodr -w hdf5
    - mbsolve-tool/mbsolve-tool -d song2005 -e 16e-15

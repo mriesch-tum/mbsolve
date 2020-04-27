@@ -75,6 +75,7 @@ option(WITH_CUDA "with(out) CUDA solver" OFF)
 option(WITH_DOXYGEN "with(out) Doxygen documentation" ON)
 option(WITH_FORMAT "with(out) clang-format support" ON)
 option(WITH_PYTHON "with(out) Python interface" ON)
+option(WITH_TESTS "with(out) Catch2 unit tests" OFF)
 option(WITH_CPPTOOL "with(out) C++ tool" ON)
 
 # Eigen library
@@ -96,6 +97,17 @@ if(WITH_PYTHON AND BUILD_SHARED_LIBS)
     set(MBSOLVE_PYTHON TRUE)
     set(PYTHON_IFACE_PATH "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT}")
     set(PYTHON_MOD_STRING "")
+  endif()
+endif()
+
+# Catch2 unit tests
+if(WITH_TESTS)
+  find_package(Catch2)
+  if(Catch2_FOUND)
+    set(MBSOLVE_TESTS TRUE)
+    include(CTest)
+    include(Catch)
+    enable_testing()
   endif()
 endif()
 
