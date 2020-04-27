@@ -6,7 +6,7 @@ An open-source solver tool for the full wave 1D Maxwell-Bloch equations.
 
 ## Overview
 
-![mbsolve overview](doc/mbsolve_overview.png)
+![Overview of the mbsolve project.](doc/mbsolve_overview.png)
 
 The project consists of the following components:
 
@@ -147,7 +147,7 @@ Naturally, the same versions as used during compilation must be available.
 ## Contributing to mbsolve
 
 Feel free to use the code and do not hesitate to contact me or to create an
-issue on github. Any contributions are welcome. If you found the code helpful
+issue on GitHub. Any contributions are welcome. If you found the code helpful
 and used it in your research, you can cite the following paper:<br />
 M. Riesch, N. Tchipev, S. Senninger, H.-J. Bungartz, and C. Jirauschek,
 "Performance evaluation of numerical methods for the

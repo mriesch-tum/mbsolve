@@ -22,15 +22,44 @@ PROJECT_NAME = "@PROJECT@ v@VERSION_FULL@"
 
 # input files
 
-INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/lib" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/lib/internal" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/mbsolve/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/mbsolve/solver-cpu" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/mbsolve/solver-cpu/internal" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/solver-cuda/include/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-tool/src/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/writer-hdf5/include/mbsolve/" \
-        "@CMAKE_CURRENT_SOURCE_DIR@/writer-hdf5/include/mbsolve/writer-hdf5/"
+INPUT = "@CMAKE_CURRENT_SOURCE_DIR@/README.md" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/CHANGELOG.md" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/NOTICE.md" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/CONTRIBUTING.md" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/CODE_OF_CONDUCT.md" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/lib" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-lib/include/mbsolve/lib/internal" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/mbsolve/" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/mbsolve/solver-cpu" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/solver-cpu/include/mbsolve/solver-cpu/internal" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/solver-cuda/include/" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/mbsolve-tool/src/" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/writer-hdf5/include/mbsolve/" \
+  "@CMAKE_CURRENT_SOURCE_DIR@/writer-hdf5/include/mbsolve/writer-hdf5/"
+
+# main page
+
+USE_MDFILE_AS_MAINPAGE = "@CMAKE_CURRENT_SOURCE_DIR@/README.md"
+
+# strip source dir path from input files
+
+STRIP_FROM_PATH = "@CMAKE_CURRENT_SOURCE_DIR@"
+
+# recurse into folders
+
+RECURSIVE = YES
+
+# output settings
+
+DISABLE_INDEX = YES
 
 EXTRA_PACKAGES = amsmath
+
+GENERATE_TREEVIEW = YES
+
+HTML_EXTRA_STYLESHEET = "@CMAKE_CURRENT_SOURCE_DIR@/doc/mbsolve_html_style.css"
+
+IMAGE_PATH = "@CMAKE_CURRENT_SOURCE_DIR@/doc"
+
+USE_MATHJAX = YES
