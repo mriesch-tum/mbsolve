@@ -43,7 +43,7 @@ jobs:
      script:
       - mkdir -p build
       - cd build
-      - cmake ..
+      - cmake -DWITH_TESTS=ON ..
       - cmake --build .
       - cmake --build . --target doc
       - sudo cmake --build . --target install
@@ -90,7 +90,7 @@ jobs:
      script:
       - mkdir -p build
       - cd build
-      - cmake ..
+      - cmake -DWITH_TESTS=ON ..
       - cmake --build .
       - cmake --build . --target doc
       - sudo cmake --build . --target install
@@ -118,7 +118,7 @@ jobs:
      script:
       - mkdir -p build
       - cd build
-      - cmake -G "Visual Studio 15 2017" -A x64
+      - cmake -G "Visual Studio 15 2017" -A x64 -DWITH_TESTS=ON
           -DCMAKE_PREFIX_PATH="${LIBRARY_PREFIX}"
           -DCMAKE_INSTALL_PREFIX="${LIBRARY_PREFIX}"
           -DCMAKE_BUILD_TYPE=Release ..
