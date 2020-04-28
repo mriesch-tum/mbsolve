@@ -89,6 +89,7 @@ endif()
 if(MBSOLVE_TESTS)
   add_executable(mbsolve-lib-test
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests_common_fdtd.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/tests_device.cpp)
   target_link_libraries(mbsolve-lib-test
     PRIVATE Catch2::Catch2 mbsolve-lib)
