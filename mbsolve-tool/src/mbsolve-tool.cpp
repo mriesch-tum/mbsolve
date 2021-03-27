@@ -180,8 +180,8 @@ main(int argc, char** argv)
             mbsolve::qm_operator H(energies);
 
             std::vector<std::complex<mbsolve::real> > dipoles = {
-                mbsolve::E0 * 9.2374e-11,
-                mbsolve::E0 * 9.2374e-11 * sqrt(2),
+                -mbsolve::E0 * 9.2374e-11,
+                -mbsolve::E0 * 9.2374e-11 * sqrt(2),
                 0
             };
 
@@ -416,7 +416,7 @@ main(int argc, char** argv)
 
             mbsolve::qm_operator H(energies);
 
-            mbsolve::real dipole = 1e-29;
+            mbsolve::real dipole = -1e-29;
             std::vector<std::complex<mbsolve::real> > dipoles;
             for (int i = 1; i < N; i++) {
                 for (int j = 0; j < i - 1; j++) {

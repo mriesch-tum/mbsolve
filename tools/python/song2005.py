@@ -34,7 +34,7 @@ energies = [ 0, 2.3717e15 * mb.HBAR, 2.4165e15 * mb.HBAR ]
 H = mb.qm_operator(energies)
 
 # dipole moment operator
-dipoles = [ 9.2374e-11 * mb.E0, 9.2374e-11 * math.sqrt(2) * mb.E0, 0]
+dipoles = [ -mb.E0 * 9.2374e-11, -mb.E0 * 9.2374e-11 * math.sqrt(2), 0]
 u = mb.qm_operator([ 0, 0, 0 ], dipoles)
 
 # relaxation superoperator

@@ -384,7 +384,7 @@ public:
             carrier_density,
             qm_operator(
                 { -HBAR * transition_freq / 2, +HBAR * transition_freq / 2 }),
-            qm_operator({ 0, 0 }, { E0 * dipole_moment }),
+            qm_operator({ 0, 0 }, { -E0 * dipole_moment }),
             std::make_shared<qm_lindblad_relaxation>(
                 std::vector<std::vector<real> >{
                     { 2 * dephasing_rate - scattering_rate,
