@@ -152,51 +152,50 @@ public:
      * Constructs the Lindblad relaxation superoperator using the matrix
      * \p rates.
      *
-     * \param [in] rates Matrix with non-negative entries, whose off-diagonal
+     * \param [in] scattering_rates Matrix with non-negative entries, whose
      * terms with index (m, n) describe the scattering rates from energy level
-     * m to energy level n. The main-diagonal entries (m, m) of the matrix
-     * represent pure dephasing.
+     * m to energy level n. The main-diagonal entries (m, m) are ignored and
+     * replaced with the inverse population life times.
+     *
+     * \param [in] pure_deph_rates   The pure dephasing rates in vector form.
+     * Assume a upper triangular matrix, in which each term (m, n) is the
+     * pure dephasing rate of the coherence \f$ \rho_{mn} = \rho_{nm}^* \f$.
+     * Then, this parameter is the column-major ordered vector form of this
+     * matrix.
      */
     explicit qm_lindblad_relaxation(
-        const std::vector<std::vector<real> >& rates)
-      : qm_superop(rates.size()),
-        m_scattering(rates.size(), std::vector<real>(rates.size(), 0)),
-        m_dephasing((rates.size() * (rates.size() - 1)) / 2, 0)
+        const std::vector<std::vector<real> >& scattering_rates,
+        const std::vector<real>& pure_deph_rates)
+      : qm_superop(scattering_rates.size()), m_scattering(scattering_rates),
+        m_dephasing(pure_deph_rates)
     {
         /* TODO exception or assert: rates not quadratic? */
         /* TODO exception or assert: all physical constraints fulfilled? */
         /* TODO in particular pure dephasing issue?! */
         /* TODO last main diagonal element must be zero? */
 
-        /** Implementation info: see https://doi.org/10.1364/OE.19.016784
-         * Eqs. (9ab)
-         */
-
-        /* determine relaxation rates */
+        /* determine inverse population life time of each level */
         for (int m = 0; m < m_num_levels; m++) {
-            real relaxation_rate = 0;
+            real inv_pop_lifetime = 0;
 
             for (int j = 0; j < m_num_levels; j++) {
                 if (j != m) {
-                    relaxation_rate += rates[j][m];
-                    m_scattering[m][j] = rates[m][j];
+                    inv_pop_lifetime += m_scattering[j][m];
                 }
             }
-            m_scattering[m][m] = -relaxation_rate;
+            m_scattering[m][m] = -inv_pop_lifetime;
         }
 
         /* determine dephasing rate for transition mn */
         unsigned int idx_dephasing = 0;
         for (int n = 0; n < m_num_levels; n++) {
             for (int m = 0; m < n; m++) {
-                real dephasing = 0;
+                real dephasing = -std::abs(m_dephasing[idx_dephasing]);
 
-                /* dephasing due to relaxation */
+                /* add life time contribution of dephasing */
                 dephasing -= 0.5 *
                     (std::abs(m_scattering[m][m]) +
                      std::abs(m_scattering[n][n]));
-                /* pure dephasing */
-                dephasing -= 0.5 * (rates[m][m] + rates[n][n]);
 
                 m_dephasing[idx_dephasing] = dephasing;
                 idx_dephasing++;
@@ -387,10 +386,11 @@ public:
             qm_operator({ 0, 0 }, { -E0 * dipole_moment }),
             std::make_shared<qm_lindblad_relaxation>(
                 std::vector<std::vector<real> >{
-                    { 2 * dephasing_rate - scattering_rate,
+                    { 0,
                       scattering_rate * 0.5 * (1 - equilibrium_inversion) },
                     { scattering_rate * 0.5 * (1 + equilibrium_inversion),
-                      0 } })),
+                      0 } },
+                std::vector<real>{ dephasing_rate - 0.5 * scattering_rate })),
         m_trans_freq(transition_freq), m_dipole_mom(dipole_moment),
         m_scattering(scattering_rate), m_dephasing(dephasing_rate),
         m_equi_inv(equilibrium_inversion)

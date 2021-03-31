@@ -39,8 +39,11 @@ u = mb.qm_operator([ 0, 0, 0 ], dipoles)
 
 # relaxation superoperator
 rate = 1e10
+# scattering rate matrix R
 rates = [ [ 0, rate, rate ], [ rate, 0, rate ], [ rate, rate, 0 ] ]
-relax_sop = mb.qm_lindblad_relaxation(rates)
+# pure dephasing rates are zero in this example
+pure_deph = [ 0, 0, 0 ]
+relax_sop = mb.qm_lindblad_relaxation(rates, pure_deph)
 
 # initial density matrix
 rho_init = mb.qm_operator([ 1, 0, 0 ])

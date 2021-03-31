@@ -191,10 +191,11 @@ main(int argc, char** argv)
             std::vector<std::vector<mbsolve::real> > scattering_rates = {
                 { 0, rate, rate }, { rate, 0, rate }, { rate, rate, 0 }
             };
+            std::vector<mbsolve::real> pure_dephasing_rates = { 0, 0, 0 };
 
             auto relax_sop =
                 std::make_shared<mbsolve::qm_lindblad_relaxation>(
-                    scattering_rates);
+                    scattering_rates, pure_dephasing_rates);
 
             auto qm = std::make_shared<mbsolve::qm_description>(
                 6e24, H, u, relax_sop);
@@ -436,12 +437,12 @@ main(int argc, char** argv)
             mbsolve::real pure_deph = 1e12;
 
             std::vector<std::vector<mbsolve::real> > scattering_rates;
+            std::vector<mbsolve::real> pure_dephasing_rates;
             for (int i = 0; i < N; i++) {
                 std::vector<mbsolve::real> v;
                 for (int j = 0; j < N; j++) {
                     mbsolve::real rate;
                     if (i == j) {
-                        rate = pure_deph;
                     } else if (i == j - 1) {
                         rate = 1e12 / (1 + 0.1 * i);
                     } else if (i == j + 1) {
@@ -452,13 +453,14 @@ main(int argc, char** argv)
                         rate = 0.0;
                     }
                     v.push_back(rate);
+                    pure_dephasing_rates.push_back(pure_deph);
                 }
                 scattering_rates.push_back(v);
             }
 
             auto relax_sop =
                 std::make_shared<mbsolve::qm_lindblad_relaxation>(
-                    scattering_rates);
+                    scattering_rates, pure_dephasing_rates);
 
             auto qm = std::make_shared<mbsolve::qm_description>(
                 1e25, H, u, relax_sop);
