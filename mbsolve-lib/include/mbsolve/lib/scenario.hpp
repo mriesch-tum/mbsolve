@@ -43,7 +43,7 @@ public:
     /**
      * Returns initial density matrix for given position x.
      */
-    virtual const qm_operator& initialize(real x) = 0;
+    virtual qm_operator initialize(real x) = 0;
 };
 
 /**
@@ -74,7 +74,7 @@ public:
     /**
      * Returns initial density matrix (independent of position).
      */
-    const qm_operator& initialize(real /* x */) { return m_rho; }
+    qm_operator initialize(real /* x */) { return m_rho; }
 };
 
 /**
