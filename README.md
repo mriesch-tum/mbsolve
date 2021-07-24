@@ -147,12 +147,18 @@ Naturally, the same versions as used during compilation must be available.
 ## Contributing to mbsolve
 
 Feel free to use the code and do not hesitate to contact me or to create an
-issue on GitHub. Any contributions are welcome. If you found the code helpful
-and used it in your research, you can cite the following paper:<br />
-M. Riesch, N. Tchipev, S. Senninger, H.-J. Bungartz, and C. Jirauschek,
-"Performance evaluation of numerical methods for the
-Maxwell-Liouville-von Neumann equations," Opt. Quant. Electron. <b>50</b>,
-112 (2018).
-[BIB](https://www.riesch.at/michael/publications/riesch2018oqel.bib)
-[PDF](https://www.riesch.at/michael/publications/riesch2018oqel.pdf)
-[DOI](http://dx.doi.org/10.1007/s11082-018-1377-4)
+issue on GitHub. Any contributions are welcome.
+
+If you found the code helpful and used it in your research, you can cite the
+following paper:<br />
+Riesch, Michael and Jirauschek, Christian,
+"mbsolve: An open-source solver tool for the Maxwell-Bloch equations,"
+Comp. Phys. Comm. <b>268</b>, 108097 (2021).
+[![arXiv:2005.05412](https://img.shields.io/badge/arXiv-2005.05412-informational)](https://arxiv.org/abs/2005.05412)
+[![doi:10.1016/j.cpc.2021.108097](https://img.shields.io/badge/DOI-10.1016/j.cpc.2021.108097-important)](https://doi.org/10.1016/j.cpc.2021.108097)
+
+If desired, you can cite the project web page directly:<br />
+Riesch, Michael and Jirauschek, Christian, "mbsolve: An open-source solver
+tool for the Maxwell-Bloch equations,"
+[https://github.com/mriesch-tum/mbsolve](https://github.com/mriesch-tum/mbsolve)
+[Online], (2017).
