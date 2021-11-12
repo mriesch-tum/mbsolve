@@ -38,6 +38,7 @@ public:
     enum type
     {
         electric,
+        polar_dt,
         magnetic,
         density,
         inversion

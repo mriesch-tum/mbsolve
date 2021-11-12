@@ -32,6 +32,9 @@ record::record(const std::string& name, real interval, real position)
     case 'e':
         m_type = type::electric;
         break;
+    case 'p':
+        m_type = type::polar_dt;
+        break;
     case 'h':
         m_type = type::magnetic;
         break;
