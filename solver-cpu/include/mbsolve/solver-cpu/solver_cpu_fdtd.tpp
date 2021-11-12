@@ -298,6 +298,10 @@ solver_cpu_fdtd<num_lvl, density_algo>::run() const
                     for (int i = pos; i < pos + cols; i++) {
                         if (t == record::type::electric) {
                             m_result_scratch[o_r + i - pos] = m_e[i];
+                        } else if (t == record::type::polar_dt) {
+                            m_result_scratch[o_r + i - pos] = m_p[i];
+                        } else if (t == record::type::magnetic) {
+                            m_result_scratch[o_r + i - pos] = m_h[i];
                         } else if (t == record::type::inversion) {
                             m_result_scratch[o_r + i - pos] =
                                 density_algo<num_lvl>::calc_inversion(m_d[i]);
