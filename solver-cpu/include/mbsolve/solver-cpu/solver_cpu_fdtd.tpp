@@ -294,32 +294,34 @@ solver_cpu_fdtd<num_lvl, density_algo>::run() const
                     unsigned int cidx = cle.get_col_idx();
                     unsigned int ridx = cle.get_row_idx();
 
-#pragma omp for schedule(static)
-                    for (int i = pos; i < pos + cols; i++) {
-                        if (t == record::type::electric) {
-                            m_result_scratch[o_r + i - pos] = m_e[i];
-                        } else if (t == record::type::polar_dt) {
-                            m_result_scratch[o_r + i - pos] = m_p[i];
-                        } else if (t == record::type::magnetic) {
-                            m_result_scratch[o_r + i - pos] = m_h[i];
-                        } else if (t == record::type::inversion) {
-                            m_result_scratch[o_r + i - pos] =
-                                density_algo<num_lvl>::calc_inversion(m_d[i]);
-                        } else if (t == record::type::density) {
-                            /* right now only populations */
-                            if (ridx == cidx) {
-                                m_result_scratch[o_r + i - pos] =
-                                    density_algo<num_lvl>::calc_population(
-                                        m_d[i], ridx);
-                            } else {
-                                /* coherence terms */
-
-                                /* TODO */
-                            }
+//#pragma omp for schedule(static)
+                    //for (int i = pos; i < pos + cols; i++) {
+                    //EDIT
+                    //Only the first point on x is saved
+                    if (t == record::type::electric) {
+                        m_result_scratch[o_r - pos] = m_e[0];
+                    } else if (t == record::type::polar_dt) {
+                        m_result_scratch[o_r - pos] = m_p[0];
+                    } else if (t == record::type::magnetic) {
+                        m_result_scratch[o_r - pos] = m_h[0];
+                    } else if (t == record::type::inversion) {
+                        m_result_scratch[o_r - pos] =
+                            density_algo<num_lvl>::calc_inversion(m_d[0]);
+                    } else if (t == record::type::density) {
+                        /* right now only populations */
+                        if (ridx == cidx) {
+                            m_result_scratch[o_r - pos] =
+                                density_algo<num_lvl>::calc_population(
+                                    m_d[0], ridx);
                         } else {
-                            /* TODO handle trouble */
+                            /* coherence terms */
+
+                            /* TODO */
                         }
+                    } else {
+                        /* TODO handle trouble */
                     }
+                    //}
                     /* TODO handle imaginary */
                 }
             }
